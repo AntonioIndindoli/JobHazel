@@ -8,6 +8,7 @@ import taskRoutes from "./routes/tasks.routes.js";
 import contactRoutes from "./routes/contacts.routes.js";
 import importRoutes from "./routes/imports.routes.js";
 import parserRoutes from "./routes/parser.routes.js";
+import resumeRoutes from "./routes/resumes.routes.js";
 import { env } from "./config/env.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.middleware.js";
 
@@ -28,6 +29,7 @@ export function createApp() {
   app.use("/contacts", contactRoutes);
   app.use("/imports", importRoutes);
   app.use("/parser", parserRoutes);
+  app.use("/resumes", resumeRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

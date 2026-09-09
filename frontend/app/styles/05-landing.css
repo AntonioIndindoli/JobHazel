@@ -13,7 +13,8 @@
     --landing-surface-muted: #eef4ec;
     --landing-border: #dce8d9;
     --landing-border-strong: #a4c4aa;
-    --landing-copy: #405747;
+    --landing-copy: #2f4234;
+    --landing-copy-background: #fbfdf98a;
     --landing-muted: #5c7162;
     --landing-faint: #708574;
     --landing-button-ink: #ffffff;
@@ -24,7 +25,6 @@
     min-height: 100vh;
     overflow: hidden;
     color: var(--landing-ink);
-    background: linear-gradient(180deg, var(--landing-top-gradient), var(--landing-background) );
 }
 
 html[data-theme="dark"] .landing-page {
@@ -32,14 +32,15 @@ html[data-theme="dark"] .landing-page {
     --landing-green: #5ee384;
     --landing-green-dark: #43c86a;
     --landing-mint: #153426;
-    --landing-background: #000000;
+    --landing-background: #0c1d15;
     --landing-surface: #0e2117;
     --landing-surface-translucent: rgba(14, 33, 23, .93);
     --landing-surface-soft: #10261a;
     --landing-surface-muted: #142b1e;
-    --landing-border: #294534;
+    --landing-border: #2b493a;
     --landing-border-strong: #3d6b4e;
     --landing-copy: #b3c8b9;
+    --landing-copy-background: #fafafa00;
     --landing-muted: #8ea395;
     --landing-faint: #6f8677;
     --landing-button-ink: #06130b;
@@ -116,17 +117,12 @@ html[data-theme="dark"] .landing-page {
     width: 44px;
     height: 44px;
     padding: 0;
-    border: 1px solid var(--landing-border);
-    border-radius: 12px;
     color: var(--landing-ink);
-    background: var(--landing-surface-translucent);
     transition: color .18s ease, background .18s ease, border-color .18s ease;
 }
 
 .landing-theme-toggle:hover {
     color: var(--landing-green);
-    border-color: var(--landing-border-strong);
-    background: var(--landing-mint);
 }
 
 .landing-theme-toggle:focus-visible {
@@ -220,6 +216,8 @@ html[data-theme="dark"] .landing-page {
     position: relative;
     z-index: 2;
     max-width: 570px;
+    background: var(--landing-copy-background);
+    box-shadow: 0 0 100px 100px var(--landing-copy-background);
 }
 
 .landing-hero-entrance>* {
@@ -1117,6 +1115,7 @@ body.auth-modal-open {
 }
 
 @keyframes landing-plant-sway {
+
     0%,
     100% {
         transform: translateX(-1px) rotate(-.18deg);
@@ -1463,38 +1462,62 @@ body.auth-modal-open {
 }
 
 @keyframes landing-tree-trunk-reveal {
-    from { clip-path: inset(100% 0 0 0); }
-    to { clip-path: inset(0 0 0 0); }
+    from {
+        clip-path: inset(100% 0 0 0);
+    }
+
+    to {
+        clip-path: inset(0 0 0 0);
+    }
 }
 
 @keyframes landing-tree-leaf-unfurl {
-    from { opacity: 0; transform: scale(.35) rotate(-9deg); }
-    to { opacity: var(--tree-foliage-opacity); transform: scale(1) rotate(0); }
+    from {
+        opacity: 0;
+        transform: scale(.35) rotate(-9deg);
+    }
+
+    to {
+        opacity: var(--tree-foliage-opacity);
+        transform: scale(1) rotate(0);
+    }
 }
 
 @keyframes landing-tree-limb-reveal {
-    from { opacity: 1; stroke-dashoffset: 1; }
-    to { opacity: 1; stroke-dashoffset: 0; }
+    from {
+        opacity: 1;
+        stroke-dashoffset: 1;
+    }
+
+    to {
+        opacity: 1;
+        stroke-dashoffset: 0;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .hero-growth-natural .hero-growth-trunk-silhouette,
     .hero-growth-natural .hero-growth-path,
     .hero-growth-natural .hero-growth-leaf,
     .hero-growth-natural .hero-growth-canopy {
         animation: none !important;
     }
+
     .hero-growth-natural .hero-growth-trunk-silhouette {
         clip-path: none;
     }
+
     .hero-growth-natural .hero-growth-path {
         stroke-dashoffset: 0;
         opacity: 1;
     }
+
     .hero-growth-natural .hero-growth-leaf {
         opacity: var(--tree-foliage-opacity);
         transform: none;
     }
+
     .hero-growth-natural .hero-growth-canopy {
         transform: none;
     }

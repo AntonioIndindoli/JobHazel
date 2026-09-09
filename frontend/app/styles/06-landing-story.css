@@ -83,7 +83,7 @@ html[data-theme="dark"] .landing-story {
 }
 
 .story-features {
-    padding-block: 108px 100px;
+    padding-block: 60px 60px;
 }
 
 .story-section-heading {
@@ -724,13 +724,14 @@ html[data-theme="dark"] .landing-story {
 
 .story-follow-copy>p {
     max-width: 445px;
-    margin: 25px 0 32px;
+
     color: #c2d0c5;
     font-size: 15px;
     line-height: 1.8;
 }
 
 .story-follow-benefits {
+    margin: 25px 0 32px;
     display: grid;
     gap: 25px;
 }
@@ -1030,63 +1031,6 @@ html[data-theme="dark"] .landing-story {
     line-height: 1.8;
 }
 
-.story-faq {
-    display: grid;
-    grid-template-columns: .8fr 1.2fr;
-    gap: 90px;
-    padding-block: 70px 105px;
-}
-
-.story-faq h2 {
-    font-size: clamp(30px, 3vw, 39px);
-}
-
-.story-faq>div>p {
-    margin: 18px 0 0;
-    color: var(--landing-muted);
-    font-size: 13px;
-    line-height: 1.7;
-}
-
-.story-faq details {
-    border-bottom: 1px solid var(--landing-border);
-}
-
-.story-faq summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 20px;
-    min-height: 68px;
-    padding-block: 20px;
-    color: var(--landing-ink);
-    font-size: 14px;
-    font-weight: 600;
-    line-height: 1.5;
-    cursor: pointer;
-    list-style: none;
-}
-
-.story-faq summary::-webkit-details-marker {
-    display: none;
-}
-
-.story-faq summary svg {
-    color: var(--landing-muted);
-    transition: transform .2s ease;
-}
-
-.story-faq details[open] summary svg {
-    transform: rotate(45deg);
-}
-
-.story-faq details>p {
-    margin: 0 28px 23px 0;
-    color: var(--landing-muted);
-    font-size: 13px;
-    line-height: 1.8;
-}
-
 .story-cta {
     position: relative;
     display: grid;
@@ -1096,6 +1040,7 @@ html[data-theme="dark"] .landing-story {
     isolation: isolate;
     overflow: hidden;
     margin-bottom: 80px;
+margin-top: 80px;
     padding: 64px 70px;
     border: 1px solid #2d573a;
     border-radius: 24px;
@@ -1208,8 +1153,6 @@ html[data-theme="dark"] .landing-story {
 }
 
 .story-copyright {
-    padding-top: 23px;
-    border-top: 1px solid var(--landing-border);
     color: var(--landing-muted);
     font-size: 10px;
 }
@@ -1250,10 +1193,6 @@ html[data-theme="dark"] .landing-story {
 
     .story-day-preview {
         padding: 18px;
-    }
-
-    .story-faq {
-        gap: 50px;
     }
 
     .story-cta {
@@ -1356,16 +1295,6 @@ html[data-theme="dark"] .landing-story {
 
     .story-steps h3 {
         font-size: 18px;
-    }
-
-    .story-faq {
-        grid-template-columns: 1fr;
-        gap: 28px;
-        padding-block: 60px 80px;
-    }
-
-    .story-faq h2 br {
-        display: none;
     }
 
     .story-cta {
@@ -1694,19 +1623,6 @@ html[data-theme="dark"] .landing-story {
         font-size: 13px;
     }
 
-    .story-faq {
-        padding: 50px 7px 65px;
-    }
-
-    .story-faq h2 {
-        font-size: 32px;
-    }
-
-    .story-faq summary {
-        min-height: 72px;
-        font-size: 13px;
-    }
-
     .story-cta {
         grid-template-columns: 1fr;
         gap: 30px;
@@ -1792,4 +1708,6 @@ html[data-theme="dark"] .landing-story {
     text-align: center;
 }
 
-.story-feature-tile > .story-screenshot { margin-top: 28px; }
+.story-feature-tile>.story-screenshot {
+    margin-top: 28px;
+}

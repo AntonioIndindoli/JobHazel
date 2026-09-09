@@ -12,5 +12,9 @@ export function errorHandler(error, _req, res, _next) {
     payload.details = error.details;
   }
 
+  if (error?.code && status < 500) {
+    payload.code = error.code;
+  }
+
   return res.status(status).json(payload);
 }

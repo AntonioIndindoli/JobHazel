@@ -80,11 +80,16 @@ The product is designed as a modern SaaS-style dashboard for candidates who appl
 * Associate contacts with companies or specific applications
 * Save email addresses, LinkedIn URLs, roles, and notes
 
-### Resume Management (Planned)
+### Resume Management
 
-* Upload and manage named resume versions
+* Upload and manage immutable, named PDF resume versions through the authenticated API
+* Validate stored size and PDF signatures before making an upload available
+* Rename, annotate, archive, and unarchive completed resumes
+* Download resumes through five-minute links to private object storage
+
+Planned UI and application integration work will:
+
 * Associate the exact resume version submitted with an application
-* Preview or download resumes through temporary, authenticated links
 * Preserve application history when a newer resume version is uploaded
 * Filter applications by resume version
 * Measure interview and offer conversion by resume version
@@ -408,6 +413,21 @@ POST  /api/interviews
 PATCH /api/interviews/:id
 DELETE /api/interviews/:id
 ```
+
+### Resumes
+
+```http
+GET   /api/resumes
+POST  /api/resumes/uploads
+POST  /api/resumes/:id/complete
+GET   /api/resumes/:id/download-url
+PATCH /api/resumes/:id
+```
+
+Resume routes require a bearer token. Uploads accept PDF metadata, return a
+five-minute presigned `PUT` URL, and remain hidden until completion verifies the
+stored content. `GET /api/resumes?includeArchived=true` includes archived, completed
+resumes; the default list excludes archived and incomplete records.
 
 ### Analytics
 

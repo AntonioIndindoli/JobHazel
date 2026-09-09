@@ -4,8 +4,10 @@ import { Pool } from "pg";
 
 let prisma;
 let pool;
+let prismaForTests;
 
 export async function getPrismaAsync() {
+  if (prismaForTests) return prismaForTests;
   if (!prisma) {
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
@@ -34,4 +36,8 @@ export async function checkPrisma() {
 export async function disconnectPrisma() {
   if (prisma) await prisma.$disconnect();
   if (pool) await pool.end();
+}
+
+export function setPrismaForTests(client) {
+  prismaForTests = client ?? undefined;
 }

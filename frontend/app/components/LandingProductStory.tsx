@@ -5,13 +5,6 @@ import { LandingScreenshot } from "./LandingScreenshot";
 
 import { AppIcon } from "./AppIcon";
 
-const faqs = [
-    { question: "Is JobHazel free to get started?", answer: "Yes. You can create an account and start organizing your job search for free, with no credit card required." },
-    { question: "How do I add jobs to my workspace?", answer: "Enter a job manually, or paste the posting text and its URL into the import flow. JobHazel creates a draft with the details it can identify, including the role, company, location, and salary. You can review and correct everything before saving." },
-    { question: "How do follow-up reminders work?", answer: "Create tasks with due dates and see upcoming or overdue work in your workspace. You can also enable task automation to create application follow-ups and interview thank-you tasks, with a delay you choose. These are tasks inside JobHazel, so you can review and complete them when you are ready." },
-    { question: "Does JobHazel apply to jobs for me?", answer: "You submit applications directly with the employer or job board. JobHazel helps you manage everything around that process: saved roles, application stages, interview details, contacts, notes, and follow-ups." },
-];
-
 export function LandingProductStory({ onGetStarted }: { onGetStarted: () => void }) {
     return (
         <div className="landing-story">
@@ -68,9 +61,7 @@ export function LandingProductStory({ onGetStarted }: { onGetStarted: () => void
             <section className="story-follow-through" id="follow-through" aria-labelledby="story-follow-title">
                 <div className="story-container story-follow-grid">
                     <div className="story-follow-copy" data-reveal>
-                        <span className="story-eyebrow">The details make the difference</span>
-                        <h2 id="story-follow-title">Show up prepared.<br />Follow through<br /> <em>with confidence.</em></h2>
-                        <p>The meeting link. The recruiter’s name. That note you wanted to send. Keep the little things connected, so you can focus on the conversation.</p>
+                        <h2 id="story-follow-title">Show up prepared.<br />Follow through.<br /></h2>
                         <div className="story-follow-benefits">
                             <div><AppIcon name="calendar" size={21} /><span><strong>Walk into interviews ready</strong><p>Keep dates, meeting links, prep notes, and outcomes together.</p></span></div>
                             <div><AppIcon name="contacts" size={21} /><span><strong>Remember the people behind the role</strong><p>Connect recruiters, referrals, and hiring managers to your applications.</p></span></div>
@@ -81,11 +72,6 @@ export function LandingProductStory({ onGetStarted }: { onGetStarted: () => void
                 </div>
             </section>
 
-            <section className="story-faq story-container" id="questions" aria-labelledby="story-faq-title">
-                <div data-reveal><span className="story-eyebrow">FAQ</span><h2 id="story-faq-title">A few things<br /> you might be wondering.</h2></div>
-                <div className="story-faq-list" data-reveal>{faqs.map((faq) => (<details key={faq.question}><summary>{faq.question}<AppIcon name="plus" size={19} /></summary><p>{faq.answer}</p></details>))}</div>
-            </section>
-
             <section className="story-cta story-container" aria-labelledby="story-cta-title" data-reveal>
                 <div className="story-cta-orbit story-cta-orbit-one" aria-hidden="true" /><div className="story-cta-orbit story-cta-orbit-two" aria-hidden="true" />
                 <div className="story-cta-copy"><h2 id="story-cta-title">100% free.<br />No credit card required.</h2><p>Bring your opportunities together.<br />Take the next step with JobHazel.</p></div>
@@ -94,7 +80,7 @@ export function LandingProductStory({ onGetStarted }: { onGetStarted: () => void
 
             <footer className="story-footer story-container">
                 <div><a className="landing-brand" href="#top"><Image src="/JobHazelIcon.png" alt="" width={32} height={32} /><span>JobHazel</span></a></div>
-                <nav aria-label="Footer navigation"><a href="#features">Features</a><a href="#how-it-works">How it works</a><a href="#questions">FAQs</a><a className="story-back-top" href="#top">Back to top ↑</a></nav>
+                <nav aria-label="Footer navigation"><a href="#features">Features</a><a href="#how-it-works">How it works</a><a className="story-back-top" href="#top">Back to top ↑</a></nav>
                 <span className="story-copyright">© {new Date().getFullYear()} JobHazel</span>
             </footer>
         </div>
