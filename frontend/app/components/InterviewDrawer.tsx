@@ -10,6 +10,7 @@ import {
 } from "../lib/constants";
 import type { Application, InterviewFormValues } from "../lib/types";
 import { AppIcon } from "./AppIcon";
+import { DrawerBackdrop } from "./DrawerBackdrop";
 
 type InterviewDrawerProps = {
     applications: Application[];
@@ -39,7 +40,7 @@ export function InterviewDrawer({
     const isEditing = Boolean(editingId);
 
     return (
-        <div className="drawer-backdrop" onClick={onClose}>
+        <DrawerBackdrop onClose={onClose}>
             <aside
                 className="application-drawer interview-drawer"
                 role="dialog"
@@ -267,6 +268,6 @@ export function InterviewDrawer({
                     </footer>
                 </form>
             </aside>
-        </div>
+        </DrawerBackdrop>
     );
 }

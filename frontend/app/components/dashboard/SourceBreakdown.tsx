@@ -48,12 +48,6 @@ export function SourceBreakdown({ applications }: SourceBreakdownProps) {
                 : 0,
         };
     });
-    const donutBackground = totalSourceCount
-        ? `radial-gradient(circle, white 42%, transparent 43%), conic-gradient(${sourceSegments
-            .filter((segment) => segment.count > 0)
-            .map((segment) => `${segment.color} ${segment.startPercent}% ${segment.endPercent}%`)
-            .join(", ")})`
-        : undefined;
 
     return (
         <div className="sources">
@@ -70,7 +64,6 @@ export function SourceBreakdown({ applications }: SourceBreakdownProps) {
             <div className="sources-chart">
                 <div
                     className={`donut${totalSourceCount ? " has-data" : ""}`}
-                    style={donutBackground ? { background: donutBackground } : undefined}
                     aria-label={`${totalSourceCount} applications by source`}
                 >
                     <strong>{totalSourceCount}</strong>

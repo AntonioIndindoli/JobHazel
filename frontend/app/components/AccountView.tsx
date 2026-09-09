@@ -3,6 +3,7 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import { AppIcon } from "./AppIcon";
+import { DrawerBackdrop } from "./DrawerBackdrop";
 
 export type AccountActionResult = {
     ok: boolean;
@@ -338,7 +339,7 @@ export function AccountView({
             </div>
         </section>
         {activePanel === "profile" && (
-            <div className="drawer-backdrop" onClick={closePanel}>
+            <DrawerBackdrop onClose={closePanel}>
                 <aside
                     className="application-drawer account-form-drawer"
                     role="dialog"
@@ -394,10 +395,10 @@ export function AccountView({
                         </footer>
                     </form>
                 </aside>
-            </div>
+            </DrawerBackdrop>
         )}
         {activePanel === "password" && (
-            <div className="drawer-backdrop" onClick={closePanel}>
+            <DrawerBackdrop onClose={closePanel}>
                 <aside
                     className="application-drawer account-form-drawer"
                     role="dialog"
@@ -466,7 +467,7 @@ export function AccountView({
                         </footer>
                     </form>
                 </aside>
-            </div>
+            </DrawerBackdrop>
         )}
         </>
     );

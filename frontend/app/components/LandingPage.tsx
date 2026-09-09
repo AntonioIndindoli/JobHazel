@@ -7,6 +7,8 @@ import type { AuthStatus, Mode } from "../lib/types";
 import { AppIcon } from "./AppIcon";
 import { AuthPanel } from "./AuthPanel";
 import { GrowingBranches } from "./GrowingBranches";
+import { LandingProductStory } from "./LandingProductStory";
+import { ThemeToggle } from "./ThemeToggle";
 
 type LandingPageProps = {
     authStatus: AuthStatus;
@@ -22,27 +24,6 @@ type LandingPageProps = {
     onPasswordChange: (password: string) => void;
     onSubmit: ComponentProps<typeof AuthPanel>["onSubmit"];
 };
-
-const features = [
-    {
-        icon: "applications" as const,
-        title: "One clear pipeline",
-        description:
-            "Keep every role, company, status, and deadline organized in one calm workspace.",
-    },
-    {
-        icon: "analytics" as const,
-        title: "See what is working",
-        description:
-            "Understand your momentum, strongest sources, and conversion rate without a spreadsheet.",
-    },
-    {
-        icon: "checklist" as const,
-        title: "Never miss a follow-up",
-        description:
-            "Turn interviews and applications into timely tasks so the right next step is always visible.",
-    },
-];
 
 export function LandingPage({
     authStatus,
@@ -60,6 +41,29 @@ export function LandingPage({
 }: LandingPageProps) {
     const pageRef = useRef<HTMLElement>(null);
     const productRef = useRef<HTMLDivElement>(null);
+    const previewRef = useRef<HTMLIFrameElement>(null);
+
+    useEffect(() => {
+        const preview = previewRef.current;
+        if (!preview) return;
+
+        function syncPreviewTheme() {
+            const previewRoot = preview?.contentDocument?.documentElement;
+            if (previewRoot) {
+                previewRoot.dataset.theme = document.documentElement.dataset.theme ?? "light";
+            }
+        }
+
+        syncPreviewTheme();
+        preview.addEventListener("load", syncPreviewTheme);
+        const observer = new MutationObserver(syncPreviewTheme);
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+        return () => {
+            preview.removeEventListener("load", syncPreviewTheme);
+            observer.disconnect();
+        };
+    }, []);
 
     useEffect(() => {
         const page = pageRef.current;
@@ -96,7 +100,7 @@ export function LandingPage({
             if (!product) return;
             product.style.setProperty(
                 "--landing-dashboard-scale",
-                String(product.clientWidth / 1920),
+                String(product.clientWidth / 1610),
             );
         }
 
@@ -139,6 +143,7 @@ export function LandingPage({
                 </nav>
 
                 <div className="landing-nav-actions">
+                    <ThemeToggle variant="icon" />
                     <button type="button" className="landing-text-button" onClick={() => onAuthOpen("login")}>
                         Sign in
                     </button>
@@ -180,6 +185,7 @@ export function LandingPage({
                 >
                     <div className="landing-product" ref={productRef}>
                         <iframe
+                            ref={previewRef}
                             className="landing-product-frame"
                             src="/dashboard-preview"
                             title="JobHazel dashboard preview"
@@ -190,56 +196,7 @@ export function LandingPage({
                 </div>
             </section>
 
-            <section className="landing-feature-section" id="features">
-                <div className="landing-section-heading" data-reveal>
-                    <span>Everything in one place</span>
-                    <h2>A smarter home for your job search</h2>
-                    <p>Built to reduce busywork and help you take the next best action.</p>
-                </div>
-                <div className="landing-feature-grid">
-                    {features.map((feature) => (
-                        <article className="landing-feature-card" data-reveal key={feature.title}>
-                            <div className="landing-feature-icon"><AppIcon name={feature.icon} size={24} /></div>
-                            <h3>{feature.title}</h3>
-                            <p>{feature.description}</p>
-                        </article>
-                    ))}
-                </div>
-            </section>
-
-            <section className="landing-steps-section" id="how-it-works">
-                <div className="landing-steps-copy" data-reveal>
-                    <span>Simple by design</span>
-                    <h2>From saved role to signed offer.</h2>
-                    <p>Your entire search stays clear, current, and ready for whatever comes next.</p>
-                    <button type="button" className="landing-button" onClick={() => onAuthOpen("signup")}>
-                        Build your pipeline <AppIcon name="arrow-right" size={18} />
-                    </button>
-                </div>
-                <ol className="landing-steps">
-                    <li data-reveal><b>01</b><span><strong>Capture every opportunity</strong><small>Add a role manually or import the job details.</small></span></li>
-                    <li data-reveal><b>02</b><span><strong>Move through your pipeline</strong><small>Track each stage from saved to offer.</small></span></li>
-                    <li data-reveal><b>03</b><span><strong>Follow through with confidence</strong><small>Keep interviews, contacts, and tasks connected.</small></span></li>
-                </ol>
-            </section>
-
-            <section className="landing-cta" data-reveal>
-                <Image src="/JobHazelIcon.png" alt="" width={52} height={52} />
-                <h2>Your next opportunity deserves a clear plan.</h2>
-                <p>Start building a job search that feels focused, not frantic.</p>
-                <button type="button" className="landing-button landing-button-light" onClick={() => onAuthOpen("signup")}>
-                    Get started for free <AppIcon name="arrow-right" size={18} />
-                </button>
-            </section>
-
-            <footer className="landing-footer">
-                <a className="landing-brand" href="#top">
-                    <Image src="/JobHazelIcon.png" alt="" width={30} height={30} />
-                    <span>JobHazel</span>
-                </a>
-                <p>Keep your search moving.</p>
-                <span>© {new Date().getFullYear()} JobHazel</span>
-            </footer>
+            <LandingProductStory onGetStarted={() => onAuthOpen("signup")} />
 
             {isAuthOpen && (
                 <AuthPanel

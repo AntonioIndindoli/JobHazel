@@ -173,7 +173,7 @@
 
 .pipeline-header p {
     margin: 0 0 4px;
-    color: var(--muted);
+    color: var(--green);
     font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
@@ -182,7 +182,8 @@
 
 .pipeline-header h2 {
     margin: 0;
-    color: var(--text-heading);
+    color: var(--green);
+font-weight: 800;
     font-size: 17px;
     line-height: 1.2;
 }

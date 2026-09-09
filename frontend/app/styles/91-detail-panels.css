@@ -392,14 +392,17 @@
     border: 1px solid var(--border);
     border-radius: 7px;
     background: var(--surface-soft);
-    color: var(--text-muted);
+    color: var(--text-heading);
     font: inherit;
     font-size: 13px;
+    font-weight: 400;
+    text-align: left;
     white-space: nowrap;
 }
 
-.applications-date-filter-trigger strong {
-    color: var(--text-secondary);
+.applications-date-filter-trigger span {
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .applications-date-filter-popover {
@@ -408,25 +411,29 @@
     right: 0;
     z-index: 30;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    width: 340px;
-    padding: 16px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 12px;
+    width: 360px;
+    max-width: calc(100vw - 32px);
+    padding: 20px;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 12px;
     background: var(--surface);
-    box-shadow: 0 14px 34px rgba(20, 33, 61, .16);
+    box-shadow: 0 12px 32px rgba(20, 33, 61, .12), 0 2px 6px rgba(20, 33, 61, .04);
+    text-align: left;
 }
 
 .applications-date-filter-heading {
     grid-column: 1 / -1;
     display: grid;
-    gap: 2px;
+    gap: 4px;
+    line-height: 1.4;
 }
 
 .applications-date-filter-heading strong {
     color: var(--text-heading);
-    font-size: 14px;
+    font-size: 15px;
+    font-weight: 700;
 }
 
 .applications-date-filter-heading span {
@@ -435,36 +442,74 @@
 }
 
 .applications-date-filter-popover label {
+    min-width: 0;
     display: grid;
     gap: 6px;
     color: var(--text-muted);
     font-size: 12px;
-    font-weight: 750;
+    font-weight: 600;
 }
 
 .applications-date-filter-popover input {
     min-width: 0;
     width: 100%;
-    padding: 9px;
+    height: 42px;
+    padding: 10px;
     border: 1px solid var(--border);
     border-radius: 7px;
     background: var(--surface-soft);
     color: var(--text-heading);
     font: inherit;
+    font-size: 13px;
+    font-weight: 400;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.applications-date-filter-popover input:hover {
+    border-color: var(--border-strong);
+}
+
+.applications-date-filter-popover input:focus-visible {
+    border-color: var(--green);
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
 }
 
 .applications-date-filter-actions {
     grid-column: 1 / -1;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding-top: 3px;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
 }
 
-.applications-date-filter-actions .primary {
-    min-height: 34px;
-    padding: 7px 13px;
-    font-size: 12px;
+.applications-date-filter-actions button {
+    min-height: 36px;
+    min-width: 68px;
+    padding: 8px 14px;
+    border-radius: 7px;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.applications-date-filter-clear {
+    border: 1px solid var(--border);
+    background: var(--surface-soft);
+    color: var(--text-secondary);
+}
+
+.applications-date-filter-clear:hover {
+    background: var(--surface-muted);
+    border-color: var(--border-strong);
+}
+
+.applications-date-filter-actions button:focus-visible {
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
 }
 
 /* Shared detail-panel system for applications, interviews, and tasks. */
@@ -616,11 +661,7 @@
     min-height: 620px;
     padding: clamp(26px, 2.8vw, 36px) clamp(28px, 3.2vw, 42px);
     border-color: var(--border-strong);
-    border-radius: 0 16px 16px 0;
     background: var(--surface);
-    box-shadow:
-        inset 6px 0 var(--status-accent, var(--application-status-saved)),
-        0 12px 28px rgba(31, 60, 100, .05);
 }
 
 .applications-page .application-detail-header {
@@ -953,9 +994,6 @@
         min-height: 100dvh;
         padding: 24px 20px 32px;
         border-radius: 12px;
-        box-shadow:
-            inset 6px 0 var(--status-accent, var(--application-status-saved)),
-            0 10px 24px rgba(31, 60, 100, .05);
     }
 
     .applications-page .application-detail-heading h2 {

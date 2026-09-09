@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 
+import { AppIcon } from "./AppIcon";
+
 type ColorTheme = "light" | "dark";
 
-export function ThemeToggle() {
+export function ThemeToggle({ variant = "switch" }: { variant?: "switch" | "icon" }) {
     const [theme, setTheme] = useState<ColorTheme>("light");
 
     useEffect(() => {
@@ -18,7 +20,7 @@ export function ThemeToggle() {
     }, []);
 
     function toggleTheme() {
-        const nextTheme: ColorTheme = theme === "dark" ? "light" : "dark";
+        const nextTheme: ColorTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
         setTheme(nextTheme);
         document.documentElement.dataset.theme = nextTheme;
 
@@ -33,14 +35,19 @@ export function ThemeToggle() {
         <button
             type="button"
             role="switch"
-            className={theme === "dark" ? "appearance-switch active" : "appearance-switch"}
+            className={variant === "icon" ? "landing-theme-toggle" : theme === "dark" ? "appearance-switch active" : "appearance-switch"}
             aria-label="Dark mode"
             aria-checked={theme === "dark"}
+            title={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
             onClick={toggleTheme}
         >
-            <span className="account-switch-track" aria-hidden="true">
-                <span />
-            </span>
+            {variant === "icon" ? (
+                <AppIcon name={theme === "dark" ? "sun" : "moon"} size={20} />
+            ) : (
+                <span className="account-switch-track" aria-hidden="true">
+                    <span />
+                </span>
+            )}
         </button>
     );
 }

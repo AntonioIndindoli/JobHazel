@@ -396,7 +396,8 @@
   line-height: 1.2;
 }
 
-.analytics-kpi-toolbar label {
+.analytics-timeframe-control {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -405,8 +406,22 @@
   font-weight: 800;
 }
 
-.analytics-kpi-toolbar select {
-  min-height: 34px;
+.analytics-timeframe-control::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  bottom: 18px;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid var(--text-secondary);
+  border-bottom: 2px solid var(--text-secondary);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.analytics-timeframe-control select {
+  appearance: none;
+  min-height: 40px;
   border: 1px solid var(--border);
   border-radius: 7px;
   padding: 6px 32px 6px 10px;
@@ -417,7 +432,7 @@
   cursor: pointer;
 }
 
-.analytics-kpi-toolbar select:focus-visible {
+.analytics-timeframe-control select:focus-visible {
   outline: 2px solid rgba(11, 107, 255, .28);
   outline-offset: 2px;
 }
@@ -521,7 +536,7 @@
     align-items: flex-start;
   }
 
-  .analytics-kpi-toolbar label {
+  .analytics-timeframe-control {
     align-items: flex-start;
     flex-direction: column;
     gap: 4px;

@@ -1,11 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 import {
-    ANALYTICS_TIMEFRAME_OPTIONS,
     buildAnalyticsKpiCards,
-    DEFAULT_ANALYTICS_TIMEFRAME,
 } from "../lib/application-analytics";
 import type { AnalyticsTimeframeDays } from "../lib/application-analytics";
 import type {
@@ -24,6 +22,7 @@ type AnalyticsViewProps = {
     applications: Application[];
     historyByApp: Record<string, ActivityLog[]>;
     interviews: Interview[];
+    kpiTimeframeDays: AnalyticsTimeframeDays;
     weeklyRangeWeeks: WeeklyRangeWeeks;
     onViewApplication: (applicationId: string) => void;
     onWeeklyRangeChange: (weeks: WeeklyRangeWeeks) => void;
@@ -33,12 +32,11 @@ export function AnalyticsView({
     applications,
     historyByApp,
     interviews,
+    kpiTimeframeDays,
     weeklyRangeWeeks,
     onViewApplication,
     onWeeklyRangeChange,
 }: AnalyticsViewProps) {
-    const [kpiTimeframeDays, setKpiTimeframeDays] =
-        useState<AnalyticsTimeframeDays>(DEFAULT_ANALYTICS_TIMEFRAME);
     const kpiCards = useMemo(
         () =>
             buildAnalyticsKpiCards(
@@ -55,24 +53,6 @@ export function AnalyticsView({
             <section className="analytics-kpi-section" aria-labelledby="analytics-kpi-title">
                 <header className="analytics-kpi-toolbar">
                     <h2 id="analytics-kpi-title">Key performance indicators</h2>
-                    <label>
-                        <span>Time frame</span>
-                        <select
-                            aria-label="KPI time frame"
-                            value={kpiTimeframeDays}
-                            onChange={(event) =>
-                                setKpiTimeframeDays(
-                                    Number(event.target.value) as AnalyticsTimeframeDays,
-                                )
-                            }
-                        >
-                            {ANALYTICS_TIMEFRAME_OPTIONS.map((option) => (
-                                <option key={option.days} value={option.days}>
-                                    {option.label}
-                                </option>
-                            ))}
-                        </select>
-                    </label>
                 </header>
                 <div className="analytics-kpi-grid">
                     {kpiCards.map((card) => (

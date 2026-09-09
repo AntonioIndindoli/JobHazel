@@ -109,6 +109,16 @@
   font-size: 13px;
 }
 
+.applications-toolbar>select,
+.applications-toolbar.contacts-toolbar>select,
+.applications-toolbar .applications-date-filter-trigger {
+  appearance: none;
+  padding-right: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23667085' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 14px center;
+  background-repeat: no-repeat;
+}
+
 .applications-toolbar .secondary {
   padding: 10px 14px;
   white-space: nowrap;
@@ -419,16 +429,13 @@
   overflow: hidden;
   border: 1px solid var(--border);
   background: var(--surface);
-  box-shadow: 0 10px 26px rgba(31, 60, 100, .035);
 }
 
 .application-detail-panel {
   min-width: 0;
   min-height: 520px;
   padding: 24px;
-  box-shadow: inset 4px 0 var(--status-accent, var(--application-status-saved));
-  border-bottom-right-radius: 12px;
-  border-top-right-radius: 12px;
+  border-radius: 12px;
 }
 
 .application-list-header {

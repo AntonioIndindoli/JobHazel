@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 import { TASK_TYPE_LABELS, TASK_TYPES } from "../lib/constants";
 import type { Application, TaskFormValues } from "../lib/types";
 import { AppIcon } from "./AppIcon";
+import { DrawerBackdrop } from "./DrawerBackdrop";
 
 type TaskDrawerProps = {
     applications: Application[];
@@ -34,7 +35,7 @@ export function TaskDrawer({
     const isEditing = Boolean(editingId);
 
     return (
-        <div className="drawer-backdrop" onClick={onClose}>
+        <DrawerBackdrop onClose={onClose}>
             <aside
                 className="application-drawer task-drawer"
                 role="dialog"
@@ -172,6 +173,6 @@ export function TaskDrawer({
                     </footer>
                 </form>
             </aside>
-        </div>
+        </DrawerBackdrop>
     );
 }

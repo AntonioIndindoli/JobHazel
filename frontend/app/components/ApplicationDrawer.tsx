@@ -5,6 +5,7 @@ import type { FormEvent } from "react";
 import { SOURCE_OPTIONS, STATUSES, STATUS_LABELS } from "../lib/constants";
 import type { Application, ApplicationFormValues } from "../lib/types";
 import { AppIcon } from "./AppIcon";
+import { DrawerBackdrop } from "./DrawerBackdrop";
 
 type ApplicationDrawerProps = {
     duplicateMatch?: Application | null;
@@ -30,7 +31,7 @@ export function ApplicationDrawer({
     const isEditing = Boolean(editingId);
 
     return (
-        <div className="drawer-backdrop" onClick={onClose}>
+        <DrawerBackdrop onClose={onClose}>
             <aside
                 className="application-drawer"
                 role="dialog"
@@ -233,6 +234,6 @@ export function ApplicationDrawer({
                     </footer>
                 </form>
             </aside>
-        </div>
+        </DrawerBackdrop>
     );
 }

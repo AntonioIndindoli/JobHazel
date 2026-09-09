@@ -21,7 +21,12 @@ import { SettingsView } from "./components/SettingsView";
 import { TaskDrawer } from "./components/TaskDrawer";
 import { TasksView } from "./components/TasksView";
 import { DashboardHome } from "./components/dashboard/DashboardHome";
-import { countActiveApplications } from "./lib/application-analytics";
+import {
+    ANALYTICS_TIMEFRAME_OPTIONS,
+    countActiveApplications,
+    DEFAULT_ANALYTICS_TIMEFRAME,
+    type AnalyticsTimeframeDays,
+} from "./lib/application-analytics";
 import { toLocalDateTimeInputs } from "./lib/interview-utils";
 import { toTaskDueDateInput, toTaskDueDatePayload } from "./lib/task-utils";
 import {
@@ -119,6 +124,8 @@ function getInitialApplicationGoal(): ApplicationGoalSettings {
 }
 
 export default function MainPage() {
+    const [kpiTimeframeDays, setKpiTimeframeDays] =
+        useState<AnalyticsTimeframeDays>(DEFAULT_ANALYTICS_TIMEFRAME);
     const [mode, setMode] = useState<Mode>("signup");
     const [email, setEmail] = useState("");
     const [userEmail, setUserEmail] = useState("");
@@ -1368,7 +1375,29 @@ export default function MainPage() {
                         </div>
                     </>
                 ) : currentView === "analytics" ? (
-                    <h1 className="topbar-page-title">Analytics</h1>
+                    <>
+                        <h1 className="topbar-page-title">Analytics</h1>
+                        <div className="topbar-page-actions">
+                            <label className="analytics-timeframe-control">
+                                <span>Time frame</span>
+                                <select
+                                    aria-label="KPI time frame"
+                                    value={kpiTimeframeDays}
+                                    onChange={(event) =>
+                                        setKpiTimeframeDays(
+                                            Number(event.target.value) as AnalyticsTimeframeDays,
+                                        )
+                                    }
+                                >
+                                    {ANALYTICS_TIMEFRAME_OPTIONS.map((option) => (
+                                        <option key={option.days} value={option.days}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        </div>
+                    </>
                 ) : currentView === "applications" ? (
                     <>
                         <h1 className="topbar-page-title">Applications</h1>
@@ -1479,6 +1508,7 @@ export default function MainPage() {
                     applications={applications}
                     historyByApp={historyByApp}
                     interviews={interviews}
+                    kpiTimeframeDays={kpiTimeframeDays}
                     weeklyRangeWeeks={weeklyRangeWeeks}
                     onViewApplication={viewApplication}
                     onWeeklyRangeChange={setWeeklyRangeWeeks}

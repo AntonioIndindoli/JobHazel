@@ -37,7 +37,6 @@
         transform: translateX(0);
         visibility: visible;
         pointer-events: auto;
-        background: var(--surface-blue-strong);
     }
 
     .dashboard-shell.view-dashboard .sidebar-backdrop {
@@ -530,6 +529,7 @@
         inset: auto 0 0;
         z-index: 90;
         width: 100%;
+        max-width: none;
         max-height: min(80vh, 520px);
         overflow-y: auto;
         padding: 20px 18px calc(20px + env(safe-area-inset-bottom));

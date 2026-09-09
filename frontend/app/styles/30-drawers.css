@@ -301,7 +301,6 @@
         transform: translateX(0);
         visibility: visible;
         pointer-events: auto;
-        background: var(--surface-blue-strong);
     }
 
     .sidebar-backdrop {

@@ -824,7 +824,6 @@ export function PipelineVisualization({
         <section className="pipeline-graph" aria-labelledby="pipeline-heading">
             <header className="pipeline-header">
                 <div>
-                    <p>Pipeline</p>
                     <h2 id="pipeline-heading">
                         {visualization === "sankey"
                             ? "Application Flow"

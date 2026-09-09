@@ -420,10 +420,9 @@ export function ApplicationsView({
                             if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsAppliedDateOpen(false);
                         }}>
                             <button type="button" className="applications-date-filter-trigger" aria-haspopup="dialog" aria-expanded={isAppliedDateOpen} onClick={() => setIsAppliedDateOpen((open) => !open)}>
-                                <span><strong>Applied date:</strong> {filters.startDate || filters.endDate
+                                <span>Applied date: {filters.startDate || filters.endDate
                                     ? `${filters.startDate ? formatFilterDate(filters.startDate) : "Any"} – ${filters.endDate ? formatFilterDate(filters.endDate) : "Any"}`
                                     : "Any time"}</span>
-                                <AppIcon name="chevron-down" size={14} />
                             </button>
                             {isAppliedDateOpen && (
                                 <div className="applications-date-filter-popover" role="dialog" aria-label="Applied date range">
@@ -434,7 +433,7 @@ export function ApplicationsView({
                                     <label>From<input type="date" value={filters.startDate} max={filters.endDate || undefined} onChange={(event) => setFilters({ ...filters, startDate: event.target.value })} /></label>
                                     <label>To<input type="date" value={filters.endDate} min={filters.startDate || undefined} onChange={(event) => setFilters({ ...filters, endDate: event.target.value })} /></label>
                                     <div className="applications-date-filter-actions">
-                                        <button type="button" className="application-detail-posting-link" onClick={() => setFilters({ ...filters, startDate: "", endDate: "" })}>Clear</button>
+                                        <button type="button" className="applications-date-filter-clear" onClick={() => setFilters({ ...filters, startDate: "", endDate: "" })}>Clear</button>
                                         <button type="button" className="primary" onClick={() => setIsAppliedDateOpen(false)}>Done</button>
                                     </div>
                                 </div>

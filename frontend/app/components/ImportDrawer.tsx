@@ -11,6 +11,7 @@ import type {
     ParserDebug,
 } from "../lib/types";
 import { AppIcon } from "./AppIcon";
+import { DrawerBackdrop } from "./DrawerBackdrop";
 
 type ImportDrawerProps = {
     importCapture: ImportCaptureValues;
@@ -46,7 +47,7 @@ export function ImportDrawer({
     onStepChange,
 }: ImportDrawerProps) {
     return (
-        <div className="drawer-backdrop" onClick={onClose}>
+        <DrawerBackdrop onClose={onClose}>
             <aside
                 className="application-drawer import-drawer"
                 role="dialog"
@@ -379,6 +380,6 @@ export function ImportDrawer({
                     </form>
                 )}
             </aside>
-        </div>
+        </DrawerBackdrop>
     );
 }
