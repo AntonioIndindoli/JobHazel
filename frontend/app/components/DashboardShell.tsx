@@ -79,6 +79,7 @@ export function DashboardShell({
     function getNavItemView(label: string): DashboardView | null {
         if (label === "Dashboard") return "dashboard";
         if (label === "Applications") return "applications";
+        if (label === "Resumes") return "resumes";
         if (label === "Analytics") return "analytics";
         if (label === "Interviews") return "interviews";
         if (label === "Tasks") return "tasks";

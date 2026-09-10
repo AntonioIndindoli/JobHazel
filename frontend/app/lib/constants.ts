@@ -185,6 +185,7 @@ export const DEFAULT_APPLICATION_GOAL = {
 export const NAV_ITEMS: Array<{ label: string; icon: AppIconName }> = [
     { label: "Dashboard", icon: "dashboard" },
     { label: "Applications", icon: "applications" },
+    { label: "Resumes", icon: "document" },
     { label: "Analytics", icon: "analytics" },
     { label: "Interviews", icon: "calendar" },
     { label: "Tasks", icon: "checklist" },

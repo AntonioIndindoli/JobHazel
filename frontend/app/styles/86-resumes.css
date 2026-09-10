@@ -1,0 +1,822 @@
+/* Resume library and upload workflow. */
+
+.resume-page {
+    width: 100%;
+    max-width: 1460px;
+    margin: 0 auto;
+    padding: 30px 34px 46px;
+}
+
+.resume-page-intro {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 25px;
+}
+
+.resume-page-kicker,
+.resume-dialog-eyebrow {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--success);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+}
+
+.resume-page-intro h2 {
+    margin: 0;
+    color: var(--text-heading);
+    font-size: clamp(24px, 2.3vw, 33px);
+    line-height: 1.15;
+    letter-spacing: -.025em;
+}
+
+.resume-page-intro > div > p {
+    margin: 8px 0 0;
+    color: var(--text-muted);
+    font-size: 15px;
+}
+
+.resume-library-summary {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 8px;
+    margin: 0;
+}
+
+.resume-library-summary div {
+    min-width: 94px;
+    padding: 11px 14px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: var(--surface);
+}
+
+.resume-library-summary dt {
+    color: var(--text-soft);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+.resume-library-summary dd {
+    margin: 2px 0 0;
+    color: var(--text-heading);
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.resume-library-toolbar {
+    display: flex;
+    justify-content: flex-start;
+    margin-bottom: 18px;
+}
+
+.resume-filter-tabs {
+    display: inline-flex;
+    gap: 3px;
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: var(--surface-muted);
+}
+
+.resume-filter-tabs button {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-height: 35px;
+    padding: 6px 11px;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.resume-filter-tabs button:hover {
+    color: var(--text-primary);
+}
+
+.resume-filter-tabs button[aria-pressed="true"] {
+    background: var(--surface);
+    color: var(--text-primary);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, .08);
+}
+
+.resume-filter-tabs button span {
+    display: inline-grid;
+    min-width: 20px;
+    height: 20px;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--surface-slate);
+    color: var(--text-soft);
+    font-size: 11px;
+}
+
+.resume-card-grid,
+.resume-loading-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.resume-card {
+    position: relative;
+    display: flex;
+    min-width: 0;
+    min-height: 338px;
+    flex-direction: column;
+    padding: 20px;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    background: var(--surface);
+    box-shadow: 0 3px 12px rgba(15, 23, 42, .035);
+    transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+.resume-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: 0 9px 24px rgba(15, 23, 42, .075);
+    transform: translateY(-1px);
+}
+
+.resume-card.is-archived {
+    background: color-mix(in srgb, var(--surface) 76%, var(--surface-muted));
+}
+
+.resume-card-topline {
+    display: flex;
+    align-items: center;
+    min-height: 40px;
+    gap: 9px;
+}
+
+.resume-file-mark {
+    display: inline-grid;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid var(--danger-border);
+    border-radius: 10px;
+    background: var(--danger-surface);
+    color: var(--danger);
+}
+
+.resume-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: auto;
+    padding: 5px 9px;
+    border: 1px solid var(--success-border);
+    border-radius: 999px;
+    background: var(--success-surface);
+    color: var(--success);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.resume-status-pill::before {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    content: "";
+}
+
+.resume-status-pill.archived {
+    border-color: var(--border);
+    background: var(--surface-slate);
+    color: var(--text-muted);
+}
+
+.resume-icon-button {
+    display: inline-grid;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 auto;
+    place-items: center;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--text-muted);
+}
+
+.resume-icon-button:hover:not(:disabled),
+.resume-icon-button[aria-expanded="true"] {
+    border-color: var(--border);
+    background: var(--surface-muted);
+    color: var(--text-primary);
+}
+
+.resume-icon-button:disabled {
+    cursor: not-allowed;
+    opacity: .5;
+}
+
+.resume-actions-menu {
+    position: relative;
+}
+
+.resume-actions-popover {
+    position: absolute;
+    z-index: 12;
+    top: 42px;
+    right: 0;
+    width: 188px;
+    padding: 5px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-translucent);
+    box-shadow: 0 14px 35px rgba(15, 23, 42, .17);
+    backdrop-filter: blur(10px);
+}
+
+.resume-actions-popover button {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+}
+
+.resume-actions-popover button:hover,
+.resume-actions-popover button:focus-visible {
+    background: var(--surface-blue);
+    color: var(--text-primary);
+    outline: 0;
+}
+
+.resume-card-heading {
+    margin: 20px 0 17px;
+}
+
+.resume-card-heading h3 {
+    overflow: hidden;
+    margin: 0;
+    color: var(--text-heading);
+    font-size: 18px;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.resume-card-heading p {
+    overflow: hidden;
+    margin: 5px 0 0;
+    color: var(--text-muted);
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.resume-card-details {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(80px, .65fr);
+    gap: 14px 18px;
+    margin: 0;
+    padding: 16px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+.resume-card-details div {
+    min-width: 0;
+}
+
+.resume-card-details dt {
+    margin-bottom: 3px;
+    color: var(--text-soft);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.resume-card-details dd {
+    overflow: hidden;
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 650;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.resume-card-notes {
+    display: -webkit-box;
+    overflow: hidden;
+    margin: 14px 0 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+}
+
+.resume-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 18px;
+}
+
+.resume-download-button,
+.resume-edit-button {
+    display: inline-flex;
+    min-height: 34px;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    color: var(--accent-strong);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.resume-download-button {
+    gap: 7px;
+    padding: 6px 0;
+}
+
+.resume-edit-button {
+    padding: 6px;
+    color: var(--text-muted);
+}
+
+.resume-download-button:hover:not(:disabled),
+.resume-edit-button:hover:not(:disabled) {
+    color: var(--text-primary);
+}
+
+.resume-download-button:disabled,
+.resume-edit-button:disabled {
+    cursor: wait;
+    opacity: .6;
+}
+
+.resume-empty-state,
+.resume-error-state,
+.resume-filter-empty {
+    display: flex;
+    min-height: 390px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 40px 24px;
+    border: 1px dashed var(--border-strong);
+    border-radius: 16px;
+    background: var(--surface-translucent);
+    text-align: center;
+}
+
+.resume-filter-empty {
+    min-height: 260px;
+}
+
+.resume-empty-illustration,
+.resume-error-icon {
+    display: inline-grid;
+    width: 62px;
+    height: 62px;
+    margin-bottom: 17px;
+    place-items: center;
+    border: 1px solid var(--success-border);
+    border-radius: 16px;
+    background: var(--success-surface);
+    color: var(--success);
+}
+
+.resume-error-icon {
+    border-color: var(--danger-border);
+    background: var(--danger-surface);
+    color: var(--danger);
+}
+
+.resume-empty-state h3,
+.resume-error-state h2,
+.resume-filter-empty h3 {
+    margin: 0;
+    color: var(--text-heading);
+    font-size: 21px;
+}
+
+.resume-empty-state p,
+.resume-error-state p,
+.resume-filter-empty p {
+    max-width: 430px;
+    margin: 9px 0 20px;
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.resume-filter-empty > svg {
+    margin-bottom: 13px;
+    color: var(--text-faint);
+}
+
+.resume-card-skeleton {
+    min-height: 338px;
+    border: 1px solid var(--border);
+    border-radius: 15px;
+    background:
+        linear-gradient(100deg, transparent 25%, color-mix(in srgb, var(--surface) 70%, transparent) 47%, transparent 70%) 0 0 / 220% 100%,
+        var(--surface-muted);
+    animation: resume-skeleton 1.4s ease-in-out infinite;
+}
+
+@keyframes resume-skeleton {
+    from { background-position: 100% 0, 0 0; }
+    to { background-position: -100% 0, 0 0; }
+}
+
+.resume-dialog {
+    width: min(620px, calc(100vw - 28px));
+    max-height: min(790px, calc(100dvh - 28px));
+    margin: auto;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 17px;
+    background: var(--surface);
+    color: var(--text-primary);
+    box-shadow: 0 28px 80px rgba(15, 23, 42, .35);
+}
+
+.resume-dialog::backdrop {
+    background: rgba(7, 12, 20, .55);
+    backdrop-filter: blur(3px);
+}
+
+.resume-dialog form {
+    display: flex;
+    max-height: inherit;
+    flex-direction: column;
+}
+
+.resume-dialog-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 23px 24px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.resume-dialog-header h2 {
+    margin: 0;
+    color: var(--text-heading);
+    font-size: 23px;
+    line-height: 1.2;
+}
+
+.resume-dialog-header p {
+    margin: 6px 0 0;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.resume-dialog-body {
+    overflow-y: auto;
+    padding: 22px 24px;
+}
+
+.resume-dialog-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    background: var(--surface-soft);
+}
+
+.resume-dialog-footer .primary,
+.resume-dialog-footer .alternative {
+    min-height: 40px;
+}
+
+.resume-dropzone {
+    display: flex;
+    min-height: 175px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 21px;
+    border: 1px dashed var(--border-strong);
+    border-radius: 13px;
+    background: var(--surface-soft);
+    text-align: center;
+    transition: border-color .15s ease, background .15s ease;
+}
+
+.resume-dropzone.is-dragging {
+    border-color: var(--accent);
+    background: var(--surface-blue);
+}
+
+.resume-dropzone.has-error {
+    border-color: var(--danger);
+}
+
+.resume-dropzone-icon {
+    display: inline-grid;
+    width: 47px;
+    height: 47px;
+    margin-bottom: 10px;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--surface-blue-strong);
+    color: var(--accent-strong);
+}
+
+.resume-selected-file,
+.resume-dropzone > div {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    flex-direction: column;
+}
+
+.resume-dropzone strong {
+    overflow: hidden;
+    max-width: 430px;
+    color: var(--text-heading);
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.resume-dropzone span:not(.resume-dropzone-icon) {
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.resume-file-picker {
+    min-height: 35px;
+    margin-top: 13px;
+    padding: 7px 12px;
+    font-size: 12px;
+}
+
+.resume-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.resume-dropzone > small {
+    margin-top: 8px;
+    color: var(--text-soft);
+    font-size: 10px;
+}
+
+.resume-field-error {
+    margin: 7px 0 0;
+    color: var(--danger);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.resume-form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.resume-edit-dialog .resume-form-grid {
+    margin-top: 0;
+}
+
+.resume-field {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.resume-field > span {
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.resume-field > span small {
+    margin-left: 4px;
+    color: var(--text-soft);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.resume-field input,
+.resume-field textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--surface-soft);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 14px;
+    outline: none;
+}
+
+.resume-field input {
+    min-height: 42px;
+    padding: 9px 11px;
+}
+
+.resume-field textarea {
+    min-height: 87px;
+    padding: 10px 11px;
+    resize: vertical;
+}
+
+.resume-field input:focus,
+.resume-field textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.resume-field input:disabled,
+.resume-field textarea:disabled {
+    cursor: not-allowed;
+    opacity: .65;
+}
+
+.resume-version-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin-top: 18px;
+    padding: 11px 12px;
+    border: 1px solid var(--accent-border);
+    border-radius: 9px;
+    background: var(--surface-blue);
+    color: var(--accent-strong);
+}
+
+.resume-version-note svg {
+    flex: 0 0 auto;
+    margin-top: 1px;
+}
+
+.resume-version-note p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.resume-upload-progress {
+    margin-top: 17px;
+}
+
+.resume-upload-progress > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 7px;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.resume-upload-progress progress {
+    width: 100%;
+    height: 7px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 999px;
+    background: var(--surface-muted);
+    accent-color: var(--success);
+}
+
+.resume-action-error {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    margin-top: 15px;
+    padding: 11px 12px;
+    border: 1px solid var(--danger-border);
+    border-radius: 9px;
+    background: var(--danger-surface);
+    color: var(--danger);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.resume-action-error svg {
+    flex: 0 0 auto;
+}
+
+.resume-button-spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: resume-spin .7s linear infinite;
+}
+
+@keyframes resume-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 1180px) {
+    .resume-card-grid,
+    .resume-loading-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .resume-page {
+        padding: 22px 16px 34px;
+    }
+
+    .resume-page-intro {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .resume-library-summary {
+        width: 100%;
+    }
+
+    .resume-library-summary div {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .resume-card-grid,
+    .resume-loading-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .resume-filter-tabs {
+        width: 100%;
+    }
+
+    .resume-filter-tabs button {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .resume-dialog {
+        width: calc(100vw - 16px);
+        max-height: calc(100dvh - 16px);
+        border-radius: 14px;
+    }
+
+    .resume-dialog-header,
+    .resume-dialog-body,
+    .resume-dialog-footer {
+        padding-right: 17px;
+        padding-left: 17px;
+    }
+
+    .resume-dialog-footer .primary,
+    .resume-dialog-footer .alternative {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .resume-card,
+    .resume-dropzone {
+        transition: none;
+    }
+
+    .resume-card-skeleton,
+    .resume-button-spinner {
+        animation: none;
+    }
+}

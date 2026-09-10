@@ -29,6 +29,7 @@ export type AuthStatus = "checking" | "signedOut" | "signedIn";
 export type DashboardView =
     | "dashboard"
     | "applications"
+    | "resumes"
     | "analytics"
     | "interviews"
     | "tasks"
@@ -179,6 +180,49 @@ export type ContactFormValues = {
     notes: string;
     companyName: string;
     applicationId: string;
+};
+
+export type ResumeUploadStatus = "PENDING" | "READY" | "FAILED";
+
+export type ResumeVersion = {
+    id: string;
+    name: string;
+    targetRole: string | null;
+    originalFilename: string;
+    mimeType: string;
+    sizeBytes: number;
+    checksum: string | null;
+    uploadStatus: ResumeUploadStatus;
+    notes: string | null;
+    archivedAt: string | null;
+    applicationCount: number;
+    createdAt: string;
+    updatedAt: string;
+};
+
+export type ResumeUploadMetadata = {
+    name: string;
+    targetRole: string | null;
+    originalFilename: string;
+    mimeType: "application/pdf";
+    sizeBytes: number;
+    checksum: string;
+    notes: string | null;
+};
+
+export type ResumeUploadInitiation = {
+    resume: ResumeVersion;
+    objectKey: string;
+    uploadUrl: string;
+    expiresInSeconds: number;
+    requiredHeaders: Record<string, string>;
+};
+
+export type ResumeMetadataUpdate = {
+    name?: string;
+    targetRole?: string | null;
+    notes?: string | null;
+    archived?: boolean;
 };
 
 export type ImportCaptureValues = {

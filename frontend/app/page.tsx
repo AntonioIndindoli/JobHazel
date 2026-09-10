@@ -17,6 +17,8 @@ import { ImportDrawer } from "./components/ImportDrawer";
 import { InterviewDrawer } from "./components/InterviewDrawer";
 import { InterviewsView } from "./components/InterviewsView";
 import { LandingPage } from "./components/LandingPage";
+import { ResumeLibraryView } from "./components/ResumeLibraryView";
+import { ResumeUploadDialog } from "./components/ResumeUploadDialog";
 import { SettingsView } from "./components/SettingsView";
 import { TaskDrawer } from "./components/TaskDrawer";
 import { TasksView } from "./components/TasksView";
@@ -29,6 +31,14 @@ import {
 } from "./lib/application-analytics";
 import { toLocalDateTimeInputs } from "./lib/interview-utils";
 import { toTaskDueDateInput, toTaskDueDatePayload } from "./lib/task-utils";
+import {
+    completeResumeUpload,
+    createResumeDownloadUrl,
+    getResumeErrorMessage,
+    initiateResumeUpload,
+    listResumes,
+    updateResumeMetadata,
+} from "./lib/resume-api";
 import {
     ACCESS_TOKEN_KEY,
     APPLICATION_GOAL_PERIOD_OPTIONS,
@@ -64,6 +74,9 @@ import type {
     InterviewFormValues,
     Mode,
     ParserDebug,
+    ResumeMetadataUpdate,
+    ResumeUploadMetadata,
+    ResumeVersion,
     Task,
     TaskAutomationPreferences,
     TaskFormValues,
@@ -140,6 +153,11 @@ export default function MainPage() {
     const [interviews, setInterviews] = useState<Interview[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
     const [contacts, setContacts] = useState<Contact[]>([]);
+    const [resumes, setResumes] = useState<ResumeVersion[]>([]);
+    const [isResumeLibraryLoading, setIsResumeLibraryLoading] = useState(false);
+    const [resumeLibraryError, setResumeLibraryError] = useState("");
+    const [busyResumeId, setBusyResumeId] = useState<string | null>(null);
+    const [isResumeUploadOpen, setIsResumeUploadOpen] = useState(false);
     const [contactCreateRequest, setContactCreateRequest] = useState(0);
     const [form, setForm] = useState<ApplicationFormValues>(EMPTY_APPLICATION_FORM);
     const [editingId, setEditingId] = useState<string | null>(null);
@@ -309,6 +327,7 @@ export default function MainPage() {
             loadTasks(token);
             loadContacts(token);
             loadTaskAutomationPreferences(token);
+            loadResumeLibrary(token);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [authStatus, token]);
@@ -335,6 +354,7 @@ export default function MainPage() {
         loadTasks(data.accessToken);
         loadContacts(data.accessToken);
         loadTaskAutomationPreferences(data.accessToken);
+        loadResumeLibrary(data.accessToken);
     }
 
     async function signOut() {
@@ -355,6 +375,11 @@ export default function MainPage() {
         setInterviews([]);
         setTasks([]);
         setContacts([]);
+        setResumes([]);
+        setResumeLibraryError("");
+        setIsResumeLibraryLoading(false);
+        setBusyResumeId(null);
+        setIsResumeUploadOpen(false);
         setTaskPreferences({
             autoCreateFollowUpTasks: false,
             autoCreateThankYouTasks: false,
@@ -376,12 +401,16 @@ export default function MainPage() {
         setMessage(nextMessage);
     }
 
-    async function authedFetch(path: string, init: RequestInit = {}) {
+    async function authedFetch(
+        path: string,
+        init: RequestInit = {},
+        activeToken = token,
+    ) {
         const res = await fetch(`${API_BASE_URL}${path}`, {
             ...init,
             headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
+                Authorization: `Bearer ${activeToken}`,
                 ...(init.headers || {}),
             },
             credentials: "include",
@@ -529,6 +558,109 @@ export default function MainPage() {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) return setMessage(data.message ?? "Failed loading contacts");
         setContacts(data.contacts ?? []);
+    }
+
+    async function loadResumeLibrary(activeToken = token) {
+        if (!activeToken) return;
+        setIsResumeLibraryLoading(true);
+        setResumeLibraryError("");
+        try {
+            const nextResumes = await listResumes((path, init) =>
+                authedFetch(path, init, activeToken),
+            );
+            setResumes(nextResumes);
+        } catch (error) {
+            setResumeLibraryError(getResumeErrorMessage(error));
+        } finally {
+            setIsResumeLibraryLoading(false);
+        }
+    }
+
+    async function beginResumeUpload(metadata: ResumeUploadMetadata) {
+        return initiateResumeUpload((path, init) => authedFetch(path, init), metadata);
+    }
+
+    async function verifyResumeUpload(resumeId: string) {
+        return completeResumeUpload((path, init) => authedFetch(path, init), resumeId);
+    }
+
+    function addCompletedResume(resume: ResumeVersion) {
+        setResumes((current) => [
+            resume,
+            ...current.filter((candidate) => candidate.id !== resume.id),
+        ]);
+        setResumeLibraryError("");
+        setMessage(`${resume.name} was added to your resume library.`);
+    }
+
+    async function updateResumeDetails(
+        resume: ResumeVersion,
+        update: ResumeMetadataUpdate,
+    ) {
+        setBusyResumeId(resume.id);
+        try {
+            const updatedResume = await updateResumeMetadata(
+                (path, init) => authedFetch(path, init),
+                resume.id,
+                update,
+            );
+            setResumes((current) =>
+                current.map((candidate) =>
+                    candidate.id === updatedResume.id ? updatedResume : candidate,
+                ),
+            );
+            setMessage("Resume details updated.");
+        } catch (error) {
+            throw new Error(getResumeErrorMessage(error));
+        } finally {
+            setBusyResumeId(null);
+        }
+    }
+
+    async function changeResumeArchiveState(
+        resume: ResumeVersion,
+        archived: boolean,
+    ) {
+        setBusyResumeId(resume.id);
+        try {
+            const updatedResume = await updateResumeMetadata(
+                (path, init) => authedFetch(path, init),
+                resume.id,
+                { archived },
+            );
+            setResumes((current) =>
+                current.map((candidate) =>
+                    candidate.id === updatedResume.id ? updatedResume : candidate,
+                ),
+            );
+            setMessage(archived ? "Resume archived." : "Resume restored.");
+        } catch (error) {
+            setMessage(getResumeErrorMessage(error));
+        } finally {
+            setBusyResumeId(null);
+        }
+    }
+
+    async function downloadResume(resume: ResumeVersion) {
+        setBusyResumeId(resume.id);
+        try {
+            const downloadUrl = await createResumeDownloadUrl(
+                (path, init) => authedFetch(path, init),
+                resume.id,
+            );
+            const link = document.createElement("a");
+            link.href = downloadUrl;
+            link.target = "_blank";
+            link.rel = "noopener noreferrer";
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setMessage(`Downloading ${resume.originalFilename}.`);
+        } catch (error) {
+            setMessage(getResumeErrorMessage(error));
+        } finally {
+            setBusyResumeId(null);
+        }
     }
 
     async function saveContact(values: ContactFormValues, id?: string) {
@@ -1422,6 +1554,21 @@ export default function MainPage() {
                             </button>
                         </div>
                     </>
+                ) : currentView === "resumes" ? (
+                    <>
+                        <h1 className="topbar-page-title">Resumes</h1>
+                        <div className="topbar-page-actions">
+                            <button
+                                type="button"
+                                className="primary"
+                                aria-label="Upload resume"
+                                onClick={() => setIsResumeUploadOpen(true)}
+                            >
+                                <AppIcon name="plus" size={18} />
+                                <span>Upload Resume</span>
+                            </button>
+                        </div>
+                    </>
                 ) : currentView === "interviews" ? (
                     <>
                         <h1 className="topbar-page-title">Interviews</h1>
@@ -1502,6 +1649,18 @@ export default function MainPage() {
                     onStatusChange={transitionStatus}
                     onUpdateNotes={updateApplicationNotes}
                     onViewInterview={viewInterview}
+                />
+            ) : currentView === "resumes" ? (
+                <ResumeLibraryView
+                    busyResumeId={busyResumeId}
+                    error={resumeLibraryError}
+                    isLoading={isResumeLibraryLoading}
+                    resumes={resumes}
+                    onArchiveChange={changeResumeArchiveState}
+                    onDownload={downloadResume}
+                    onMetadataUpdate={updateResumeDetails}
+                    onRetry={() => loadResumeLibrary()}
+                    onUploadOpen={() => setIsResumeUploadOpen(true)}
                 />
             ) : currentView === "analytics" ? (
                 <AnalyticsView
@@ -1631,6 +1790,14 @@ export default function MainPage() {
                     onStepChange={setImportStep}
                 />
             )}
+
+            <ResumeUploadDialog
+                isOpen={isResumeUploadOpen}
+                onClose={() => setIsResumeUploadOpen(false)}
+                onComplete={verifyResumeUpload}
+                onInitiate={beginResumeUpload}
+                onSuccess={addCompletedResume}
+            />
         </DashboardShell>
     );
 }
