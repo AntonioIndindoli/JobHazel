@@ -24,6 +24,7 @@ export class ResumeApiError extends Error {
     this.name = "ResumeApiError";
     this.status = status;
     this.code = code;
+    this.exposeCode = true;
     if (details) this.details = details;
   }
 }

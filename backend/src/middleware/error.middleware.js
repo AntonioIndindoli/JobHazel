@@ -12,7 +12,7 @@ export function errorHandler(error, _req, res, _next) {
     payload.details = error.details;
   }
 
-  if (error?.code && status < 500) {
+  if (error?.code && (status < 500 || error?.exposeCode === true)) {
     payload.code = error.code;
   }
 
