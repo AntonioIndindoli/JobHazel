@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./styles/86-resumes.css";
+import "./styles/87-application-resumes.css";
+import "./styles/88-resume-lifecycle.css";
 import "leaflet/dist/leaflet.css";
 
 export const metadata: Metadata = {

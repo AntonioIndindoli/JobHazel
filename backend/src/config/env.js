@@ -61,9 +61,43 @@ function loadResumeStorageEnv(source, nodeEnv) {
   return { ...values, RESUME_STORAGE_ENABLED: shouldConfigure };
 }
 
+function loadResumeMaintenanceEnv(source, nodeEnv) {
+  const cleanupSecret = optional(
+    source,
+    "RESUME_CLEANUP_SECRET",
+    optional(source, "CRON_SECRET", null),
+  );
+  if (nodeEnv === "production" && !cleanupSecret) {
+    throw new Error("Missing required env var: RESUME_CLEANUP_SECRET or CRON_SECRET");
+  }
+
+  return {
+    RESUME_CLEANUP_SECRET: cleanupSecret,
+    RESUME_CLEANUP_STALE_HOURS: integer(source, "RESUME_CLEANUP_STALE_HOURS", 24, {
+      max: 24 * 30,
+    }),
+    RESUME_CLEANUP_BATCH_SIZE: integer(source, "RESUME_CLEANUP_BATCH_SIZE", 100, {
+      max: 500,
+    }),
+    RESUME_RATE_LIMIT_WINDOW_SECONDS: integer(source, "RESUME_RATE_LIMIT_WINDOW_SECONDS", 900, {
+      max: 86400,
+    }),
+    RESUME_UPLOAD_INIT_RATE_LIMIT: integer(source, "RESUME_UPLOAD_INIT_RATE_LIMIT", 10, {
+      max: 1000,
+    }),
+    RESUME_UPLOAD_COMPLETE_RATE_LIMIT: integer(source, "RESUME_UPLOAD_COMPLETE_RATE_LIMIT", 20, {
+      max: 1000,
+    }),
+    RESUME_DOWNLOAD_RATE_LIMIT: integer(source, "RESUME_DOWNLOAD_RATE_LIMIT", 60, {
+      max: 5000,
+    }),
+  };
+}
+
 export function loadEnv(source = process.env) {
   const nodeEnv = optional(source, "NODE_ENV", "development");
   const resumeStorage = loadResumeStorageEnv(source, nodeEnv);
+  const resumeMaintenance = loadResumeMaintenanceEnv(source, nodeEnv);
 
   return {
     NODE_ENV: nodeEnv,
@@ -80,6 +114,7 @@ export function loadEnv(source = process.env) {
     RESUME_SIGNED_URL_TTL_SECONDS: integer(source, "RESUME_SIGNED_URL_TTL_SECONDS", 300, {
       max: 604800,
     }),
+    ...resumeMaintenance,
     ...resumeStorage,
   };
 }

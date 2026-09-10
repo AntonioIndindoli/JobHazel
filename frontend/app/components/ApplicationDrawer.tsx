@@ -3,7 +3,7 @@
 import type { FormEvent } from "react";
 
 import { SOURCE_OPTIONS, STATUSES, STATUS_LABELS } from "../lib/constants";
-import type { Application, ApplicationFormValues } from "../lib/types";
+import type { Application, ApplicationFormValues, ResumeVersion } from "../lib/types";
 import { AppIcon } from "./AppIcon";
 import { DrawerBackdrop } from "./DrawerBackdrop";
 
@@ -12,6 +12,7 @@ type ApplicationDrawerProps = {
     editingId: string | null;
     form: ApplicationFormValues;
     formErrors: Record<string, string>;
+    resumes: ResumeVersion[];
     onClose: () => void;
     onFormChange: (form: ApplicationFormValues) => void;
     onRemoveApplication: (id: string) => void;
@@ -23,12 +24,18 @@ export function ApplicationDrawer({
     editingId,
     form,
     formErrors,
+    resumes,
     onClose,
     onFormChange,
     onRemoveApplication,
     onSubmit,
 }: ApplicationDrawerProps) {
     const isEditing = Boolean(editingId);
+    const selectableResumes = resumes.filter(
+        (resume) =>
+            resume.uploadStatus === "READY" &&
+            (!resume.archivedAt || resume.id === form.resumeVersionId),
+    );
 
     return (
         <DrawerBackdrop onClose={onClose}>
@@ -137,6 +144,49 @@ export function ApplicationDrawer({
                         </label>
                         {formErrors.dateApplied && (
                             <span className="field-error">{formErrors.dateApplied}</span>
+                        )}
+                    </section>
+                    <section className="form-section application-resume-form-section">
+                        <h3>Submitted resume</h3>
+                        <label>
+                            Resume version
+                            <select
+                                aria-label="Resume version"
+                                value={form.resumeVersionId}
+                                onChange={(event) =>
+                                    onFormChange({
+                                        ...form,
+                                        resumeVersionId: event.target.value,
+                                    })
+                                }
+                            >
+                                <option value="">No resume</option>
+                                {selectableResumes.map((resume) => (
+                                    <option key={resume.id} value={resume.id}>
+                                        {resume.name}
+                                        {resume.targetRole ? ` — ${resume.targetRole}` : ""}
+                                        {resume.archivedAt ? " (Archived)" : ""}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        {selectableResumes.length === 0 && (
+                            <p className="application-resume-form-hint">
+                                Upload a completed PDF in Resumes to attach it here.
+                            </p>
+                        )}
+                        {form.resumeVersionId &&
+                            selectableResumes.find(
+                                (resume) => resume.id === form.resumeVersionId,
+                            )?.archivedAt && (
+                                <p className="application-resume-form-hint archived">
+                                    This archived resume stays linked for historical accuracy.
+                                </p>
+                            )}
+                        {form.status === "APPLIED" && !form.resumeVersionId && (
+                            <p className="application-resume-warning" role="status">
+                                No resume is attached. You can still save this application.
+                            </p>
                         )}
                     </section>
                     <section className="form-section">

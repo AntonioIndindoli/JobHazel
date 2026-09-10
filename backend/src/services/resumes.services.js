@@ -16,6 +16,7 @@ export const RESUME_ERROR_CODES = Object.freeze({
   INVALID_STATE: "RESUME_INVALID_STATE",
   ACCESS_DENIED: "RESUME_ACCESS_DENIED",
   STORAGE_UNAVAILABLE: "RESUME_STORAGE_UNAVAILABLE",
+  IN_USE: "RESUME_IN_USE",
 });
 
 export class ResumeApiError extends Error {
@@ -435,4 +436,46 @@ export async function updateResume(userId, id, payload, overrides) {
   if (updated.count !== 1) throw accessDenied();
 
   return getResume(userId, id, { ...overrides, prisma: deps.prisma, storage: deps.storage });
+}
+
+export async function deleteResume(userId, id, overrides) {
+  const deps = await dependencies(overrides);
+
+  return deps.prisma.$transaction(async (tx) => {
+    await lockUserForResumeWrite(tx, userId);
+    const resume = await tx.resumeVersion.findFirst({
+      where: buildOwnedResumeWhere(userId, id),
+      select: {
+        id: true,
+        userId: true,
+        storageKey: true,
+        _count: { select: { applications: true } },
+      },
+    });
+    if (!resume) throw accessDenied();
+    if (resume._count.applications > 0) {
+      throw apiError(
+        409,
+        RESUME_ERROR_CODES.IN_USE,
+        "Remove this resume from its applications before permanently deleting it.",
+        { applicationCount: resume._count.applications },
+      );
+    }
+
+    try {
+      await deps.storage.deleteObject(resume.storageKey);
+    } catch {
+      throw apiError(
+        503,
+        RESUME_ERROR_CODES.STORAGE_UNAVAILABLE,
+        "The resume file could not be deleted. Nothing was removed; try again.",
+      );
+    }
+
+    const deleted = await tx.resumeVersion.deleteMany({
+      where: buildOwnedResumeWhere(userId, id),
+    });
+    if (deleted.count !== 1) throw accessDenied();
+    return { id: resume.id };
+  });
 }

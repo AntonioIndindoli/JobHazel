@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
     formatResumeSize,
+    permanentlyDeleteResume,
     resumeNameFromFilename,
     validateResumeFile,
 } from "./resume-api";
@@ -36,5 +37,15 @@ describe("resume file validation", () => {
         );
         expect(formatResumeSize(1536)).toBe("2 KB");
         expect(formatResumeSize(2.25 * 1024 * 1024)).toBe("2.3 MB");
+    });
+});
+
+describe("permanent resume deletion", () => {
+    it("uses the authenticated DELETE endpoint", async () => {
+        const request = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+        await permanentlyDeleteResume(request, "resume-1");
+        expect(request).toHaveBeenCalledWith("/resumes/resume-1", {
+            method: "DELETE",
+        });
     });
 });

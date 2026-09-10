@@ -2,10 +2,7 @@ import { getPrismaAsync } from "../db/prisma.js";
 import { detectJobSource, parseJobDescriptionWithFetch } from "./parser.services.js";
 import { normalizeUrl } from "../utils/url.js";
 import { maybeCreateAppliedFollowUpTask } from "./tasks.services.js";
-
-function withCompany(application) {
-  return { ...application, companyName: application.company?.name ?? null };
-}
+import { APPLICATION_INCLUDE, withApplicationRelations } from "./applications.services.js";
 
 function decorateDraft(draft) {
   if (!draft) return null;
@@ -26,7 +23,7 @@ async function findDuplicateApplications(prisma, userId, payload) {
   const normalizedUrl = normalizeUrl(payload.sourceUrl);
   const candidates = await prisma.application.findMany({
     where: { userId },
-    include: { company: { select: { name: true } } },
+    include: APPLICATION_INCLUDE,
   });
 
   return candidates
@@ -41,7 +38,7 @@ async function findDuplicateApplications(prisma, userId, payload) {
         app.title.trim().toLowerCase() === payload.title.trim().toLowerCase();
       return Boolean(byUrl || byCompanyTitle);
     })
-    .map(withCompany);
+    .map(withApplicationRelations);
 }
 
 function buildDuplicatePayloadFromDraft(parsed) {
@@ -141,7 +138,7 @@ export async function convertImportDraft(userId, id, overrides = {}) {
         notes: payload.notes,
         dateApplied: payload.dateApplied,
       },
-      include: { company: { select: { name: true } } },
+      include: APPLICATION_INCLUDE,
     });
 
     const importDraft = await tx.importDraft.update({
@@ -169,7 +166,7 @@ export async function convertImportDraft(userId, id, overrides = {}) {
       if (task) createdTasks.push(task);
     }
 
-    return { application: withCompany(application), importDraft: decorateDraft(importDraft), createdTasks };
+    return { application: withApplicationRelations(application), importDraft: decorateDraft(importDraft), createdTasks };
   });
 
   return result;

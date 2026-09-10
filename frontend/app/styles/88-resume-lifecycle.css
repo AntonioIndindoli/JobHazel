@@ -1,0 +1,96 @@
+/* Permanent deletion states for private resume files. */
+
+.resume-actions-popover .danger-text {
+    color: var(--danger);
+}
+
+.resume-delete-dialog {
+    width: min(520px, calc(100vw - 32px));
+}
+
+.resume-delete-dialog-body {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 16px;
+    padding: 26px 26px 8px;
+}
+
+.resume-delete-icon {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+    color: var(--danger);
+}
+
+.resume-delete-dialog h2 {
+    margin: 5px 0 9px;
+    color: var(--text-heading);
+    font-size: 22px;
+    line-height: 1.2;
+    letter-spacing: -.025em;
+}
+
+.resume-delete-dialog p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.resume-delete-dialog .resume-delete-conflict {
+    margin-top: 14px;
+    padding: 10px 12px;
+    border: 1px solid var(--warning-border);
+    border-radius: 9px;
+    background: var(--warning-surface);
+    color: var(--warning);
+    font-weight: 650;
+}
+
+.resume-delete-dialog .resume-field-error {
+    margin-top: 12px;
+}
+
+.resume-delete-confirm {
+    min-height: 40px;
+    padding: 9px 15px;
+    border: 1px solid var(--danger);
+    border-radius: 9px;
+    background: var(--danger);
+    color: #fff;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.resume-delete-confirm:hover:not(:disabled),
+.resume-delete-confirm:focus-visible:not(:disabled) {
+    filter: brightness(.94);
+    outline: 3px solid color-mix(in srgb, var(--danger) 24%, transparent);
+    outline-offset: 2px;
+}
+
+.resume-delete-confirm:disabled {
+    cursor: not-allowed;
+    opacity: .48;
+}
+
+@media (max-width: 560px) {
+    .resume-delete-dialog-body {
+        grid-template-columns: 1fr;
+        padding: 22px 20px 8px;
+    }
+
+    .resume-delete-dialog .resume-dialog-footer {
+        align-items: stretch;
+        flex-direction: column-reverse;
+    }
+
+    .resume-delete-dialog .resume-dialog-footer button {
+        width: 100%;
+        justify-content: center;
+    }
+}

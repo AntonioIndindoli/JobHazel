@@ -92,6 +92,14 @@ export async function createResumeDownloadUrl(
     return payload.downloadUrl;
 }
 
+export async function permanentlyDeleteResume(
+    request: AuthenticatedRequest,
+    resumeId: string,
+) {
+    const response = await request(`/resumes/${resumeId}`, { method: "DELETE" });
+    await parseJson<Record<string, never>>(response);
+}
+
 export function validateResumeFile(file: File | null) {
     if (!file) return "Choose a PDF to upload.";
     if (file.size < 1) return "The selected file is empty.";
@@ -173,11 +181,13 @@ export function getResumeErrorMessage(error: unknown) {
         RESUME_INVALID_PDF: "This file does not appear to be a valid PDF.",
         RESUME_INVALID_STATE: "This resume is no longer available for that action. Refresh and try again.",
         RESUME_INVALID_TYPE: "Only PDF files are supported.",
+        RESUME_IN_USE: "Remove this resume from its applications before permanently deleting it.",
         RESUME_QUOTA_EXCEEDED: "You have reached the active resume limit. Archive one to upload another.",
         RESUME_SIZE_MISMATCH: "The uploaded file size could not be verified. Choose it again and retry.",
         RESUME_STORAGE_UNAVAILABLE: "Resume storage is temporarily unavailable. Please retry in a moment.",
         RESUME_TOO_LARGE: "PDF files must be 5 MB or smaller.",
         RESUME_UPLOAD_MISSING: "The upload expired or was not received. Start the upload again.",
+        RESUME_RATE_LIMITED: "Too many resume requests. Wait a moment and try again.",
     };
     return (error.code && messages[error.code]) || error.message;
 }

@@ -16,18 +16,26 @@ import {
 } from "../lib/interview-utils";
 import { formatTaskDueDate, getTaskDueState, sortTasksByDueDate } from "../lib/task-utils";
 import { SOURCES, STATUSES, STATUS_LABELS } from "../lib/constants";
-import type { Application, Interview, Task } from "../lib/types";
+import type {
+    Application,
+    ApplicationResumeSummary,
+    Interview,
+    ResumeVersion,
+    Task,
+} from "../lib/types";
 import { AppIcon } from "./AppIcon";
 
 type ApplicationsViewProps = {
     applications: Application[];
     focusedApplicationId?: string | null;
     interviews: Interview[];
+    resumes: ResumeVersion[];
     tasks: Task[];
     onCreateApplication: () => void;
     onCreateInterview: (applicationId?: string) => void;
     onCreateTask: (applicationId?: string) => void;
     onCompleteTask: (id: string) => void | Promise<void>;
+    onDownloadResume: (resume: ApplicationResumeSummary) => void | Promise<void>;
     onRemoveApplication: (id: string) => void;
     onRemoveInterview: (id: string) => void | Promise<void>;
     onStartEdit: (application: Application) => void;
@@ -41,6 +49,7 @@ type ApplicationsTableFilters = {
     query: string;
     status: string;
     source: string;
+    resumeVersionId: string;
     startDate: string;
     endDate: string;
 };
@@ -59,9 +68,12 @@ const INITIAL_FILTERS: ApplicationsTableFilters = {
     query: "",
     status: "",
     source: "",
+    resumeVersionId: "",
     startDate: "",
     endDate: "",
 };
+
+export const NO_RESUME_FILTER = "__no_resume__";
 
 function formatDisplayDate(value: string | null) {
     if (!value) return "Not set";
@@ -135,11 +147,13 @@ export function ApplicationsView({
     applications,
     focusedApplicationId,
     interviews,
+    resumes,
     tasks,
     onCreateApplication,
     onCreateInterview,
     onCreateTask,
     onCompleteTask,
+    onDownloadResume,
     onRemoveApplication,
     onRemoveInterview,
     onStartEdit,
@@ -173,6 +187,23 @@ export function ApplicationsView({
         });
         return Array.from(sources).sort((a, b) => a.localeCompare(b));
     }, [applications]);
+    const resumeOptions = useMemo(() => {
+        const options = new Map<
+            string,
+            { id: string; name: string; archivedAt: string | null }
+        >();
+        resumes
+            .filter((resume) => resume.uploadStatus === "READY")
+            .forEach((resume) => options.set(resume.id, resume));
+        applications.forEach((application) => {
+            if (application.resumeVersion) {
+                options.set(application.resumeVersion.id, application.resumeVersion);
+            }
+        });
+        return Array.from(options.values()).sort((left, right) =>
+            left.name.localeCompare(right.name),
+        );
+    }, [applications, resumes]);
     const applicationStatusSummary = useMemo(() => {
         const counts = countApplicationsByStatus(applications);
         const populatedStatuses = STATUSES.filter((status) => counts[status] > 0);
@@ -201,6 +232,7 @@ export function ApplicationsView({
                 application.companyName,
                 application.location,
                 application.source,
+                application.resumeVersion?.name,
             ]
                 .filter(Boolean)
                 .join(" ")
@@ -211,6 +243,20 @@ export function ApplicationsView({
             if (
                 filters.source &&
                 application.source?.toLowerCase() !== filters.source.toLowerCase()
+            )
+                return false;
+
+            const associatedResumeId =
+                application.resumeVersion?.id ?? application.resumeVersionId;
+            if (
+                filters.resumeVersionId === NO_RESUME_FILTER &&
+                associatedResumeId
+            )
+                return false;
+            if (
+                filters.resumeVersionId &&
+                filters.resumeVersionId !== NO_RESUME_FILTER &&
+                associatedResumeId !== filters.resumeVersionId
             )
                 return false;
 
@@ -265,6 +311,7 @@ export function ApplicationsView({
     const activeFilterCount = [
         filters.status,
         filters.source,
+        filters.resumeVersionId,
         filters.startDate || filters.endDate,
     ].filter(Boolean).length;
     const nextActionByApplication = useMemo(() => {
@@ -413,6 +460,24 @@ export function ApplicationsView({
                             {sourceOptions.map((source) => (
                                 <option key={source} value={source}>
                                     {source}
+                                </option>
+                            ))}
+                        </select>
+                        <select
+                            aria-label="Filter by resume"
+                            value={filters.resumeVersionId}
+                            onChange={(event) =>
+                                setFilters({
+                                    ...filters,
+                                    resumeVersionId: event.target.value,
+                                })
+                            }
+                        >
+                            <option value="">All resumes</option>
+                            <option value={NO_RESUME_FILTER}>No resume</option>
+                            {resumeOptions.map((resume) => (
+                                <option key={resume.id} value={resume.id}>
+                                    {resume.name}{resume.archivedAt ? " (Archived)" : ""}
                                 </option>
                             ))}
                         </select>
@@ -626,6 +691,52 @@ export function ApplicationsView({
 
                             <div className="application-detail-layout">
                                 <div className="application-detail-main">
+                                    <section className="application-detail-section application-detail-card-section application-resume-detail-section">
+                                        <div className="application-detail-section-heading">
+                                            <div>
+                                                <h3>Submitted resume</h3>
+                                                <span>The exact version recorded for this application</span>
+                                            </div>
+                                        </div>
+                                        {selectedApplication.resumeVersion ? (
+                                            <div className="application-resume-detail-card">
+                                                <span className="application-resume-detail-icon" aria-hidden="true">
+                                                    <AppIcon name="document" size={21} />
+                                                </span>
+                                                <span className="application-resume-detail-copy">
+                                                    <strong>{selectedApplication.resumeVersion.name}</strong>
+                                                    <small>
+                                                        {selectedApplication.resumeVersion.originalFilename}
+                                                        {selectedApplication.resumeVersion.targetRole
+                                                            ? ` · ${selectedApplication.resumeVersion.targetRole}`
+                                                            : ""}
+                                                    </small>
+                                                </span>
+                                                {selectedApplication.resumeVersion.archivedAt && (
+                                                    <span className="application-resume-archived-badge">Archived</span>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    className="alternative application-resume-download"
+                                                    onClick={() =>
+                                                        onDownloadResume(
+                                                            selectedApplication.resumeVersion!,
+                                                        )
+                                                    }
+                                                >
+                                                    Download PDF
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="application-resume-detail-empty">
+                                                <AppIcon name="document" size={21} />
+                                                <span>
+                                                    <strong>No resume attached</strong>
+                                                    <small>Edit this application to record the version used.</small>
+                                                </span>
+                                            </div>
+                                        )}
+                                    </section>
                                     <section className="application-detail-section application-detail-card-section application-next-action-section">
                                         <div className="application-detail-section-heading">
                                             <div>

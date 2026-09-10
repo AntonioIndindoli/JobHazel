@@ -51,6 +51,17 @@ export type Application = {
     description: string | null;
     notes: string | null;
     dateApplied: string | null;
+    resumeVersionId: string | null;
+    resumeVersion: ApplicationResumeSummary | null;
+};
+
+export type ApplicationResumeSummary = {
+    id: string;
+    name: string;
+    targetRole: string | null;
+    originalFilename: string;
+    uploadStatus: ResumeUploadStatus;
+    archivedAt: string | null;
 };
 
 export type ImportDraft = {
@@ -125,6 +136,7 @@ export type ApplicationFormValues = {
     description: string;
     notes: string;
     dateApplied: string;
+    resumeVersionId: string;
 };
 
 export type InterviewFormValues = {

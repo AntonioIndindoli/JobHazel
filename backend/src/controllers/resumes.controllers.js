@@ -1,6 +1,7 @@
 import {
   completeResumeUpload,
   createResumeDownloadUrl,
+  deleteResume,
   initiateResumeUpload,
   listResumes,
   updateResume,
@@ -29,4 +30,9 @@ export async function createResumeDownloadUrlController(req, res) {
 export async function updateResumeController(req, res) {
   const resume = await updateResume(req.auth.sub, req.params.id, req.body);
   return res.status(200).json({ resume });
+}
+
+export async function deleteResumeController(req, res) {
+  await deleteResume(req.auth.sub, req.params.id);
+  return res.status(204).send();
 }

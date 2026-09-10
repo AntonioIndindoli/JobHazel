@@ -27,6 +27,7 @@ function renderLibrary(overrides: Partial<Parameters<typeof ResumeLibraryView>[0
         error: "",
         isLoading: false,
         onArchiveChange: vi.fn().mockResolvedValue(undefined),
+        onDelete: vi.fn().mockResolvedValue(undefined),
         onDownload: vi.fn().mockResolvedValue(undefined),
         onMetadataUpdate: vi.fn().mockResolvedValue(undefined),
         onRetry: vi.fn(),
@@ -121,6 +122,42 @@ describe("ResumeLibraryView", () => {
             }),
         );
     });
+
+    it("explains archive versus deletion and confirms an unreferenced permanent delete", async () => {
+        const onDelete = vi.fn().mockResolvedValue(undefined);
+        renderLibrary({
+            onDelete,
+            resumes: [{ ...resume, applicationCount: 0 }],
+        });
+
+        await userEvent.click(
+            screen.getByRole("button", { name: "More actions for Product manager — core" }),
+        );
+        await userEvent.click(
+            screen.getByRole("menuitem", { name: "Permanently delete" }),
+        );
+        expect(screen.getByText(/Archiving hides a version from new selections/i)).toBeTruthy();
+        await userEvent.click(
+            screen.getByRole("button", { name: "Delete permanently" }),
+        );
+        await waitFor(() => expect(onDelete).toHaveBeenCalledOnce());
+    });
+
+    it("blocks permanent deletion while a resume is referenced", async () => {
+        renderLibrary();
+        await userEvent.click(
+            screen.getByRole("button", { name: "More actions for Product manager — core" }),
+        );
+        await userEvent.click(
+            screen.getByRole("menuitem", { name: "Permanently delete" }),
+        );
+
+        expect(screen.getByText(/used in 2 applications/i)).toBeTruthy();
+        expect(
+            (screen.getByRole("button", { name: "Delete permanently" }) as HTMLButtonElement)
+                .disabled,
+        ).toBe(true);
+    });
 });
 
 function renderLibraryProps(): Parameters<typeof ResumeLibraryView>[0] {
@@ -129,6 +166,7 @@ function renderLibraryProps(): Parameters<typeof ResumeLibraryView>[0] {
         error: "",
         isLoading: false,
         onArchiveChange: vi.fn().mockResolvedValue(undefined),
+        onDelete: vi.fn().mockResolvedValue(undefined),
         onDownload: vi.fn().mockResolvedValue(undefined),
         onMetadataUpdate: vi.fn().mockResolvedValue(undefined),
         onRetry: vi.fn(),

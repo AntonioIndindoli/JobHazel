@@ -1,0 +1,154 @@
+/* Resume associations inside application forms, filters, and details. */
+
+.application-resume-form-section {
+    padding-bottom: 10px;
+}
+
+.application-resume-form-hint,
+.application-resume-warning {
+    margin: -2px 0 0;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.application-resume-form-hint {
+    color: var(--muted);
+}
+
+.application-resume-form-hint.archived {
+    color: var(--warning);
+}
+
+.application-resume-warning {
+    padding: 10px 12px;
+    border: 1px solid var(--warning-border);
+    border-radius: 9px;
+    background: var(--warning-surface);
+    color: var(--warning);
+    font-weight: 650;
+}
+
+.applications-page .applications-toolbar {
+    grid-template-columns:
+        minmax(160px, 2fr)
+        minmax(116px, .9fr)
+        minmax(116px, .9fr)
+        minmax(130px, 1fr)
+        minmax(160px, 1.35fr)
+        auto;
+}
+
+.application-resume-detail-card,
+.application-resume-detail-empty {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 68px;
+    padding: 13px 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: 12px;
+    background: var(--surface-soft);
+}
+
+.application-resume-detail-icon,
+.application-resume-detail-empty > svg {
+    display: inline-grid;
+    flex: 0 0 auto;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: var(--surface-blue);
+    color: var(--accent);
+}
+
+.application-resume-detail-copy,
+.application-resume-detail-empty > span {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
+}
+
+.application-resume-detail-copy {
+    flex: 1 1 auto;
+}
+
+.application-resume-detail-copy strong,
+.application-resume-detail-empty strong {
+    overflow: hidden;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.application-resume-detail-copy small,
+.application-resume-detail-empty small {
+    overflow: hidden;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.application-resume-archived-badge {
+    flex: 0 0 auto;
+    padding: 5px 8px;
+    border: 1px solid var(--warning-border);
+    border-radius: 999px;
+    background: var(--warning-surface);
+    color: var(--warning);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.application-resume-download {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 7px 11px;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 750;
+}
+
+.application-resume-detail-empty {
+    color: var(--muted);
+}
+
+@media (max-width: 1180px) and (min-width: 761px) {
+    .applications-page .applications-toolbar {
+        grid-template-columns: minmax(180px, 1.7fr) repeat(2, minmax(130px, 1fr));
+    }
+
+    .applications-page .applications-toolbar > .applications-date-filter,
+    .applications-page .applications-toolbar > .interviews-reset-button {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 760px) {
+    .applications-page .applications-toolbar {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .application-resume-detail-card {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .application-resume-detail-copy {
+        min-width: calc(100% - 50px);
+    }
+
+    .application-resume-detail-copy small,
+    .application-resume-detail-empty small {
+        white-space: normal;
+    }
+
+    .application-resume-download {
+        width: 100%;
+        justify-content: center;
+    }
+}

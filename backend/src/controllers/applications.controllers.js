@@ -6,6 +6,7 @@ import {
   getApplicationHistory,
   listApplicationHistories,
   listApplications,
+  setApplicationResume,
   transitionApplicationStatus,
   updateApplication,
 } from "../services/applications.services.js";
@@ -57,6 +58,16 @@ export async function updateApplicationController(req, res) {
 
 export async function transitionApplicationStatusController(req, res) {
   const result = await transitionApplicationStatus(req.auth.sub, req.params.id, req.validatedStatusTransition.status);
+  if (!result) return res.status(404).json({ message: "Application not found." });
+  return res.status(200).json(result);
+}
+
+export async function setApplicationResumeController(req, res) {
+  const result = await setApplicationResume(
+    req.auth.sub,
+    req.params.id,
+    req.validatedResumeAssociation.resumeVersionId,
+  );
   if (!result) return res.status(404).json({ message: "Application not found." });
   return res.status(200).json(result);
 }

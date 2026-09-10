@@ -7,6 +7,8 @@ const APP_STATUSES = new Set([
   "WITHDRAWN",
 ]);
 
+const RESUME_ASSOCIATION_FIELDS = new Set(["resumeVersionId"]);
+
 function normalizeOptional(value) {
   if (value === undefined || value === null) return null;
   const trimmed = String(value).trim();
@@ -68,5 +70,37 @@ export function validateStatusTransition(req, res, next) {
     return res.status(400).json({ message: "status is invalid." });
   }
   req.validatedStatusTransition = { status };
+  return next();
+}
+
+export function validateApplicationResumeAssociation(req, _res, next) {
+  const source = req.body && typeof req.body === "object" && !Array.isArray(req.body) ? req.body : {};
+  const issues = [];
+
+  for (const field of Object.keys(source)) {
+    if (!RESUME_ASSOCIATION_FIELDS.has(field)) {
+      issues.push({ path: field, message: `${field} is not an allowed field.` });
+    }
+  }
+
+  if (!Object.prototype.hasOwnProperty.call(source, "resumeVersionId")) {
+    issues.push({ path: "resumeVersionId", message: "resumeVersionId is required." });
+  } else if (
+    source.resumeVersionId !== null &&
+    (typeof source.resumeVersionId !== "string" || !source.resumeVersionId.trim())
+  ) {
+    issues.push({ path: "resumeVersionId", message: "resumeVersionId must be a non-empty string or null." });
+  }
+
+  if (issues.length) {
+    const error = new Error("Invalid resume association payload.");
+    error.status = 400;
+    error.details = issues;
+    return next(error);
+  }
+
+  req.validatedResumeAssociation = {
+    resumeVersionId: source.resumeVersionId === null ? null : source.resumeVersionId.trim(),
+  };
   return next();
 }

@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { getPrismaAsync } from "../db/prisma.js";
 import { env } from "../config/env.js";
+import { getResumeStorage } from "./resume-storage.services.js";
 
 const SALT_BYTES = 16;
 const KEYLEN = 64;
@@ -220,16 +221,68 @@ export async function changePassword(userId, currentPassword, newPassword) {
   return { status: 200, body: session };
 }
 
-export async function deleteAccount(userId, password) {
-  const prisma = await getPrismaAsync();
+export async function deleteAccount(userId, password, overrides = {}) {
+  const prisma = overrides.prisma ?? (await getPrismaAsync());
   const user = await prisma.user.findUnique({ where: { id: userId } });
 
   if (!user || !verifyPassword(password, user.passwordHash)) {
     return { status: 400, body: { message: "Password is incorrect." } };
   }
 
-  await prisma.user.delete({ where: { id: userId } });
-  return { status: 204, body: null };
+  return prisma.$transaction(async (tx) => {
+    if (typeof tx.$queryRaw === "function") {
+      await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
+    }
+
+    const resumeObjects = await tx.resumeVersion.findMany({
+      where: { userId },
+      select: { id: true, storageKey: true },
+    });
+    let failedCleanupCount = 0;
+
+    if (resumeObjects.length > 0) {
+      let storage;
+      try {
+        storage = overrides.storage ?? getResumeStorage();
+      } catch {
+        failedCleanupCount = resumeObjects.length;
+      }
+
+      if (storage) {
+        for (const resume of resumeObjects) {
+          try {
+            // R2 DeleteObject is idempotent, so retrying is safe when an
+            // earlier attempt deleted only some objects.
+            await storage.deleteObject(resume.storageKey);
+          } catch {
+            failedCleanupCount += 1;
+          }
+        }
+      }
+    }
+
+    if (failedCleanupCount > 0) {
+      console.info(
+        "[resume-maintenance]",
+        JSON.stringify({
+          operation: "account-delete",
+          status: "storage-cleanup-failed",
+          objectCount: resumeObjects.length,
+          failedCleanupCount,
+        }),
+      );
+      return {
+        status: 503,
+        body: {
+          code: "ACCOUNT_STORAGE_CLEANUP_FAILED",
+          message: "Your account was not deleted because private file cleanup did not finish. Try again.",
+        },
+      };
+    }
+
+    await tx.user.delete({ where: { id: userId } });
+    return { status: 204, body: null };
+  });
 }
 
 export async function buildAccountExport(userId) {

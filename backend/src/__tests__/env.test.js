@@ -9,6 +9,14 @@ const BASE_ENV = {
   JWT_REFRESH_SECRET: "refresh-secret",
 };
 
+const COMPLETE_R2_ENV = {
+  R2_ACCOUNT_ID: "example-account",
+  R2_ACCESS_KEY_ID: "access-key",
+  R2_SECRET_ACCESS_KEY: "secret-key",
+  R2_BUCKET_NAME: "jobhazel-resumes",
+  R2_ENDPOINT: "https://example-account.r2.cloudflarestorage.com",
+};
+
 test("production startup reports every missing R2 setting", () => {
   assert.throws(
     () => loadEnv({ ...BASE_ENV, NODE_ENV: "production" }),
@@ -49,4 +57,31 @@ test("resume limits are parsed and validated", () => {
     () => loadEnv({ ...BASE_ENV, RESUME_SIGNED_URL_TTL_SECONDS: "604801" }),
     /RESUME_SIGNED_URL_TTL_SECONDS/,
   );
+});
+
+test("production requires authenticated cleanup and parses lifecycle controls", () => {
+  assert.throws(
+    () => loadEnv({ ...BASE_ENV, ...COMPLETE_R2_ENV, NODE_ENV: "production" }),
+    /RESUME_CLEANUP_SECRET or CRON_SECRET/,
+  );
+
+  const config = loadEnv({
+    ...BASE_ENV,
+    ...COMPLETE_R2_ENV,
+    NODE_ENV: "production",
+    CRON_SECRET: "maintenance-secret",
+    RESUME_CLEANUP_STALE_HOURS: "48",
+    RESUME_CLEANUP_BATCH_SIZE: "50",
+    RESUME_RATE_LIMIT_WINDOW_SECONDS: "300",
+    RESUME_UPLOAD_INIT_RATE_LIMIT: "5",
+    RESUME_UPLOAD_COMPLETE_RATE_LIMIT: "8",
+    RESUME_DOWNLOAD_RATE_LIMIT: "30",
+  });
+  assert.equal(config.RESUME_CLEANUP_SECRET, "maintenance-secret");
+  assert.equal(config.RESUME_CLEANUP_STALE_HOURS, 48);
+  assert.equal(config.RESUME_CLEANUP_BATCH_SIZE, 50);
+  assert.equal(config.RESUME_RATE_LIMIT_WINDOW_SECONDS, 300);
+  assert.equal(config.RESUME_UPLOAD_INIT_RATE_LIMIT, 5);
+  assert.equal(config.RESUME_UPLOAD_COMPLETE_RATE_LIMIT, 8);
+  assert.equal(config.RESUME_DOWNLOAD_RATE_LIMIT, 30);
 });

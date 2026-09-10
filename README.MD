@@ -1,776 +1,196 @@
 # JobHazel
 
-A full-stack job application tracker with a Chrome extension for saving job postings from any website.
+JobHazel is a full-stack job application tracker for organizing applications, interviews, contacts, follow-up tasks, and the resume version used for each application.
 
-JobHazel helps job seekers organize their search pipeline, save jobs from browser pages, track interviews, manage follow-up tasks, and analyze which job sources produce the best results.
+**App:** [jobhazel.com](https://jobhazel.com/)
 
-The product is designed as a modern SaaS-style dashboard for candidates who apply across LinkedIn, Indeed, Greenhouse, Lever, Workday, company career pages, referrals, and recruiter outreach.
+This README describes the implementation in this repository as of **September 10, 2026**, including current workspace changes. It does not confirm that every change has been deployed or verified in production. The Chrome extension and external account integrations are not implemented.
 
----
+## Implemented features
 
-## Demo
+| Area | Current behavior |
+| --- | --- |
+| Accounts | Email/password signup and login, session refresh, logout, profile editing, password changes, and account deletion. Signup is limited to 1,000 current accounts; deletion frees a slot. |
+| Applications | Create, edit, delete, search, and filter applications. Store company, role, source, URL, location, workplace/employment type, salary, priority, dates, description, and notes. |
+| Kanban | Drag applications between fixed stages and persist status changes. Application activity history records changes. |
+| Imports | Paste a URL or description, create a parsed draft, review/edit extracted fields, and convert the draft into an application. |
+| Duplicate detection | Detect normalized URL matches or exact company/title matches, ignoring company/title case and surrounding whitespace. |
+| Interviews | Create, edit, and delete interviews linked to applications; record type, schedule, duration, location, meeting URL, interviewer, notes, and outcome. View upcoming interviews. |
+| Tasks | Create, edit, delete, complete, and reopen tasks. Support follow-ups, preparation, thank-you notes, reminders, due dates, and overdue/upcoming views. |
+| Task automation | Optional automatic follow-up and thank-you task creation, with separately configurable delays of 0–365 days and per-user preferences. |
+| Contacts | Manage recruiters, referrals, hiring managers, employees, and other contacts, with company/application associations, email, LinkedIn URL, role, and notes. |
+| Resume library | Upload immutable PDF versions; list, rename, annotate, download, archive/unarchive, and permanently delete unreferenced resumes. |
+| Application resumes | Select one resume per application, change/remove it, download it from application details, and filter by resume or “No resume.” Association changes create history events. |
+| Dashboard and analytics | Application and conversion metrics, pipeline visualization, source comparisons, weekly application volume, and a geographic application map. |
+| Data export | Download account data as JSON or application records as CSV. Resume exports include metadata, not file bytes or private storage credentials. |
+| Appearance | Dark mode, responsive layouts, and mobile navigation. |
 
-**Live App:** https://jobhazel.com/
+### Application stages
 
-**Chrome Extension Demo:** Coming soon
+The six fixed application statuses are **Saved, Applied, Interviewing, Offer, Rejected, and Withdrawn**. Recruiter screen, technical, manager, panel, final, take-home, and other are interview types, not separate application stages. Custom stages are not supported.
 
----
+### Job importing
 
-## Features
+The parser uses deterministic rules, a skills dictionary, HTML metadata, and structured job data where available. It attempts URL fetching when no description text is supplied, and extracts candidate title, company, location, salary, description, source, and skills for review.
 
-### Job Application Tracking
+Fetching does not guarantee extraction from every job board. Access restrictions and dynamically rendered pages can require pasted text and manual corrections. There is no AI parsing or browser extension. Duplicate detection does not implement fuzzy role-name matching.
 
-* Create, edit, and delete job applications
-* Track applications by status
-* Store company, role, location, salary range, source, job URL, and notes
-* Assign priority levels to applications
-* Detect duplicate applications by URL, company, and role
-* View all applications in a searchable table
+### Resume management
 
-### Kanban Tracker
+The resume library and application association UI are implemented; they are no longer API-only plans.
 
-* Drag applications between hiring stages
-* Persist status updates in the database
-* Track pipeline movement through an activity log
-* View applications by stage:
+- PDF uploads only, with a default maximum of 5 MB and configurable active-resume quota (default: 10).
+- Files reside in private Cloudflare R2 storage; the application stores metadata and object keys.
+- Upload completion verifies stored content before exposing a resume as ready.
+- Upload/download links expire after five minutes by default.
+- A revised file creates a new version; changing its name or notes does not replace its contents.
+- Archived resumes already linked to applications remain available in historical associations.
+- Permanent deletion is blocked while an application references the resume.
+- Moving an application to Applied without a resume produces a non-blocking warning.
+- Backend lifecycle controls include endpoint rate limits, abandoned-upload cleanup, cleanup status reporting, and retryable storage cleanup during account deletion.
 
-  * Saved
-  * Applied
-  * Recruiter Screen
-  * Technical Interview
-  * Final Interview
-  * Offer
-  * Rejected
-  * Withdrawn
+Application saving and resume association use separate requests. If association fails, the application may already be saved; the UI reports that partial result.
 
-### Chrome Extension Job Saving
+A scheduled cleanup entry exists in `backend/vercel.json`. Actual bucket privacy, credentials, CORS, migrations, scheduler execution, and cleanup behavior still need verification in the deployed environment.
 
-* Save jobs from any browser page
-* Capture page title, URL, source domain, and selected text
-* Open an import review page inside the web app
-* Parse selected job description text into structured fields
-* Let users review and confirm imported data before saving
+The [resume feature document](frontend/RESUME-FEATURE.md) describes the broader phased scope. Storage, library UI, application associations, and lifecycle-hardening code exist. Resume performance analytics, parsing, matching, and generalized application documents remain future work.
 
-### Job Import System
+## Implemented foundations with remaining limitations
 
-* Paste a job URL
-* Paste a job description
-* Import from the Chrome extension
-* Auto-detect job source from domain
-* Extract possible job title, company, location, salary range, and skills
-* Create an import draft before converting it into an application
+| Area | What is still missing or limited |
+| --- | --- |
+| Task automation | Creates in-app tasks, not email/push notifications. Thank-you tasks are created when an interview is added, with a due date based on its schedule; there is no background detection of interview completion. |
+| Analytics | Calculated in the frontend from applications, interviews, and activity history. No dedicated backend analytics endpoints or resume-version performance reports. |
+| Resume intelligence | The schema has an optional extracted-text field, but no PDF text-extraction pipeline, scoring, matching, or tailoring workflow. |
+| Account access | Signed-in password changes exist; forgotten-password recovery, email verification, and social sign-in do not. |
+| Companies | Company records support applications and contacts, but there is no dedicated company-management screen/API. |
+| Mobile | Responsive web UI exists; installable PWA and offline support do not. |
+| Imports | URL/text review works, but browser-extension capture and CSV import are absent. |
 
-### Interviews
+## Not implemented / future work
 
-* Add interviews to applications
-* Track interview type, date, duration, meeting link, interviewer, notes, and outcome
-* View upcoming interviews from the dashboard
+These are potential extensions, not available features or release commitments:
 
-### Tasks and Follow-Ups
+- Chrome extension, including selected-text capture and authenticated one-click saving.
+- Gmail import and application-confirmation email detection.
+- Google Calendar sync and interview detection.
+- LinkedIn/Indeed application-history synchronization.
+- CSV import (CSV export already exists).
+- AI-powered job parsing and interview-preparation generation.
+- Resume text extraction, performance comparisons, matching, scoring, rewriting, and tailoring.
+- Cover-letter, portfolio, writing-sample, and take-home document management; DOC/DOCX uploads.
+- Custom pipeline stages.
+- Email/push follow-up reminders.
+- Public shareable job-search activity reports.
+- Installable/offline PWA support.
 
-* Add follow-up tasks, prep tasks, thank-you notes, and reminders
-* Automatically create follow-up tasks when an application is marked as applied
-* Automatically create thank-you tasks after interviews
-* Mark tasks as complete
-* View overdue and upcoming tasks
+JobHazel does not submit job applications on users' behalf.
 
-### Contacts
+## Architecture and stack
 
-* Store recruiters, referrals, hiring managers, and employee contacts
-* Associate contacts with companies or specific applications
-* Save email addresses, LinkedIn URLs, roles, and notes
+| Layer | Implementation |
+| --- | --- |
+| Frontend | Next.js 16, React 19, TypeScript, custom components and CSS, Tailwind CSS tooling. |
+| Visualization | D3 Sankey, Leaflet, and custom chart components. The map uses external geocoding with a browser cache. |
+| Drag and drop | Native browser drag-and-drop handlers. |
+| Backend | Express 5 and JavaScript ES modules. |
+| Authentication | Custom password authentication, signed JWT access tokens, and persisted hashed refresh tokens. Not Auth.js. |
+| Persistence | PostgreSQL with Prisma 7 and the PostgreSQL adapter; Neon connection tooling is included. |
+| Files | Cloudflare R2 through the AWS S3 SDK, using signed upload/download URLs. |
+| Tests | Node test runner for the backend; Vitest and Testing Library for the frontend. |
+| Deployment support | Static frontend export (`frontend/out`) and a Vercel Express entry point/configuration for the backend. |
 
-### Resume Management
+The frontend calls the Express API, which accesses PostgreSQL and issues signed R2 URLs. There is no extension package. Frontend and backend dependencies are installed separately; there is no root application package.
 
-* Upload and manage immutable, named PDF resume versions through the authenticated API
-* Validate stored size and PDF signatures before making an upload available
-* Rename, annotate, archive, and unarchive completed resumes
-* Download resumes through five-minute links to private object storage
+## Local development
 
-Planned UI and application integration work will:
+Use Node.js **20.9 or newer**, npm, and PostgreSQL. Docker is optional for the included local database.
 
-* Associate the exact resume version submitted with an application
-* Preserve application history when a newer resume version is uploaded
-* Filter applications by resume version
-* Measure interview and offer conversion by resume version
+### 1. Configure environment files
 
-### Analytics
+Copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env.local`. Do not overwrite existing local configuration.
 
-* Track total applications
-* View applications submitted this week
-* Measure response rate
-* Measure interview conversion rate
-* Measure offer rate
-* Analyze applications by source
-* Analyze application status distribution
-* Track application volume over time
-* Identify which sources produce the most interviews
+- Set both backend JWT secrets to long random values.
+- Set `DATABASE_URL`; use `DATABASE_URL_UNPOOLED` for a direct migration connection when using a pooled database service.
+- Local database defaults use port `55489` and database name `jobappledger`.
+- The API defaults to `http://localhost:4000`; the frontend defaults to `http://localhost:3000`.
+- Set frontend `NEXT_PUBLIC_API_BASE_URL` to the API URL and backend `CORS_ORIGIN` to the frontend origin.
 
----
+For resume storage, supply all five backend R2 settings: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, and `R2_ENDPOINT`. Apply appropriate bucket CORS settings; [an example is included](infra/cloudflare/r2-cors.json).
 
-## Tech Stack
+To run development without resume storage, leave **all five R2 values empty**. The example contains bucket/endpoint placeholders, which must also be cleared. Partial configuration fails startup validation, and resume storage operations require a configured provider.
 
-### Web App
+### 2. Start a local database (optional)
 
-* **Framework:** Next.js
-* **Language:** TypeScript
-* **Styling:** Tailwind CSS
-* **UI Components:** shadcn/ui
-* **Database:** PostgreSQL
-* **ORM:** Prisma
-* **Authentication:** Auth.js
-* **Charts:** Recharts
-* **Drag and Drop:** dnd-kit
-* **Deployment:** Vercel
-* **Database Hosting:** Neon
-* **Private File Storage:** Cloudflare R2
+From the repository root; skip if using an existing database:
 
-### Chrome Extension (planned)
-
-* **Manifest:** Chrome Manifest V3
-* **Language:** TypeScript
-* **Permissions:** activeTab, scripting where needed
-* **Purpose:** Capture user-selected job posting content and open the app import flow
-
----
-
-## Product Architecture
-
-JobHazel is split into two main parts:
-
-1. **The web application**, which handles authentication, job tracking, data persistence, analytics, and import review.
-2. **The Chrome extension**, which captures job posting context from the active browser tab and sends it to the web app.
-
-The extension is intentionally lightweight. It does not store job data permanently, scrape private user accounts, or perform background monitoring. It acts as a user-triggered capture tool.
-
-### High-Level Flow
-
-```text
-User visits job posting
-        ↓
-User highlights job description
-        ↓
-User clicks Chrome extension: “Save Job”
-        ↓
-Extension captures title, URL, source domain, and selected text
-        ↓
-Extension creates an import draft or opens the import page
-        ↓
-Web app parses job data
-        ↓
-User reviews and confirms details
-        ↓
-Application is saved to the user's pipeline
+```sh
+docker compose -f infra/docker-compose.yml up -d
 ```
 
----
+### 3. Install and start the backend
 
-## Core Data Models
+From `backend/`, after configuring `.env`:
 
-### User
-
-Represents an authenticated user.
-
-```text
-User
-- id
-- name
-- email
-- createdAt
-- updatedAt
-```
-
-### Application
-
-The main entity in the product. Represents one job opportunity.
-
-```text
-Application
-- id
-- userId
-- companyId
-- title
-- status
-- source
-- sourceUrl
-- location
-- workplaceType
-- employmentType
-- salaryMin
-- salaryMax
-- currency
-- description
-- priority
-- dateSaved
-- dateApplied
-- resumeVersionId
-- notes
-- createdAt
-- updatedAt
-```
-
-### Company
-
-Stores company-level information.
-
-```text
-Company
-- id
-- userId
-- name
-- website
-- industry
-- size
-- logoUrl
-- notes
-- createdAt
-- updatedAt
-```
-
-### Contact
-
-Stores recruiters, referrals, hiring managers, and other contacts.
-
-```text
-Contact
-- id
-- userId
-- companyId
-- applicationId
-- name
-- role
-- email
-- linkedinUrl
-- relationship
-- notes
-- createdAt
-- updatedAt
-```
-
-### Interview
-
-Stores interview events connected to an application.
-
-```text
-Interview
-- id
-- userId
-- applicationId
-- type
-- scheduledAt
-- durationMinutes
-- location
-- meetingUrl
-- interviewerName
-- notes
-- outcome
-- createdAt
-- updatedAt
-```
-
-### Task
-
-Stores follow-up reminders and application-related action items.
-
-```text
-Task
-- id
-- userId
-- applicationId
-- title
-- description
-- dueDate
-- completedAt
-- type
-- createdAt
-- updatedAt
-```
-
-### ResumeVersion
-
-Stores metadata for an immutable resume file in private object storage. Updating a
-resume's display name or notes is allowed, but replacing its file creates a new
-`ResumeVersion`. This ensures an application continues to reference the exact file
-that was submitted.
-
-```text
-ResumeVersion
-- id
-- userId
-- name
-- targetRole
-- storageKey
-- originalFilename
-- mimeType
-- sizeBytes
-- checksum
-- uploadStatus
-- extractedText
-- notes
-- archivedAt
-- createdAt
-- updatedAt
-```
-
-The database stores only metadata and the object-storage key. Resume bytes and
-expiring download URLs are never stored in PostgreSQL.
-
-### ImportDraft
-
-Stores temporary imported job data before a user confirms and saves it.
-
-```text
-ImportDraft
-- id
-- userId
-- sourceUrl
-- sourceDomain
-- pageTitle
-- rawText
-- parsedTitle
-- parsedCompany
-- parsedLocation
-- parsedSalaryMin
-- parsedSalaryMax
-- parsedDescription
-- confidence
-- createdAt
-- convertedAt
-```
-
-### ActivityLog
-
-Stores user-visible history for application changes.
-
-```text
-ActivityLog
-- id
-- userId
-- applicationId
-- type
-- message
-- metadata
-- createdAt
-```
-
----
-
-## Application Statuses
-
-```text
-Saved
-Applied
-Recruiter Screen
-Technical Interview
-Final Interview
-Offer
-Rejected
-Withdrawn
-```
-
-These statuses are used by the Kanban pipeline, analytics, and status history.
-
----
-
-## API Overview
-
-### Applications
-
-```http
-GET    /api/applications
-POST   /api/applications
-GET    /api/applications/:id
-PATCH  /api/applications/:id
-DELETE /api/applications/:id
-PATCH  /api/applications/:id/status
-```
-
-### Imports
-
-```http
-POST /api/imports/create-draft
-GET  /api/imports/:id
-POST /api/imports/:id/convert
-POST /api/parser/job-description
-```
-
-### Tasks
-
-```http
-POST  /api/tasks
-PATCH /api/tasks/:id
-PATCH /api/tasks/:id/complete
-DELETE /api/tasks/:id
-```
-
-### Interviews
-
-```http
-GET   /api/interviews
-GET   /api/interviews?upcoming=true
-GET   /api/interviews?applicationId=:applicationId
-POST  /api/interviews
-PATCH /api/interviews/:id
-DELETE /api/interviews/:id
-```
-
-### Resumes
-
-```http
-GET   /api/resumes
-POST  /api/resumes/uploads
-POST  /api/resumes/:id/complete
-GET   /api/resumes/:id/download-url
-PATCH /api/resumes/:id
-```
-
-Resume routes require a bearer token. Uploads accept PDF metadata, return a
-five-minute presigned `PUT` URL, and remain hidden until completion verifies the
-stored content. `GET /api/resumes?includeArchived=true` includes archived, completed
-resumes; the default list excludes archived and incomplete records.
-
-### Analytics
-
-```http
-GET /api/analytics/summary
-GET /api/analytics/sources
-GET /api/analytics/timeline
-GET /api/analytics/statuses
-```
-
----
-
-## Chrome Extension Design
-
-The Chrome extension is built around a simple, user-triggered workflow.
-
-### Extension Actions
-
-* Read the active tab URL
-* Read the active tab title
-* Read selected text from the page
-* Detect source domain
-* Send captured data to the web app
-* Open the import review page
-
-### Minimal Permissions
-
-```json
-{
-  "permissions": ["activeTab", "scripting"]
-}
-```
-
-The extension should avoid broad host permissions where possible. `activeTab` keeps the extension scoped to the current page only after the user invokes it.
-
-### Extension MVP Flow
-
-```text
-1. User opens a job posting page.
-2. User highlights the job description.
-3. User clicks the JobHazel extension icon.
-4. Extension captures selected text, URL, title, and domain.
-5. Extension opens the JobHazel import page.
-6. User reviews the parsed job details.
-7. User saves the job to their pipeline.
-```
-
----
-
-## Job Parsing Logic
-
-JobHazel starts with deterministic parsing before adding AI.
-
-### Source Detection
-
-```text
-linkedin.com        → LinkedIn
-indeed.com          → Indeed
-greenhouse.io       → Greenhouse
-lever.co            → Lever
-ashbyhq.com         → Ashby
-workdayjobs.com     → Workday
-other domain        → Company Website
-```
-
-### Salary Extraction Examples
-
-Supported examples:
-
-```text
-$120,000 - $160,000
-$80/hr
-120k-150k
-USD 100,000 - 140,000
-```
-
-### Skill Extraction
-
-A predefined skill dictionary can identify common technologies in job descriptions:
-
-```text
-JavaScript
-TypeScript
-React
-Next.js
-Node.js
-Python
-Java
-Go
-PostgreSQL
-AWS
-Docker
-Kubernetes
-GraphQL
-REST
-Redis
-MongoDB
-Prisma
-Tailwind CSS
-CI/CD
-```
-
-### Duplicate Detection
-
-JobHazel warns users when a new application appears to match an existing one.
-
-Duplicate signals:
-
-* Same source URL
-* Same company and title
-* Same company and similar role name
-* Same imported page title
-
----
-
-## Analytics Definitions
-
-### Response Rate
-
-```text
-Applications beyond Applied / Total applied applications
-```
-
-### Interview Rate
-
-```text
-Applications with at least one interview / Total applied applications
-```
-
-### Offer Rate
-
-```text
-Offers / Total applied applications
-```
-
-### Source Quality
-
-```text
-Interviews or offers generated per application source
-```
-
----
-
-## Local Development
-
-### Prerequisites
-
-* Node.js 18+
-* PostgreSQL
-* npm, pnpm, or yarn
-* Chrome browser for extension testing
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/your-username/JobHazel.git
-cd JobHazel
-```
-
-### 2. Install dependencies
-
-```bash
+```sh
 npm install
-```
-
-### 3. Configure environment variables
-
-Create a `.env` file:
-
-```env
-DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:55489/JobHazel"
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-AUTH_SECRET=""
-AUTH_GITHUB_ID=""
-AUTH_GITHUB_SECRET=""
-AUTH_GOOGLE_ID=""
-AUTH_GOOGLE_SECRET=""
-```
-
-### 4. Run database migrations
-
-```bash
-npx prisma migrate dev
-```
-
-### 5. Seed demo data
-
-```bash
-npx prisma db seed
-```
-
-### 6. Start the development server
-
-```bash
+npm run prisma:generate
+npx prisma migrate deploy
 npm run dev
 ```
 
-The app should now be available at:
+Optionally run `npm run db:seed` to create/update the development seed user using the `SEED_USER_*` environment settings. Do not seed a production database with development credentials.
 
-```text
-http://localhost:4000
-```
+### 4. Install and start the frontend
 
-## Chrome Extension Local Setup
+In a second terminal, from `frontend/`:
 
-From the extension directory:
-
-```bash
-cd extension
+```sh
 npm install
-npm run build
+npm run dev
 ```
 
-Then load the extension in Chrome:
+Open [localhost:3000](http://localhost:3000). The API exposes `/health/live` and `/health/ready` on port 4000.
 
-1. Open `chrome://extensions`
-2. Enable Developer Mode
-3. Click “Load unpacked”
-4. Select the extension build folder
-5. Open a job posting page
-6. Highlight the job description
-7. Click the JobHazel extension icon
+### Builds and deployment configuration
 
----
+Run `npm run build` from `frontend/` to generate the static site in `frontend/out`. Host that export with a static host; the current configuration is not a server-rendered Next.js deployment. Set `NEXT_PUBLIC_API_BASE_URL` when building.
 
-## Security and Privacy
+The backend can run with `npm start` or its included Vercel entry point. Apply migrations before relying on new schema-dependent features. Production configuration requires complete R2 settings and a maintenance secret, plus appropriate `CORS_ORIGIN` and secure cookie settings.
 
-JobHazel is designed around user-controlled data capture.
+For Vercel Cron, set `CRON_SECRET`. The backend falls back to it when `RESUME_CLEANUP_SECRET` is unset; if both are set, ensure the cron-supplied bearer token matches the effective cleanup secret. The included cron configuration requests cleanup daily at 04:17 UTC. Other hosts need an equivalent authenticated scheduled request.
 
-Security principles:
+## Implemented API routes
 
-* Every application record is scoped to the authenticated user
-* Users cannot access other users’ applications
-* Resume files are stored in private object storage and accessed only through
-  short-lived, user-scoped URLs
-* The Chrome extension only captures data after user action
-* The extension does not monitor browser activity in the background
-* The extension does not collect LinkedIn or Indeed credentials
-* The app does not auto-apply to jobs
-* Imported job data must be reviewed before saving
-* Backend inputs are validated before database writes
+Paths are relative to the backend origin, with **no `/api` prefix** in Express. User-data routes require authentication; resume maintenance uses a separate bearer secret.
 
----
+| Area | Routes |
+| --- | --- |
+| Health | `GET /health/live`, `GET /health/ready` |
+| Authentication | `POST /auth/signup`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` |
+| Account | `PATCH /auth/profile`, `PATCH /auth/password`, `GET /auth/export` (JSON, or `?format=csv` for applications), `DELETE /auth/account` |
+| Applications | `GET /applications`, `POST /applications`, `GET /applications/:id`, `PUT /applications/:id`, `PATCH /applications/:id/status`, `DELETE /applications/:id` |
+| Application history | `GET /applications/history`, `GET /applications/:id/history`, `DELETE /applications/:id/history/:activityLogId` |
+| Application resume | `PUT /applications/:id/resume` (attach, replace, or remove) |
+| Interviews | `GET /interviews`, `POST /interviews`, `PATCH /interviews/:id`, `DELETE /interviews/:id` |
+| Tasks | `GET /tasks`, `POST /tasks`, `PATCH /tasks/:id`, `PATCH /tasks/:id/complete`, `DELETE /tasks/:id` |
+| Task preferences | `GET /tasks/preferences`, `PATCH /tasks/preferences` |
+| Contacts | `GET /contacts`, `POST /contacts`, `GET /contacts/:id`, `PATCH /contacts/:id`, `DELETE /contacts/:id` |
+| Imports | `POST /imports/create-draft`, `GET /imports/:id`, `POST /imports/:id/convert` |
+| Parser | `POST /parser/job-description` |
+| Resumes | `GET /resumes`, `POST /resumes/uploads`, `POST /resumes/:id/complete`, `GET /resumes/:id/download-url`, `PATCH /resumes/:id`, `DELETE /resumes/:id` |
+| Resume maintenance | `GET /resumes/maintenance/status`, `GET /resumes/maintenance/cleanup`, `POST /resumes/maintenance/cleanup` |
 
-## Testing Plan
+There are no `/analytics/*` routes. Analytics are computed in [the frontend analytics module](frontend/app/lib/application-analytics.ts).
 
-### Unit Tests
+## Verification and test coverage
 
-* Source detection
-* Salary parsing
-* Location parsing
-* Skill extraction
-* Title parsing
-* Duplicate detection
-* Analytics calculations
+Run `npm test` separately from `backend/` and `frontend/`. The frontend also provides `npm run lint` and `npm run build`.
 
-### Integration Tests
+On September 10, 2026, **75 backend tests and 18 frontend tests passed** against the reviewed workspace. Backend coverage includes validation, parsing, signup limits, exports, task automation, resume storage/lifecycle, and application-resume associations. Frontend coverage currently focuses on the resume library, upload flow, API helpers, and application-resume experience.
 
-* Create application
-* Update application status
-* Create import draft
-* Convert import draft to application
-* Create follow-up task after application is marked applied
-* Add interview to an application
-* Ensure user-scoped data access
-* Initiate and complete a valid resume upload
-* Reject unsupported, oversized, missing, or malformed resume uploads
-* Prevent one user from listing, downloading, updating, deleting, or associating
-  another user's resume
-* Associate, change, and remove an application's resume and verify activity history
-* Refuse permanent deletion of a resume referenced by an application
-* Remove the object and metadata for an unreferenced permanent deletion
-* Clean up abandoned uploads
-
-### Manual Extension Tests
-
-* Save from LinkedIn job page
-* Save from Indeed job page
-* Save from Greenhouse job page
-* Save from Lever job page
-* Save from Workday job page
-* Save from company career page
-* Save with selected text
-* Save without selected text
-* Save while logged out
-* Detect duplicate application
-
----
-
-## Known Limitations
-
-* Self-service account creation is limited to 1,000 current accounts. When the
-  limit is reached, `POST /auth/signup` returns `409 Conflict`. Deleting an
-  account makes a registration slot available again.
-* JobHazel does not directly sync LinkedIn or Indeed application history.
-* The Chrome extension does not scrape private job-board account pages.
-* Job parsing is heuristic-based and may require user correction.
-* Some job boards render content dynamically, so selected text may be more reliable than automatic page extraction.
-* The app does not submit applications on behalf of users.
-* Gmail and Google Calendar integrations are not included in the initial MVP.
-* Resume parsing, job matching, and automatic tailoring are not included in the
-  resume-upload MVP.
-
----
-
-## Future Improvements
-
-* Gmail import for application confirmation emails
-* Google Calendar interview detection
-* CSV import and export
-* AI-powered job description parsing
-* AI-generated interview prep checklist
-* Resume text extraction and job-to-resume matching
-* Resume tailoring workflow
-* Browser extension authenticated one-click save
-* Public job search activity reports
-* Custom pipeline stages
-* Email reminders for follow-ups
-* Mobile-friendly PWA experience
-
----
-
-## License
-
-This project is available under the MIT License.
-
----
+These suites include mocked dependencies. Passing tests does not verify live migrations, R2 permissions/CORS, scheduled maintenance, all browser workflows, or production deployment. Broad browser end-to-end coverage and a production-like manual pass remain verification work.
 
 ## Author
 
 Built by Antonio Indindoli.
-
-## Backend Auth Dev Setup
-
-1. Copy `backend/.env.example` to `backend/.env` and set secure JWT secrets.
-2. Install backend deps: `cd backend && npm install`.
-3. Generate Prisma client: `npm run prisma:generate`.
-4. Run migrations: `npx prisma migrate dev`.
-5. Seed dev auth user (optional): `npm run db:seed`.
-6. Start API: `npm run dev`.
-
-### Useful Backend Scripts
-
-- `npm test` – runs auth validation and error middleware tests.
-- `npm run db:seed` – upserts a demo user for local auth testing.
-- `npm run db:dev:reset` – resets DB and reseeds dev data.

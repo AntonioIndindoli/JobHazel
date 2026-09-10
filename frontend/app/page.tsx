@@ -31,12 +31,14 @@ import {
 } from "./lib/application-analytics";
 import { toLocalDateTimeInputs } from "./lib/interview-utils";
 import { toTaskDueDateInput, toTaskDueDatePayload } from "./lib/task-utils";
+import { setApplicationResume as updateApplicationResume } from "./lib/application-resume-api";
 import {
     completeResumeUpload,
     createResumeDownloadUrl,
     getResumeErrorMessage,
     initiateResumeUpload,
     listResumes,
+    permanentlyDeleteResume,
     updateResumeMetadata,
 } from "./lib/resume-api";
 import {
@@ -634,6 +636,7 @@ export default function MainPage() {
                 ),
             );
             setMessage(archived ? "Resume archived." : "Resume restored.");
+            loadApplications();
         } catch (error) {
             setMessage(getResumeErrorMessage(error));
         } finally {
@@ -641,7 +644,27 @@ export default function MainPage() {
         }
     }
 
-    async function downloadResume(resume: ResumeVersion) {
+    async function deleteResumePermanently(resume: ResumeVersion) {
+        setBusyResumeId(resume.id);
+        try {
+            await permanentlyDeleteResume(
+                (path, init) => authedFetch(path, init),
+                resume.id,
+            );
+            setResumes((current) =>
+                current.filter((candidate) => candidate.id !== resume.id),
+            );
+            setMessage("Resume permanently deleted.");
+        } catch (error) {
+            throw new Error(getResumeErrorMessage(error));
+        } finally {
+            setBusyResumeId(null);
+        }
+    }
+
+    async function downloadResume(
+        resume: Pick<ResumeVersion, "id" | "originalFilename">,
+    ) {
         setBusyResumeId(resume.id);
         try {
             const downloadUrl = await createResumeDownloadUrl(
@@ -1171,8 +1194,9 @@ export default function MainPage() {
         const wasEditing = Boolean(editingId);
         const method = editingId ? "PUT" : "POST";
         const url = editingId ? `/applications/${editingId}` : "/applications";
+        const { resumeVersionId, ...applicationFields } = form;
         const payload = {
-            ...form,
+            ...applicationFields,
             salaryMin: form.salaryMin.trim() ? Number(form.salaryMin) : null,
             salaryMax: form.salaryMax.trim() ? Number(form.salaryMax) : null,
             dateApplied: form.dateApplied || null,
@@ -1183,11 +1207,41 @@ export default function MainPage() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) return setMessage(data.message ?? "Save failed");
+
+        const savedApplicationId = data.application?.id as string | undefined;
+        if (!savedApplicationId) return setMessage("Application saved, but its response was incomplete.");
+
+        try {
+            await updateApplicationResume(
+                (path, init) => authedFetch(path, init),
+                savedApplicationId,
+                resumeVersionId || null,
+            );
+        } catch (error) {
+            resetApplicationForm();
+            setIsApplicationFormOpen(false);
+            setMessage(
+                `Application saved, but the resume link was not updated. ${
+                    error instanceof Error ? error.message : "Try editing the application again."
+                }`,
+            );
+            loadApplications();
+            loadResumeLibrary();
+            return;
+        }
+
         resetApplicationForm();
         setIsApplicationFormOpen(false);
-        setMessage(wasEditing ? "Application updated." : "Application saved.");
+        setMessage(
+            form.status === "APPLIED" && !resumeVersionId
+                ? `${wasEditing ? "Application updated" : "Application saved"} without a resume.`
+                : wasEditing
+                  ? "Application updated."
+                  : "Application saved.",
+        );
         loadApplications();
         loadTasks();
+        loadResumeLibrary();
     }
 
     async function updateApplicationNotes(app: Application, notes: string) {
@@ -1335,6 +1389,7 @@ export default function MainPage() {
 
     async function transitionStatus(id: string, nextStatus: string) {
         const original = applications;
+        const currentApplication = applications.find((app) => app.id === id);
         setApplications((prev) =>
             prev.map((app) => (app.id === id ? { ...app, status: nextStatus } : app)),
         );
@@ -1350,6 +1405,13 @@ export default function MainPage() {
         setApplications((prev) =>
             prev.map((app) => (app.id === id ? data.application : app)),
         );
+        if (
+            nextStatus === "APPLIED" &&
+            !currentApplication?.resumeVersionId &&
+            !currentApplication?.resumeVersion
+        ) {
+            setMessage("Application moved to Applied without a resume.");
+        }
         loadHistory(id);
         loadTasks();
     }
@@ -1394,6 +1456,7 @@ export default function MainPage() {
             description: app.description ?? "",
             notes: app.notes ?? "",
             dateApplied: app.dateApplied ? app.dateApplied.slice(0, 10) : "",
+            resumeVersionId: app.resumeVersion?.id ?? app.resumeVersionId ?? "",
         });
         setIsInterviewFormOpen(false);
         setIsTaskFormOpen(false);
@@ -1637,11 +1700,13 @@ export default function MainPage() {
                     applications={applications}
                     focusedApplicationId={focusedApplicationId}
                     interviews={interviews}
+                    resumes={resumes}
                     tasks={tasks}
                     onCreateApplication={openCreateApplication}
                     onCreateInterview={openCreateInterview}
                     onCreateTask={openCreateTask}
                     onCompleteTask={completeTask}
+                    onDownloadResume={downloadResume}
                     onRemoveApplication={removeApplication}
                     onRemoveInterview={removeInterview}
                     onStartEdit={startEdit}
@@ -1657,6 +1722,7 @@ export default function MainPage() {
                     isLoading={isResumeLibraryLoading}
                     resumes={resumes}
                     onArchiveChange={changeResumeArchiveState}
+                    onDelete={deleteResumePermanently}
                     onDownload={downloadResume}
                     onMetadataUpdate={updateResumeDetails}
                     onRetry={() => loadResumeLibrary()}
@@ -1739,6 +1805,7 @@ export default function MainPage() {
                     editingId={editingId}
                     form={form}
                     formErrors={formErrors}
+                    resumes={resumes}
                     onClose={closeApplicationForm}
                     onFormChange={setForm}
                     onRemoveApplication={removeApplication}

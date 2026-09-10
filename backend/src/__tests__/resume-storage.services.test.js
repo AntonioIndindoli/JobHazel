@@ -63,6 +63,14 @@ test("R2 adapter presigns private object operations and inspects metadata", asyn
   assert.deepEqual(signed[0].options, { expiresIn: 300 });
   assert.equal("ACL" in signed[0].command.input, false);
 
+  assert.equal(
+    await storage.presignDownload({ key, downloadFilename: "Product Resume.pdf" }),
+    "https://private.example/signed",
+  );
+  assert.ok(signed[1].command instanceof GetObjectCommand);
+  assert.deepEqual(signed[1].options, { expiresIn: 300 });
+  assert.match(signed[1].command.input.ResponseContentDisposition, /^attachment;/);
+
   const metadata = await storage.inspectObject(key);
   assert.equal(metadata.sizeBytes, 1234);
   assert.equal(metadata.contentType, "application/pdf");

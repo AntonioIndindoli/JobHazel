@@ -20,6 +20,7 @@ type ResumeLibraryViewProps = {
     isLoading: boolean;
     onArchiveChange: (resume: ResumeVersion, archived: boolean) => Promise<void>;
     onDownload: (resume: ResumeVersion) => Promise<void>;
+    onDelete: (resume: ResumeVersion) => Promise<void>;
     onMetadataUpdate: (
         resume: ResumeVersion,
         update: ResumeMetadataUpdate,
@@ -41,12 +42,14 @@ function ResumeActionsMenu({
     busy,
     onArchive,
     onDownload,
+    onDelete,
     onEdit,
     resume,
 }: {
     busy: boolean;
     onArchive: () => void;
     onDownload: () => void;
+    onDelete: () => void;
     onEdit: () => void;
     resume: ResumeVersion;
 }) {
@@ -129,9 +132,89 @@ function ResumeActionsMenu({
                         <AppIcon name={resume.archivedAt ? "history" : "ledger"} size={16} />
                         {resume.archivedAt ? "Restore version" : "Archive version"}
                     </button>
+                    <button type="button" role="menuitem" className="danger-text" onClick={() => run(onDelete)}>
+                        <AppIcon name="trash" size={16} />
+                        Permanently delete
+                    </button>
                 </div>
             )}
         </div>
+    );
+}
+
+function ResumeDeleteDialog({
+    busy,
+    onClose,
+    onConfirm,
+    resume,
+}: {
+    busy: boolean;
+    onClose: () => void;
+    onConfirm: () => Promise<void>;
+    resume: ResumeVersion;
+}) {
+    const dialogRef = useRef<HTMLDialogElement>(null);
+    const cancelRef = useRef<HTMLButtonElement>(null);
+    const [error, setError] = useState("");
+    const isReferenced = resume.applicationCount > 0;
+
+    useEffect(() => {
+        dialogRef.current?.showModal();
+        cancelRef.current?.focus();
+    }, []);
+
+    async function confirmDelete() {
+        try {
+            setError("");
+            await onConfirm();
+            onClose();
+        } catch (deleteError) {
+            setError(
+                deleteError instanceof Error
+                    ? deleteError.message
+                    : "This resume could not be deleted.",
+            );
+        }
+    }
+
+    return (
+        <dialog
+            ref={dialogRef}
+            className="resume-dialog resume-delete-dialog"
+            aria-labelledby="resume-delete-title"
+            onCancel={(event) => {
+                if (busy) event.preventDefault();
+                else onClose();
+            }}
+            onClose={onClose}
+        >
+            <div className="resume-delete-dialog-body">
+                <span className="resume-delete-icon"><AppIcon name="trash" size={22} /></span>
+                <div>
+                    <span className="resume-dialog-eyebrow">Permanent deletion</span>
+                    <h2 id="resume-delete-title">Delete {resume.name}?</h2>
+                    <p>
+                        Archiving hides a version from new selections while preserving
+                        its PDF and application history. Permanent deletion removes the
+                        file and cannot be undone.
+                    </p>
+                    {isReferenced && (
+                        <p className="resume-delete-conflict" role="status">
+                            This version is used in {resume.applicationCount}{" "}
+                            {resume.applicationCount === 1 ? "application" : "applications"}.
+                            Remove those links before deleting it.
+                        </p>
+                    )}
+                    {error && <p className="resume-field-error" role="alert">{error}</p>}
+                </div>
+            </div>
+            <div className="resume-dialog-footer">
+                <button ref={cancelRef} type="button" className="alternative" disabled={busy} onClick={onClose}>Cancel</button>
+                <button type="button" className="resume-delete-confirm" disabled={busy || isReferenced} onClick={confirmDelete}>
+                    {busy ? "Deleting…" : "Delete permanently"}
+                </button>
+            </div>
+        </dialog>
     );
 }
 
@@ -234,6 +317,7 @@ export function ResumeLibraryView({
     error,
     isLoading,
     onArchiveChange,
+    onDelete,
     onDownload,
     onMetadataUpdate,
     onRetry,
@@ -242,6 +326,7 @@ export function ResumeLibraryView({
 }: ResumeLibraryViewProps) {
     const [filter, setFilter] = useState<ResumeFilter>("active");
     const [editingResume, setEditingResume] = useState<ResumeVersion | null>(null);
+    const [deletingResume, setDeletingResume] = useState<ResumeVersion | null>(null);
     const activeResumes = resumes.filter((resume) => !resume.archivedAt);
     const archivedResumes = resumes.filter((resume) => Boolean(resume.archivedAt));
     const visibleResumes =
@@ -333,6 +418,7 @@ export function ResumeLibraryView({
                                                 busy={isBusy}
                                                 resume={resume}
                                                 onArchive={() => onArchiveChange(resume, !resume.archivedAt)}
+                                                onDelete={() => setDeletingResume(resume)}
                                                 onDownload={() => onDownload(resume)}
                                                 onEdit={() => setEditingResume(resume)}
                                             />
@@ -382,6 +468,14 @@ export function ResumeLibraryView({
                     resume={editingResume}
                     onClose={() => setEditingResume(null)}
                     onSave={(update) => onMetadataUpdate(editingResume, update)}
+                />
+            )}
+            {deletingResume && (
+                <ResumeDeleteDialog
+                    busy={busyResumeId === deletingResume.id}
+                    resume={deletingResume}
+                    onClose={() => setDeletingResume(null)}
+                    onConfirm={() => onDelete(deletingResume)}
                 />
             )}
         </section>

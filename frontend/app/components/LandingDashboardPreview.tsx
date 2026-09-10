@@ -109,6 +109,8 @@ function createPreviewData(): PreviewData {
         salaryMax: null,
         description: null,
         notes: null,
+        resumeVersionId: null,
+        resumeVersion: null,
         dateApplied:
             definition.status === "SAVED"
                 ? null

@@ -109,6 +109,7 @@ model User {
   importDrafts            ImportDraft[]
   activityLogs            ActivityLog[]
   refreshTokens           RefreshToken[]
+  resumeEndpointRateLimits ResumeEndpointRateLimit[]
   createdAt               DateTime        @default(now())
   updatedAt               DateTime        @updatedAt
 }
@@ -261,6 +262,34 @@ model ResumeVersion {
 
   @@unique([userId, checksum])
   @@index([userId, archivedAt])
+  @@index([uploadStatus, updatedAt])
+}
+
+model ResumeEndpointRateLimit {
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint        String
+  windowStartedAt DateTime
+  requestCount    Int      @default(0)
+  updatedAt       DateTime @updatedAt
+
+  @@id([userId, endpoint])
+  @@index([windowStartedAt])
+}
+
+model ResumeCleanupRun {
+  id               String    @id @default(cuid())
+  status           String
+  scannedCount     Int       @default(0)
+  deletedCount     Int       @default(0)
+  failedCount      Int       @default(0)
+  skippedCount     Int       @default(0)
+  reclaimedBytes   BigInt    @default(0)
+  failureResumeIds Json?
+  startedAt        DateTime  @default(now())
+  completedAt      DateTime?
+
+  @@index([startedAt])
 }
 
 model ImportDraft {

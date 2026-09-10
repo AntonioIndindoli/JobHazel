@@ -205,6 +205,7 @@ export const EMPTY_APPLICATION_FORM: ApplicationFormValues = {
     description: "",
     notes: "",
     dateApplied: "",
+    resumeVersionId: "",
 };
 
 export const EMPTY_INTERVIEW_FORM: InterviewFormValues = {

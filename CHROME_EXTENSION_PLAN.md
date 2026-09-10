@@ -1,0 +1,207 @@
+# Chrome Extension Implementation Plan
+
+Status: Phase 1 implemented; manual Chrome loading check pending  
+Created: September 10, 2026
+
+## Objective
+
+Let a user highlight a job description, click the JobHazel extension, review the captured information in JobHazel, and save it to their pipeline. Reuse the web application's authentication, parsing, import review, and duplicate detection.
+
+The MVP captures information only after a user action. Automatic applications, background browsing monitoring, job-board account synchronization, and extension-specific authentication are outside this plan.
+
+## Existing foundation
+
+These parts already exist in the repository:
+
+| Capability | Location |
+| --- | --- |
+| Authenticated import endpoints | `backend/src/routes/imports.routes.js` |
+| Draft creation, parsing integration, duplicate detection, and conversion | `backend/src/services/imports.services.js` |
+| Input validation and payload limits | `backend/src/validators/import.validators.js` |
+| Job parsing | `backend/src/services/parser.services.js` |
+| Import review UI | `frontend/app/components/ImportDrawer.tsx` |
+| Authenticated import request handlers | `frontend/app/page.tsx` |
+
+The actual backend routes are `POST /imports/create-draft`, `GET /imports/:id`, and `POST /imports/:id/convert`, relative to the configured API base. Use the existing frontend request helper rather than assuming the README's `/api` prefix.
+
+## Proposed flow
+
+1. The user opens a job posting and optionally highlights its description.
+2. The extension captures the URL, title, source domain, and selected text.
+3. The service worker stores the capture temporarily under a random ID.
+4. The extension opens `https://jobhazel.com/?capture=<id>`.
+5. JobHazel retrieves the capture through extension messaging and preserves it while the user signs in.
+6. Once authenticated, JobHazel creates an import draft and opens the existing review drawer.
+7. The user corrects fields and confirms saving.
+8. The existing conversion endpoint creates the application with status `SAVED`.
+
+Only the capture ID goes in the URL. Job descriptions and authentication tokens do not.
+
+## Phase 1 — Scaffold the extension and define the handoff
+
+### Tasks
+
+- [x] Create a standalone `extension/` TypeScript package with build and type-check scripts.
+- [x] Add a Manifest V3 manifest, toolbar action, service worker, and extension icons.
+- [x] Request `activeTab`, `scripting`, and `storage`; avoid broad job-site host permissions.
+- [x] Define production and local development builds with explicit app URLs.
+- [x] Configure `externally_connectable` for the production JobHazel origin and a development-only localhost origin.
+- [x] Establish a stable extension ID for local development and a frontend configuration value for the installed extension ID. Document the production ID update during release.
+- [x] Define versioned capture, retrieval, acknowledgment, and error message types.
+- [x] Document building and loading the unpacked extension.
+
+### Capture contract
+
+```ts
+type JobCapture = {
+  version: 1;
+  captureId: string;
+  createdAt: number;
+  sourceUrl: string;
+  sourceDomain: string;
+  pageTitle: string;
+  rawText: string;
+};
+```
+
+Match current backend limits: URL 2,000 characters, domain 255, title 300, and selected text 100,000. Reject oversized URLs and visibly explain any text truncation. Derive the domain from the captured URL.
+
+### Acceptance criteria
+
+- The build produces an unpacked extension that Chrome can load.
+- Production configuration excludes localhost.
+- The frontend can identify the intended extension without accepting an arbitrary extension ID from a URL parameter.
+
+### Implementation verification
+
+Implemented September 10, 2026. Both development and production builds and TypeScript checks pass. Frontend configuration lint passes. Build checks verified manifest assets, permissions, production origin isolation, and toolbar behavior with a Chrome API stub. Loading the unpacked build in an actual Chrome session remains a manual check; see extension/README.md.
+
+## Phase 2 — Capture job context from the active tab
+
+### Tasks
+
+- [ ] On toolbar invocation, use `chrome.scripting.executeScript()` to capture `document.title`, the current URL, and `window.getSelection()?.toString()` from the main frame.
+- [ ] Accept only HTTP and HTTPS pages and handle injection failures with a useful message.
+- [ ] Allow URL/title-only captures when no text is selected; explain that review may require manual details.
+- [ ] Do not capture the entire page body, form fields, or account information as a fallback.
+- [ ] Generate a cryptographically random capture ID and store the bounded payload in `chrome.storage.session`.
+- [ ] Set a capture expiry, initially 30 minutes, and prune expired entries during capture and retrieval. Bound the number of pending captures and handle storage-quota failures.
+- [ ] Open the configured JobHazel URL after storage succeeds.
+- [ ] Provide clear capture success and failure feedback, with a way to retry.
+
+### Acceptance criteria
+
+- A normal job page produces the expected payload with and without highlighted text.
+- Restricted pages such as `chrome://extensions` fail gracefully.
+- Captures survive service-worker suspension within the current browser session.
+- Browser restart or capture expiry produces an explicit recapture message.
+
+## Phase 3 — Connect the extension to JobHazel
+
+### Tasks
+
+- [ ] Add an external message listener that validates the sender's exact origin, message version, message type, and capture ID.
+- [ ] Restrict retrieval to the destination tab created for that capture; reject other tabs and origins.
+- [ ] Implement separate retrieval and acknowledgment operations. Reading a capture must not immediately delete it.
+- [ ] Add a small frontend bridge module for extension messaging, timeouts, validation, and typed errors.
+- [ ] Detect the `capture` parameter on app entry and retrieve the pending payload.
+- [ ] Preserve the validated capture in the receiving tab's `sessionStorage` before acknowledging receipt to the extension.
+- [ ] Remove the capture parameter with `history.replaceState` after successful receipt.
+- [ ] Preserve pending data across the existing sign-in flow. Do not create a draft before authentication completes.
+- [ ] Clear temporary data on successful handoff to a draft, cancellation, expiry, or sign-out. An expired payload must not silently attach to another account.
+- [ ] Handle a missing extension, mismatched extension ID, missing capture, and messaging failure with recovery instructions.
+
+### Acceptance criteria
+
+- Signed-in users receive their capture automatically.
+- Signed-out users can sign in and resume the same capture.
+- Reloading the receiving tab preserves an unexpired pending capture.
+- Unauthorized origins and unrelated tabs cannot retrieve captures.
+- No web-app access or refresh token is sent to or stored by the extension.
+
+## Phase 4 — Reuse draft creation and review
+
+### Tasks
+
+- [ ] Extract a reusable draft-creation function from the current form handler in `frontend/app/page.tsx` so manual imports and extension captures share the same behavior.
+- [ ] Submit only `sourceUrl`, `sourceDomain`, `pageTitle`, and `rawText` through the existing authenticated request helper.
+- [ ] Open `ImportDrawer` with the returned draft, parsed fields, and duplicate candidates.
+- [ ] Show recoverable parsing and network errors while preserving the capture for retry.
+- [ ] Prevent duplicate draft submissions caused by rerenders, repeated messages, or refreshes; retain the resulting draft ID for resumption.
+- [ ] Define retry behavior for an ambiguous network failure. If automatic retries are needed, add user-scoped backend idempotency keyed by capture ID before enabling them.
+- [ ] Preserve the existing conversion endpoint and review-before-save behavior.
+- [ ] Verify duplicate and already-converted responses leave the UI in a usable state.
+
+### Acceptance criteria
+
+- A captured posting reaches the existing editable review drawer.
+- Confirming creates one application in the signed-in user's pipeline.
+- Duplicate candidates are shown before an accidental second application is created.
+- Cancelling review creates no application.
+- Manual URL and text imports continue to work.
+
+## Phase 5 — Verify the complete workflow
+
+### Automated checks
+
+- [ ] Test message validation, origin/tab restrictions, expiry, payload limits, and acknowledgment behavior.
+- [ ] Test the frontend bridge with missing-extension, timeout, malformed-payload, and success responses.
+- [ ] Test sign-in resumption and repeated delivery without duplicate submission.
+- [ ] Verify existing import routes enforce user ownership and reject invalid payloads.
+- [ ] Add targeted integration tests for any new backend idempotency behavior introduced in Phase 4.
+- [ ] Run the extension build/type check and relevant frontend/backend checks.
+
+### Manual Chrome checks
+
+| Scenario | Expected result |
+| --- | --- |
+| LinkedIn, Indeed, Greenhouse, Lever, Workday, and a company career page | URL/title capture works where Chrome permits access; highlighted text reaches review |
+| No highlighted text | Review remains available with manual correction if parsing is incomplete |
+| Signed out | Sign-in resumes the pending capture |
+| Restricted browser page | Clear error without opening a broken import |
+| Duplicate posting | Existing duplicate warning is displayed |
+| API unavailable | Retry is possible without losing captured text |
+| Two separate captures | Each receiving tab imports its own payload |
+| Refresh during handoff or review | No unintended duplicate creation |
+| Expired capture or browser restart | Clear instruction to capture again |
+| Oversized selected text | Bounded payload and visible explanation |
+
+Use the authorized local testing account from `AGENTS.md` when needed; do not copy credentials into extension files, fixtures, or documentation.
+
+### Acceptance criteria
+
+- All critical capture-to-save scenarios pass in a real Chrome session.
+- Newly introduced failures have reproducible tests or documented manual checks.
+- The local app still supports its existing import flow.
+
+## Phase 6 — Package and release
+
+### Tasks
+
+- [ ] Build a production ZIP containing only runtime files and required assets.
+- [ ] Prepare the extension description, screenshots, icons, support link, and privacy disclosure describing captured fields and temporary retention.
+- [ ] Verify current Chrome Web Store publishing and data-use requirements before submission.
+- [ ] Confirm the production extension ID and deploy matching frontend configuration.
+- [ ] Smoke-test the packaged extension against the deployed JobHazel app.
+- [ ] Submit the package through the project owner's Chrome Web Store account when publication is authorized.
+- [ ] After approval, replace the README's planned extension setup and demo text with working installation instructions and a store link.
+- [ ] Keep manual imports available as the fallback if extension messaging fails or the extension is unavailable.
+
+### Acceptance criteria
+
+- The production package works with `https://jobhazel.com` and contains no development origins or secrets.
+- Installation and support instructions match the released build.
+- Public availability is verified before announcing the extension as released.
+
+## Suggested implementation order
+
+Complete Phases 1–4 as the first working vertical slice, then finish Phase 5 before packaging or publication. No new database model is expected for the basic capture flow; backend idempotency may require a small persistence change if adopted.
+
+Future enhancements can include structured `JobPosting` metadata extraction, a selection context-menu action, and authenticated one-click saving. Evaluate those after the review-based MVP is reliable.
+
+## Technical references
+
+- [Chrome activeTab permission](https://developer.chrome.com/docs/extensions/develop/concepts/activeTab)
+- [Chrome scripting API](https://developer.chrome.com/docs/extensions/reference/api/scripting)
+- [Extension and web-page messaging](https://developer.chrome.com/docs/extensions/develop/concepts/messaging)
+- [Chrome storage API](https://developer.chrome.com/docs/extensions/reference/api/storage)

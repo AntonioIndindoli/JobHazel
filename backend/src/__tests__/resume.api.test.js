@@ -118,6 +118,7 @@ function createPrismaFake() {
       archivedAt: null,
       createdAt: now,
       updatedAt: now,
+      _count: { applications: 0 },
       ...overrides,
     };
     resumes.push(row);
@@ -130,10 +131,12 @@ function createPrismaFake() {
 function createStorageFake() {
   const objects = new Map();
   const calls = [];
+  const controls = { deleteError: null };
 
   return {
     objects,
     calls,
+    controls,
     put(key, { bytes, contentType = "application/pdf", sizeBytes, checksumSha256 = null }) {
       const body = Buffer.from(bytes);
       objects.set(key, { body, contentType, sizeBytes: sizeBytes ?? body.length, checksumSha256 });
@@ -164,6 +167,7 @@ function createStorageFake() {
     },
     async deleteObject(key) {
       calls.push(["deleteObject", key]);
+      if (controls.deleteError) throw controls.deleteError;
       objects.delete(key);
     },
   };
@@ -504,5 +508,51 @@ test("metadata updates archive and unarchive without accepting file replacement"
     );
     assert.equal(unarchived.status, 200);
     assert.equal((await unarchived.json()).resume.archivedAt, null);
+  });
+});
+
+test("permanent deletion rejects referenced resumes and retries storage failures safely", async () => {
+  const db = createPrismaFake();
+  const storage = createStorageFake();
+  const deletable = db.seedResume({ id: "deletable" });
+  const referenced = db.seedResume({
+    id: "referenced",
+    _count: { applications: 2 },
+  });
+  storage.put(deletable.storageKey, { bytes: "%PDF-data\n" });
+  storage.put(referenced.storageKey, { bytes: "%PDF-data\n" });
+
+  await withApi(db.prisma, storage, async (baseUrl) => {
+    const referencedResponse = await fetch(
+      `${baseUrl}/resumes/${referenced.id}`,
+      jsonRequest(USER_ONE, {}, "DELETE"),
+    );
+    assert.equal(referencedResponse.status, 409);
+    assert.equal((await referencedResponse.json()).code, RESUME_ERROR_CODES.IN_USE);
+    assert.equal(storage.objects.has(referenced.storageKey), true);
+
+    storage.controls.deleteError = new Error("temporary outage");
+    const failedResponse = await fetch(
+      `${baseUrl}/resumes/${deletable.id}`,
+      jsonRequest(USER_ONE, {}, "DELETE"),
+    );
+    assert.equal(failedResponse.status, 503);
+    assert.equal((await failedResponse.json()).code, RESUME_ERROR_CODES.STORAGE_UNAVAILABLE);
+    assert.equal(db.resumes.some((resume) => resume.id === deletable.id), true);
+
+    storage.controls.deleteError = null;
+    const deletedResponse = await fetch(
+      `${baseUrl}/resumes/${deletable.id}`,
+      jsonRequest(USER_ONE, {}, "DELETE"),
+    );
+    assert.equal(deletedResponse.status, 204);
+    assert.equal(db.resumes.some((resume) => resume.id === deletable.id), false);
+    assert.equal(storage.objects.has(deletable.storageKey), false);
+
+    const foreignResponse = await fetch(
+      `${baseUrl}/resumes/${referenced.id}`,
+      jsonRequest(USER_TWO, {}, "DELETE"),
+    );
+    assert.equal(foreignResponse.status, 404);
   });
 });
