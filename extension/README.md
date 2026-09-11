@@ -1,7 +1,10 @@
 # JobHazel Chrome extension
 
-Phase 1 scaffold. Clicking the toolbar icon opens JobHazel. Capturing job text,
-external messaging, and automatic import review are planned for Phases 2–4.
+Phases 1–3 are implemented. Clicking the toolbar icon captures the active job
+page and opens JobHazel with a temporary capture ID. The app securely retrieves
+the capture, preserves it through sign-in, and opens the existing import drawer.
+Automatic draft creation remains Phase 4 work, so the user confirms **Create
+draft** after reviewing the captured URL, title, and selected text.
 
 ## Build and load locally
 
@@ -17,11 +20,19 @@ npm run build:dev
 2. Enable **Developer mode**, select **Load unpacked**, and choose
    `extension/dist/development` from this repository.
 3. Verify the extension ID is `nlbcijcaamjlllibnbkgmbeniaiagdkl`.
-4. Pin **JobHazel (Development)** and click it. It opens `http://localhost:3000/`.
-   Start the frontend separately with `npm run dev` in `frontend/`.
-5. After code changes, rebuild and click **Reload** on the extension card.
+4. Start the frontend separately with `npm run dev` in `frontend/`.
+5. Open an HTTP or HTTPS job posting, optionally highlight its description, then
+   click **JobHazel (Development)**. It captures the page and opens
+   `http://localhost:3000/?capture=<random-id>`.
+6. If signed out, sign in in the opened tab. The capture remains in that tab and
+   opens in the import drawer after authentication succeeds.
+7. A green check means the full selection was captured. `URL` means no text was
+   selected, `CUT` means a field was shortened to the backend limit, and `!`
+   means capture failed. Hover over the extension icon for details and click it
+   again to retry.
+8. After code changes, rebuild and click **Reload** on the extension card.
 
-Set this value in `frontend/.env.local` for the future web-app bridge:
+Set this value in `frontend/.env.local` for the web-app bridge:
 
 ```dotenv
 NEXT_PUBLIC_JOBHAZEL_EXTENSION_ID=nlbcijcaamjlllibnbkgmbeniaiagdkl
@@ -30,7 +41,6 @@ NEXT_PUBLIC_JOBHAZEL_EXTENSION_ID=nlbcijcaamjlllibnbkgmbeniaiagdkl
 Restart the frontend after changing it. The configuration helper in
 `frontend/app/lib/extension-config.ts` reads this build-time value and returns
 `null` when absent or invalid. It never reads an extension ID from URL parameters.
-The bridge itself is Phase 3 work.
 
 ## Build environments
 
@@ -43,13 +53,31 @@ The bridge itself is Phase 3 work.
 Builds use TypeScript's compiler and local assets, with no remote runtime code.
 The existing JobHazel PNG is reused for the manifest's icon sizes; Chrome scales
 it for each surface. The manifest requests only `activeTab`, `scripting`, and
-`storage`. Capture/storage permissions are reserved for the next phase.
+`storage`.
 
-Chrome's localhost match pattern does not constrain the port. The future external
-listener must validate the exact sender origin against `ALLOWED_APP_ORIGINS`
+## Capture behavior
+
+The extension reads only `window.location.href`, `document.title`, and the user's
+current text selection in the main frame. It does not fall back to the page body,
+read form fields, or monitor browsing in the background. HTTP and HTTPS pages are
+supported; Chrome-internal pages show a retryable error.
+
+Captures live in `chrome.storage.session` for 30 minutes. At most 10 pending
+captures are kept, and expired or oldest excess records are pruned before a new
+one is stored. Each record includes the destination tab ID for secure sender
+checks. Closing Chrome clears session storage; an app tab opened before a browser
+restart will therefore need a fresh capture.
+
+URLs over 2,000 characters are rejected. Page titles and selected text are
+bounded at 300 and 100,000 characters, respectively, with a `CUT` badge and a
+warning stored in the capture. Empty selection is allowed and produces a `URL`
+badge so the user knows review may require manual details.
+
+Chrome's localhost match pattern does not constrain the port. The external
+listener validates the exact sender origin against `ALLOWED_APP_ORIGINS`
 (`http://localhost:3000` and `https://jobhazel.com` in development). Production
-allows only `https://jobhazel.com`. Neither build currently registers an external
-message listener or exposes captured data.
+allows only `https://jobhazel.com`. Captures are exposed only through validated,
+versioned retrieval and acknowledgment messages from the bound destination tab.
 
 ## Stable development identity and production release
 
@@ -68,8 +96,10 @@ manifest configuration and verify its derived ID. Never commit a private key.
 
 ## Handoff contract
 
-`src/protocol.ts` is the canonical version 1 contract. The frontend can use a
-type-only import from it when the bridge is implemented; do not copy the types.
+`src/protocol.ts` is the canonical version 1 extension contract. The frontend
+keeps a structurally matching browser-safe type in
+`frontend/app/lib/extension-bridge.ts` so its Next build does not traverse or
+bundle extension source. Both sides validate untrusted messages at runtime.
 
 | Message | Caller | Success response |
 | --- | --- | --- |
@@ -79,8 +109,9 @@ type-only import from it when the bridge is implemented; do not copy the types.
 
 Requests and responses carry `version: 1`. Responses use `ok` as the success/error
 discriminator. Errors have a typed `code` and a user-facing `message`. Requests
-are plain JSON. TypeScript types do not validate messages at runtime: Phase 3
-must validate untrusted input and check both sender origin and destination tab.
+are plain JSON. The external listener and frontend bridge validate message
+version, type, capture ID, payload fields, exact sender origin, and destination
+tab at runtime.
 
 `JobCapture` contains `captureId`, `createdAt` (Unix milliseconds), `sourceUrl`,
 `sourceDomain`, `pageTitle`, and `rawText`. Capture IDs will be cryptographically
@@ -92,6 +123,11 @@ Retrieval must not consume a capture. The web page acknowledges only after it
 preserves the payload locally; acknowledgment can then remove the extension's
 copy. Repeated acknowledgments should be harmless. Payloads and auth tokens
 must never be placed in the handoff URL; it carries only `?capture=<id>`.
+
+The app stores a validated pending capture in the receiving tab's
+`sessionStorage`, removes the capture query parameter after receipt, and clears
+the pending data on cancellation, successful draft creation, sign-out, or
+expiry. Retrieval errors stay visible in an app notice with retry guidance.
 
 ## References
 

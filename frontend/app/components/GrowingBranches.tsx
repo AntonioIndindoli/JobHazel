@@ -1,6 +1,6 @@
 'use client';
 
-import { useId } from 'react';
+import { useId, useSyncExternalStore } from 'react';
 
 type Point = { x: number; y: number };
 type Curve = { start: Point; c1: Point; c2: Point; end: Point };
@@ -31,6 +31,21 @@ const trunkBase = 746;
 const trunkTip = 206;
 const trunkDelay = 0.2;
 const trunkDuration = 2.55;
+const wideViewportQuery = '(min-width: 1200px)';
+
+function subscribeToWideViewport(onStoreChange: () => void) {
+    const mediaQuery = window.matchMedia(wideViewportQuery);
+    mediaQuery.addEventListener('change', onStoreChange);
+    return () => mediaQuery.removeEventListener('change', onStoreChange);
+}
+
+function getWideViewportSnapshot() {
+    return window.matchMedia(wideViewportQuery).matches;
+}
+
+function useWideViewport() {
+    return useSyncExternalStore(subscribeToWideViewport, getWideViewportSnapshot, () => false);
+}
 
 function seededRandom(seed: number) {
     let state = seed >>> 0;
@@ -260,11 +275,13 @@ function GrowingBranchTree({ position }: { position: 'left' | 'center' | 'right'
 }
 
 export function GrowingBranches() {
+    const showOuterTrees = useWideViewport();
+
     return (
         <div className="landing-hero-growth" aria-hidden="true">
-            <GrowingBranchTree position="left" />
+            {showOuterTrees && <GrowingBranchTree position="left" />}
             <GrowingBranchTree position="center" />
-            <GrowingBranchTree position="right" />
+            {showOuterTrees && <GrowingBranchTree position="right" />}
         </div>
     );
 }

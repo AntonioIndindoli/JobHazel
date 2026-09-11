@@ -40,30 +40,6 @@ export function LandingPage({
     onSubmit,
 }: LandingPageProps) {
     const pageRef = useRef<HTMLElement>(null);
-    const productRef = useRef<HTMLDivElement>(null);
-    const previewRef = useRef<HTMLIFrameElement>(null);
-
-    useEffect(() => {
-        const preview = previewRef.current;
-        if (!preview) return;
-
-        function syncPreviewTheme() {
-            const previewRoot = preview?.contentDocument?.documentElement;
-            if (previewRoot) {
-                previewRoot.dataset.theme = document.documentElement.dataset.theme ?? "light";
-            }
-        }
-
-        syncPreviewTheme();
-        preview.addEventListener("load", syncPreviewTheme);
-        const observer = new MutationObserver(syncPreviewTheme);
-        observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
-
-        return () => {
-            preview.removeEventListener("load", syncPreviewTheme);
-            observer.disconnect();
-        };
-    }, []);
 
     useEffect(() => {
         const page = pageRef.current;
@@ -89,26 +65,6 @@ export function LandingPage({
         );
 
         revealItems.forEach((item) => observer.observe(item));
-        return () => observer.disconnect();
-    }, []);
-
-    useEffect(() => {
-        const product = productRef.current;
-        if (!product) return;
-
-        function syncDashboardScale() {
-            if (!product) return;
-            product.style.setProperty(
-                "--landing-dashboard-scale",
-                String(product.clientWidth / 1610),
-            );
-        }
-
-        syncDashboardScale();
-
-        if (!("ResizeObserver" in window)) return;
-        const observer = new ResizeObserver(syncDashboardScale);
-        observer.observe(product);
         return () => observer.disconnect();
     }, []);
 
@@ -183,15 +139,43 @@ export function LandingPage({
                     onPointerMove={movePreview}
                     onPointerLeave={resetPreview}
                 >
-                    <div className="landing-product" ref={productRef}>
-                        <iframe
-                            ref={previewRef}
-                            className="landing-product-frame"
-                            src="/dashboard-preview"
-                            title="JobHazel dashboard preview"
-                            tabIndex={-1}
-                            aria-hidden="true"
-                        />
+                    <div className="landing-product">
+                        <picture className="landing-product-picture">
+                            <source
+                                media="(max-width: 640px)"
+                                type="image/avif"
+                                srcSet="/landing/dashboard-preview-mobile-480.avif 480w, /landing/dashboard-preview-mobile-720.avif 720w"
+                                sizes="calc(100vw - 32px)"
+                                width="720"
+                                height="480"
+                            />
+                            <source
+                                media="(max-width: 640px)"
+                                type="image/webp"
+                                srcSet="/landing/dashboard-preview-mobile-480.webp 480w, /landing/dashboard-preview-mobile-720.webp 720w"
+                                sizes="calc(100vw - 32px)"
+                                width="720"
+                                height="480"
+                            />
+                            <source
+                                type="image/avif"
+                                srcSet="/landing/dashboard-preview-960.avif 960w, /landing/dashboard-preview-1440.avif 1440w"
+                                sizes="(max-width: 980px) 91vw, 50vw"
+                                width="1440"
+                                height="778"
+                            />
+                            <img
+                                className="landing-product-frame"
+                                src="/landing/dashboard-preview-960.webp"
+                                srcSet="/landing/dashboard-preview-960.webp 960w, /landing/dashboard-preview-1440.webp 1440w"
+                                sizes="(max-width: 980px) 91vw, 50vw"
+                                width="1440"
+                                height="778"
+                                alt="JobHazel dashboard showing an application flow, job-search metrics, and application tracker"
+                                fetchPriority="high"
+                                decoding="async"
+                            />
+                        </picture>
                     </div>
                 </div>
             </section>

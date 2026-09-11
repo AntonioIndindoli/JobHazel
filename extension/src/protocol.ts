@@ -8,6 +8,11 @@ export const CAPTURE_LIMITS = {
   rawText: 100_000,
 } as const;
 
+export type CaptureWarning =
+  | "NO_TEXT_SELECTED"
+  | "PAGE_TITLE_TRUNCATED"
+  | "SELECTED_TEXT_TRUNCATED";
+
 export type JobCapture = {
   version: typeof PROTOCOL_VERSION;
   captureId: string;
@@ -16,6 +21,7 @@ export type JobCapture = {
   sourceDomain: string;
   pageTitle: string;
   rawText: string;
+  warnings: CaptureWarning[];
 };
 
 export type CaptureRequest = {

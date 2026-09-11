@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import {
     AccountView,
@@ -14,6 +14,7 @@ import { ApplicationDrawer } from "./components/ApplicationDrawer";
 import { DashboardShell } from "./components/DashboardShell";
 import { ContactsView } from "./components/ContactsView";
 import { ImportDrawer } from "./components/ImportDrawer";
+import { ExtensionCaptureNotice } from "./components/ExtensionCaptureNotice";
 import { InterviewDrawer } from "./components/InterviewDrawer";
 import { InterviewsView } from "./components/InterviewsView";
 import { LandingPage } from "./components/LandingPage";
@@ -31,6 +32,17 @@ import {
 } from "./lib/application-analytics";
 import { toLocalDateTimeInputs } from "./lib/interview-utils";
 import { toTaskDueDateInput, toTaskDueDatePayload } from "./lib/task-utils";
+import { getJobHazelExtensionId } from "./lib/extension-config";
+import {
+    CAPTURE_MAX_AGE_MS,
+    ExtensionBridgeError,
+    clearPendingExtensionCapture,
+    getExtensionCaptureMessage,
+    readPendingExtensionCapture,
+    receiveExtensionCapture,
+    removeCaptureParameter,
+    type ExtensionJobCapture,
+} from "./lib/extension-bridge";
 import { setApplicationResume as updateApplicationResume } from "./lib/application-resume-api";
 import {
     completeResumeUpload,
@@ -150,6 +162,15 @@ export default function MainPage() {
     const [token, setToken] = useState("");
     const [authStatus, setAuthStatus] = useState<AuthStatus>("checking");
     const [message, setMessage] = useState("");
+    const [extensionCapture, setExtensionCapture] =
+        useState<ExtensionJobCapture | null>(null);
+    const [extensionCaptureNotice, setExtensionCaptureNotice] = useState<{
+        kind: "info" | "error";
+        message: string;
+        retry: boolean;
+    } | null>(null);
+    const [extensionCaptureRetry, setExtensionCaptureRetry] = useState(0);
+    const openedExtensionCaptureId = useRef<string | null>(null);
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [applications, setApplications] = useState<Application[]>([]);
     const [interviews, setInterviews] = useState<Interview[]>([]);
@@ -247,6 +268,147 @@ export default function MainPage() {
             }),
         [applications, editingId, form.companyName, form.sourceUrl, form.title],
     );
+
+    useEffect(() => {
+        let ignore = false;
+
+        async function loadExtensionCapture() {
+            const captureId = new URL(window.location.href).searchParams.get("capture");
+            try {
+                let pendingCapture: ExtensionJobCapture | null = null;
+                try {
+                    pendingCapture = readPendingExtensionCapture();
+                } catch (error) {
+                    if (!captureId) throw error;
+                }
+                if (captureId && pendingCapture?.captureId !== captureId) {
+                    setExtensionCaptureNotice({
+                        kind: "info",
+                        message: "Retrieving your captured job…",
+                        retry: false,
+                    });
+                    const receipt = await receiveExtensionCapture(
+                        captureId,
+                        getJobHazelExtensionId(),
+                    );
+                    pendingCapture = receipt.capture;
+                }
+
+                if (ignore) return;
+                if (captureId) removeCaptureParameter();
+                if (!pendingCapture) return;
+                setExtensionCapture(pendingCapture);
+                setExtensionCaptureNotice({
+                    kind: "info",
+                    message: "Captured job received. Sign in if needed, then review the details.",
+                    retry: false,
+                });
+            } catch (error) {
+                if (ignore) return;
+                if (
+                    error instanceof ExtensionBridgeError &&
+                    ["INVALID_CAPTURE_ID", "CAPTURE_EXPIRED", "CAPTURE_NOT_FOUND"].includes(
+                        error.code,
+                    )
+                ) {
+                    removeCaptureParameter();
+                }
+                setExtensionCaptureNotice({
+                    kind: "error",
+                    message: getExtensionCaptureMessage(error),
+                    retry:
+                        error instanceof ExtensionBridgeError &&
+                        ["EXTENSION_UNAVAILABLE", "MESSAGE_TIMEOUT", "STORAGE_FAILED"].includes(
+                            error.code,
+                        ),
+                });
+            }
+        }
+
+        void loadExtensionCapture();
+        return () => {
+            ignore = true;
+        };
+    }, [extensionCaptureRetry]);
+
+    useEffect(() => {
+        if (!extensionCapture) return;
+
+        if (authStatus === "signedOut") {
+            setMode("login");
+            setIsAuthOpen(true);
+            setExtensionCaptureNotice({
+                kind: "info",
+                message: "Your captured job is ready. Sign in to review it.",
+                retry: false,
+            });
+            return;
+        }
+
+        if (
+            authStatus !== "signedIn" ||
+            !token ||
+            openedExtensionCaptureId.current === extensionCapture.captureId
+        ) {
+            return;
+        }
+
+        openedExtensionCaptureId.current = extensionCapture.captureId;
+        setImportStep("capture");
+        setImportCapture({
+            sourceUrl: extensionCapture.sourceUrl,
+            pageTitle: extensionCapture.pageTitle,
+            rawText: extensionCapture.rawText,
+        });
+        setImportReview(EMPTY_IMPORT_REVIEW);
+        setImportDraft(null);
+        setParserDebug(null);
+        setImportErrors({});
+        setImportDuplicates([]);
+        setIsImportSubmitting(false);
+        setIsApplicationFormOpen(false);
+        setIsInterviewFormOpen(false);
+        setIsTaskFormOpen(false);
+        setIsImportDrawerOpen(true);
+
+        const wasTruncated = extensionCapture.warnings.some((warning) =>
+            ["PAGE_TITLE_TRUNCATED", "SELECTED_TEXT_TRUNCATED"].includes(warning),
+        );
+        setExtensionCaptureNotice({
+            kind: "info",
+            message: wasTruncated
+                ? "Captured job opened for review. Some captured text was shortened to fit import limits."
+                : extensionCapture.warnings.includes("NO_TEXT_SELECTED")
+                  ? "Captured URL and title opened for review. Add any missing job details before creating the draft."
+                  : "Captured job opened for review.",
+            retry: false,
+        });
+    }, [authStatus, extensionCapture, token]);
+
+    useEffect(() => {
+        if (!extensionCapture) return;
+        const remaining = extensionCapture.createdAt + CAPTURE_MAX_AGE_MS - Date.now();
+
+        function expireCapture() {
+            clearPendingExtensionCapture();
+            setExtensionCapture(null);
+            openedExtensionCaptureId.current = null;
+            setImportCapture(EMPTY_IMPORT_CAPTURE);
+            setIsImportDrawerOpen(false);
+            setExtensionCaptureNotice({
+                kind: "error",
+                message: "This capture expired. Return to the job posting and click the extension again.",
+                retry: false,
+            });
+        }
+
+        if (remaining <= 0) {
+            expireCapture();
+            return;
+        }
+        const timeout = window.setTimeout(expireCapture, remaining);
+        return () => window.clearTimeout(timeout);
+    }, [extensionCapture]);
 
     useEffect(() => {
         if (authStatus === "checking") return;
@@ -368,6 +530,7 @@ export default function MainPage() {
     }
 
     function clearSession(nextMessage: string) {
+        clearExtensionCaptureState();
         setToken("");
         setUserEmail("");
         setUserName("");
@@ -418,6 +581,9 @@ export default function MainPage() {
             credentials: "include",
         });
         if (res.status === 401) {
+            clearExtensionCaptureState();
+            resetImportFlow();
+            setIsImportDrawerOpen(false);
             setMessage("Unauthorized. Log in again.");
             setToken("");
             setUserEmail("");
@@ -888,6 +1054,17 @@ export default function MainPage() {
         setIsImportSubmitting(false);
     }
 
+    function clearExtensionCaptureState() {
+        try {
+            clearPendingExtensionCapture();
+        } catch {
+            // In-memory state is still cleared when browser storage is blocked.
+        }
+        setExtensionCapture(null);
+        openedExtensionCaptureId.current = null;
+        setExtensionCaptureNotice(null);
+    }
+
     function openImportDrawer() {
         resetImportFlow();
         setIsApplicationFormOpen(false);
@@ -899,6 +1076,7 @@ export default function MainPage() {
     function closeImportDrawer() {
         resetImportFlow();
         setIsImportDrawerOpen(false);
+        if (extensionCapture) clearExtensionCaptureState();
     }
 
     function buildImportReview(draft: ImportDraft): ImportReviewValues {
@@ -1149,6 +1327,7 @@ export default function MainPage() {
         setImportDuplicates(data.duplicateCandidates ?? []);
         setImportErrors({});
         setImportStep("review");
+        if (extensionCapture) clearExtensionCaptureState();
         setMessage(
             data.duplicateCandidates?.length
                 ? "Possible duplicate found. Review before saving."
@@ -1515,24 +1694,38 @@ export default function MainPage() {
 
     if (authStatus !== "signedIn" || !token)
         return (
-            <LandingPage
-                mode={mode}
-                email={email}
-                password={password}
-                authStatus={authStatus}
-                message={message}
-                isAuthOpen={isAuthOpen}
-                onAuthClose={() => setIsAuthOpen(false)}
-                onAuthOpen={(nextMode) => {
-                    setMode(nextMode);
-                    setMessage("");
-                    setIsAuthOpen(true);
-                }}
-                onModeChange={setMode}
-                onEmailChange={setEmail}
-                onPasswordChange={setPassword}
-                onSubmit={authSubmit}
-            />
+            <>
+                <LandingPage
+                    mode={mode}
+                    email={email}
+                    password={password}
+                    authStatus={authStatus}
+                    message={message}
+                    isAuthOpen={isAuthOpen}
+                    onAuthClose={() => setIsAuthOpen(false)}
+                    onAuthOpen={(nextMode) => {
+                        setMode(nextMode);
+                        setMessage("");
+                        setIsAuthOpen(true);
+                    }}
+                    onModeChange={setMode}
+                    onEmailChange={setEmail}
+                    onPasswordChange={setPassword}
+                    onSubmit={authSubmit}
+                />
+                {extensionCaptureNotice && (
+                    <ExtensionCaptureNotice
+                        kind={extensionCaptureNotice.kind}
+                        message={extensionCaptureNotice.message}
+                        onDismiss={() => setExtensionCaptureNotice(null)}
+                        onRetry={
+                            extensionCaptureNotice.retry
+                                ? () => setExtensionCaptureRetry((retry) => retry + 1)
+                                : undefined
+                        }
+                    />
+                )}
+            </>
         );
 
     return (
@@ -1676,6 +1869,18 @@ export default function MainPage() {
                 )
             }
         >
+            {extensionCaptureNotice && (
+                <ExtensionCaptureNotice
+                    kind={extensionCaptureNotice.kind}
+                    message={extensionCaptureNotice.message}
+                    onDismiss={() => setExtensionCaptureNotice(null)}
+                    onRetry={
+                        extensionCaptureNotice.retry
+                            ? () => setExtensionCaptureRetry((retry) => retry + 1)
+                            : undefined
+                    }
+                />
+            )}
             {currentView === "account" ? (
                 <AccountView
                     activePipeline={activePipeline}

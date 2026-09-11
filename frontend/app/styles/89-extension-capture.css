@@ -1,0 +1,55 @@
+.extension-capture-notice {
+    position: fixed;
+    z-index: 1200;
+    top: 18px;
+    left: 50%;
+    display: flex;
+    width: min(620px, calc(100vw - 32px));
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 12px 14px 12px 16px;
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border));
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface) 94%, var(--accent) 6%);
+    box-shadow: 0 12px 36px rgba(28, 39, 19, 0.18);
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.45;
+    transform: translateX(-50%);
+}
+
+.extension-capture-notice.error {
+    border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+    background: color-mix(in srgb, var(--surface) 94%, var(--danger) 6%);
+}
+
+.extension-capture-notice-actions {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+}
+
+.extension-capture-notice button {
+    min-height: 30px;
+    padding: 4px 9px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+}
+
+.extension-capture-notice button:hover {
+    background: color-mix(in srgb, currentColor 9%, transparent);
+}
+
+@media (max-width: 560px) {
+    .extension-capture-notice {
+        top: 10px;
+        width: calc(100vw - 20px);
+    }
+}

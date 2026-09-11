@@ -1,6 +1,6 @@
 # Chrome Extension Implementation Plan
 
-Status: Phase 1 implemented; manual Chrome loading check pending  
+Status: Phases 1–3 implemented; manual Chrome validation pending
 Created: September 10, 2026
 
 ## Objective
@@ -80,14 +80,14 @@ Implemented September 10, 2026. Both development and production builds and TypeS
 
 ### Tasks
 
-- [ ] On toolbar invocation, use `chrome.scripting.executeScript()` to capture `document.title`, the current URL, and `window.getSelection()?.toString()` from the main frame.
-- [ ] Accept only HTTP and HTTPS pages and handle injection failures with a useful message.
-- [ ] Allow URL/title-only captures when no text is selected; explain that review may require manual details.
-- [ ] Do not capture the entire page body, form fields, or account information as a fallback.
-- [ ] Generate a cryptographically random capture ID and store the bounded payload in `chrome.storage.session`.
-- [ ] Set a capture expiry, initially 30 minutes, and prune expired entries during capture and retrieval. Bound the number of pending captures and handle storage-quota failures.
-- [ ] Open the configured JobHazel URL after storage succeeds.
-- [ ] Provide clear capture success and failure feedback, with a way to retry.
+- [x] On toolbar invocation, use `chrome.scripting.executeScript()` to capture `document.title`, the current URL, and `window.getSelection()?.toString()` from the main frame.
+- [x] Accept only HTTP and HTTPS pages and handle injection failures with a useful message.
+- [x] Allow URL/title-only captures when no text is selected; explain that review may require manual details.
+- [x] Do not capture the entire page body, form fields, or account information as a fallback.
+- [x] Generate a cryptographically random capture ID and store the bounded payload in `chrome.storage.session`.
+- [x] Set a capture expiry, initially 30 minutes, prune expired entries during capture, and expose the same pruning helper for Phase 3 retrieval. Bound the number of pending captures and handle storage-quota failures.
+- [x] Open the configured JobHazel URL after storage succeeds.
+- [x] Provide clear capture success and failure feedback, with a way to retry.
 
 ### Acceptance criteria
 
@@ -96,20 +96,26 @@ Implemented September 10, 2026. Both development and production builds and TypeS
 - Captures survive service-worker suspension within the current browser session.
 - Browser restart or capture expiry produces an explicit recapture message.
 
+### Implementation verification
+
+Implemented September 10, 2026. Development and production builds pass TypeScript checks. Six focused tests verify URL/domain normalization, empty selections, field limits and warnings, unsupported pages, stored-record validation, expiry, malformed-record cleanup, and the 10-capture bound. Manifest smoke checks confirm the requested permissions, absence of broad host permissions, and exclusion of localhost from production.
+
+The service worker binds each stored capture to a newly created destination tab before navigating that tab to JobHazel, avoiding a retrieval race. Chrome UI checks remain part of the manual validation.
+
 ## Phase 3 — Connect the extension to JobHazel
 
 ### Tasks
 
-- [ ] Add an external message listener that validates the sender's exact origin, message version, message type, and capture ID.
-- [ ] Restrict retrieval to the destination tab created for that capture; reject other tabs and origins.
-- [ ] Implement separate retrieval and acknowledgment operations. Reading a capture must not immediately delete it.
-- [ ] Add a small frontend bridge module for extension messaging, timeouts, validation, and typed errors.
-- [ ] Detect the `capture` parameter on app entry and retrieve the pending payload.
-- [ ] Preserve the validated capture in the receiving tab's `sessionStorage` before acknowledging receipt to the extension.
-- [ ] Remove the capture parameter with `history.replaceState` after successful receipt.
-- [ ] Preserve pending data across the existing sign-in flow. Do not create a draft before authentication completes.
-- [ ] Clear temporary data on successful handoff to a draft, cancellation, expiry, or sign-out. An expired payload must not silently attach to another account.
-- [ ] Handle a missing extension, mismatched extension ID, missing capture, and messaging failure with recovery instructions.
+- [x] Add an external message listener that validates the sender's exact origin, message version, message type, and capture ID.
+- [x] Restrict retrieval to the destination tab created for that capture; reject other tabs and origins.
+- [x] Implement separate retrieval and acknowledgment operations. Reading a capture must not immediately delete it.
+- [x] Add a small frontend bridge module for extension messaging, timeouts, validation, and typed errors.
+- [x] Detect the `capture` parameter on app entry and retrieve the pending payload.
+- [x] Preserve the validated capture in the receiving tab's `sessionStorage` before acknowledging receipt to the extension.
+- [x] Remove the capture parameter with `history.replaceState` after successful receipt.
+- [x] Preserve pending data across the existing sign-in flow. Do not create a draft before authentication completes.
+- [x] Clear temporary data on successful handoff to a draft, cancellation, expiry, or sign-out. An expired payload must not silently attach to another account.
+- [x] Handle a missing extension, mismatched extension ID, missing capture, and messaging failure with recovery instructions.
 
 ### Acceptance criteria
 
@@ -118,6 +124,12 @@ Implemented September 10, 2026. Both development and production builds and TypeS
 - Reloading the receiving tab preserves an unexpired pending capture.
 - Unauthorized origins and unrelated tabs cannot retrieve captures.
 - No web-app access or refresh token is sent to or stored by the extension.
+
+### Implementation verification
+
+Implemented September 10, 2026. Ten extension tests cover exact-origin authorization, message validation, destination-tab enforcement, separate retrieval and idempotent acknowledgment, expiry cleanup, and the Phase 2 capture behavior. Seven frontend bridge tests cover payload validation, store-before-acknowledge ordering, blocked browser storage, missing or unreachable extensions, typed protocol errors, tab-local expiry, cleanup, and URL sanitization.
+
+Frontend lint, TypeScript, and the optimized production build pass. The app shows capture and recovery notices, resumes a tab-local capture after sign-in or reload, and opens the populated capture step without creating a backend draft. A real unpacked-Chrome sign-in and reload walkthrough remains the manual validation step.
 
 ## Phase 4 — Reuse draft creation and review
 
