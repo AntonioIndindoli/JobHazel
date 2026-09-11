@@ -9,7 +9,8 @@
     "prisma:generate": "prisma generate",
     "test": "node --test src/__tests__/*.test.js",
     "db:seed": "node prisma/seed.js",
-    "db:dev:reset": "npx prisma migrate reset --force && npm run db:seed"
+    "db:dev:reset": "npx prisma migrate reset --force && npm run db:seed",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build"
   },
   "keywords": [],
   "author": "",
