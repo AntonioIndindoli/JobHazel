@@ -116,6 +116,7 @@ export function validateConvertDraftPayload(req, res, next) {
       description: normalizeOptional(req.body.description),
       notes: normalizeOptional(req.body.notes),
       dateApplied: parseDate(req.body.dateApplied, "dateApplied"),
+      allowDuplicate: req.body.allowDuplicate === true,
     };
 
     return next();

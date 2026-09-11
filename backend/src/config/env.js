@@ -108,6 +108,11 @@ export function loadEnv(source = process.env) {
     ACCESS_TOKEN_TTL: optional(source, "ACCESS_TOKEN_TTL", "15m"),
     REFRESH_TOKEN_TTL_DAYS: integer(source, "REFRESH_TOKEN_TTL_DAYS", 7),
     CORS_ORIGIN: optional(source, "CORS_ORIGIN", "http://localhost:3000"),
+    EXTENSION_ORIGINS: optional(
+      source,
+      "EXTENSION_ORIGINS",
+      "chrome-extension://nlbcijcaamjlllibnbkgmbeniaiagdkl",
+    ),
     COOKIE_SECURE: optional(source, "COOKIE_SECURE", "false") === "true",
     RESUME_UPLOAD_MAX_BYTES: integer(source, "RESUME_UPLOAD_MAX_BYTES", 5 * 1024 * 1024),
     RESUME_ACTIVE_LIMIT: integer(source, "RESUME_ACTIVE_LIMIT", 10),

@@ -101,6 +101,45 @@
     font-weight: 400;
 }
 
+.form-section select,
+.contact-drawer select {
+    appearance: none;
+    padding-right: 42px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23667085' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 12px 8px;
+}
+
+.application-status-select {
+    position: relative;
+    display: block;
+}
+
+.application-status-select select {
+    padding-left: 34px;
+}
+
+.application-status-dot {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 13px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #64748b;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.status-applied .application-status-dot { background: #0066ff; }
+.status-interviewing .application-status-dot { background: #4f33ff; }
+.status-offer .application-status-dot { background: #15803d; }
+.status-rejected .application-status-dot { background: #dc2626; }
+.status-saved .application-status-dot,
+.status-withdrawn .application-status-dot { background: #475569; }
+
 .form-section textarea {
     resize: vertical;
     min-height: 132px;

@@ -6,6 +6,7 @@ import { validateBody } from "../middleware/validate.middleware.js";
 import { errorHandler, notFoundHandler } from "../middleware/error.middleware.js";
 import {
   deleteAccountSchema,
+  extensionRefreshSchema,
   loginSchema,
   passwordChangeSchema,
   profileSchema,
@@ -123,4 +124,13 @@ test("password and account deletion require secure confirmation fields", async (
     });
     assert.equal(missingConfirmation.status, 400);
   });
+});
+
+test("extension refresh validation accepts a bounded token", () => {
+  assert.deepEqual(extensionRefreshSchema.safeParse({ refreshToken: "token-value" }), {
+    success: true,
+    data: { refreshToken: "token-value" },
+  });
+  assert.equal(extensionRefreshSchema.safeParse({}).success, false);
+  assert.equal(extensionRefreshSchema.safeParse({ refreshToken: "x".repeat(257) }).success, false);
 });

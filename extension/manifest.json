@@ -2,14 +2,15 @@
   "manifest_version": 3,
   "name": "JobHazel",
   "version": "0.1.0",
-  "description": "Capture a job posting and review it in JobHazel.",
-  "minimum_chrome_version": "102",
-  "permissions": ["activeTab", "scripting", "storage"],
+  "description": "Capture, review, and save job postings to JobHazel.",
+  "minimum_chrome_version": "116",
+  "permissions": ["activeTab", "scripting", "storage", "sidePanel"],
+  "host_permissions": ["https://api.jobhazel.com/*"],
   "background": { "service_worker": "service-worker.js", "type": "module" },
   "action": {
     "default_title": "Save job to JobHazel",
     "default_icon": { "16": "icons/icon.png", "32": "icons/icon.png" }
   },
-  "icons": { "16": "icons/icon.png", "48": "icons/icon.png", "128": "icons/icon.png" },
-  "externally_connectable": { "matches": ["https://jobhazel.com/*"] }
+  "side_panel": { "default_path": "side-panel.html" },
+  "icons": { "16": "icons/icon.png", "48": "icons/icon.png", "128": "icons/icon.png" }
 }

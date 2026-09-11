@@ -67,12 +67,12 @@ import {
     APPLICATION_GOAL_PERIOD_OPTIONS,
     APPLICATION_GOAL_STORAGE_KEY,
     API_BASE_URL,
+    createApplicationFormDefaults,
+    createImportReviewDefaults,
     DEFAULT_APPLICATION_GOAL,
     DEFAULT_WEEKLY_RANGE,
-    EMPTY_APPLICATION_FORM,
     EMPTY_IMPORT_CAPTURE,
     EMPTY_INTERVIEW_FORM,
-    EMPTY_IMPORT_REVIEW,
     EMPTY_TASK_FORM,
     INTERVIEW_OUTCOMES,
     INTERVIEW_TYPES,
@@ -198,7 +198,7 @@ export default function MainPage() {
     const [busyResumeId, setBusyResumeId] = useState<string | null>(null);
     const [isResumeUploadOpen, setIsResumeUploadOpen] = useState(false);
     const [contactCreateRequest, setContactCreateRequest] = useState(0);
-    const [form, setForm] = useState<ApplicationFormValues>(EMPTY_APPLICATION_FORM);
+    const [form, setForm] = useState<ApplicationFormValues>(createApplicationFormDefaults);
     const [editingId, setEditingId] = useState<string | null>(null);
     const [isApplicationFormOpen, setIsApplicationFormOpen] = useState(false);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -225,7 +225,7 @@ export default function MainPage() {
     const [isImportDrawerOpen, setIsImportDrawerOpen] = useState(false);
     const [importStep, setImportStep] = useState<"capture" | "review">("capture");
     const [importCapture, setImportCapture] = useState(EMPTY_IMPORT_CAPTURE);
-    const [importReview, setImportReview] = useState(EMPTY_IMPORT_REVIEW);
+    const [importReview, setImportReview] = useState(createImportReviewDefaults);
     const [importDraft, setImportDraft] = useState<ImportDraft | null>(null);
     const [parserDebug, setParserDebug] = useState<ParserDebug | null>(null);
     const [importErrors, setImportErrors] = useState<Record<string, string>>({});
@@ -400,7 +400,7 @@ export default function MainPage() {
         };
         setImportStep("capture");
         setImportCapture(capturedValues);
-        setImportReview(EMPTY_IMPORT_REVIEW);
+        setImportReview(createImportReviewDefaults());
         setImportDraft(null);
         setParserDebug(null);
         setImportErrors({});
@@ -985,7 +985,7 @@ export default function MainPage() {
     }
 
     function resetApplicationForm() {
-        setForm(EMPTY_APPLICATION_FORM);
+        setForm(createApplicationFormDefaults());
         setEditingId(null);
         setFormErrors({});
     }
@@ -1091,7 +1091,7 @@ export default function MainPage() {
     function resetImportFlow() {
         setImportStep("capture");
         setImportCapture(EMPTY_IMPORT_CAPTURE);
-        setImportReview(EMPTY_IMPORT_REVIEW);
+        setImportReview(createImportReviewDefaults());
         setImportDraft(null);
         setParserDebug(null);
         setImportErrors({});
@@ -1146,7 +1146,7 @@ export default function MainPage() {
             salaryMax: draft.parsedSalaryMax ? String(draft.parsedSalaryMax) : "",
             description: draft.parsedDescription ?? "",
             notes: "",
-            dateApplied: "",
+            dateApplied: createImportReviewDefaults().dateApplied,
         };
     }
 

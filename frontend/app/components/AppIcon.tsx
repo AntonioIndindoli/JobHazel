@@ -342,6 +342,15 @@ export function AppIcon({
                 </>
             );
             break;
+        case "view-off":
+            icon = (
+                <>
+                    <path d="M3.5 12s3.2-5.5 8.5-5.5c1.5 0 2.8.4 3.9 1" />
+                    <path d="M20.5 12s-3.2 5.5-8.5 5.5c-1.5 0-2.8-.4-3.9-1" />
+                    <path d="m4 4 16 16" />
+                </>
+            );
+            break;
         case "warning":
             icon = (
                 <>

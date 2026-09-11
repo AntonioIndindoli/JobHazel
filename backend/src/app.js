@@ -14,7 +14,7 @@ import { errorHandler, notFoundHandler } from "./middleware/error.middleware.js"
 
 export function createApp() {
   const app = express();
-  const corsOrigins = env.CORS_ORIGIN.split(",")
+  const corsOrigins = `${env.CORS_ORIGIN},${env.EXTENSION_ORIGINS}`.split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
 

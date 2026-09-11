@@ -1,0 +1,55 @@
+:root { color-scheme: light; font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #183322; background: #f4f7f1; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+.brand { display: flex; align-items: center; gap: 11px; padding: 18px 20px; border-bottom: 1px solid #dce6d8; background: #fff; }
+.brand img { width: 34px; height: 34px; border-radius: 9px; }
+.brand div { display: grid; gap: 1px; }
+.brand strong { font-size: 16px; }
+.brand span { color: #637269; font-size: 12px; }
+main { padding: 16px; }
+.card { padding: 20px; border: 1px solid #dce6d8; border-radius: 16px; background: #fff; box-shadow: 0 8px 24px rgba(27, 58, 36, .06); }
+.hidden { display: none !important; }
+h1 { margin: 4px 0 8px; font-size: 22px; line-height: 1.2; }
+p { margin: 0 0 14px; }
+.eyebrow { margin: 0; color: #557a3e; font-size: 11px; font-weight: 800; letter-spacing: .12em; }
+.muted { color: #65716a; }
+form { display: grid; gap: 13px; margin-top: 20px; }
+label { display: grid; gap: 6px; color: #415048; font-size: 12px; font-weight: 700; }
+input, select, textarea { width: 100%; border: 1px solid #cbd8c7; border-radius: 9px; padding: 10px 11px; color: #183322; background: #fff; font: inherit; font-weight: 400; }
+select { appearance: none; padding-right: 42px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23657069' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 15px center; background-size: 12px 8px; }
+textarea { resize: vertical; }
+input:focus, select:focus, textarea:focus { outline: 2px solid #b9d8a8; border-color: #608d46; }
+button { border: 0; border-radius: 9px; padding: 10px 14px; font: inherit; font-weight: 750; cursor: pointer; }
+button:disabled { cursor: wait; opacity: .65; }
+.primary { color: #fff; background: #356b29; }
+.primary:hover { background: #295b20; }
+.secondary { border: 1px solid #cbd8c7; color: #294233; background: #fff; }
+.text-button { padding: 4px; color: #4b7137; background: transparent; }
+#create-account { margin-top: 14px; width: 100%; }
+.error, .warning { padding: 10px 12px; border-radius: 9px; }
+.error { color: #8e251f; background: #fff0ed; }
+.warning { margin: 12px 0; color: #764b00; background: #fff5d9; }
+.check-row { display: flex; align-items: center; gap: 8px; margin-top: -5px; }
+.check-row input { width: auto; }
+.account-row, .account-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.account-row strong { display: block; max-width: 210px; overflow: hidden; text-overflow: ellipsis; }
+.account-bar { margin: 0 2px 12px; color: #65716a; font-size: 12px; }
+.empty-state { padding: 42px 4px 28px; text-align: center; }
+.spinner { width: 36px; height: 36px; margin: 8px auto 20px; border: 4px solid #dce8d7; border-top-color: #477934; border-radius: 50%; animation: spin .8s linear infinite; }
+#working-view { padding-block: 40px; text-align: center; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.review-card { padding-top: 18px; }
+.review-card form { margin: 0; }
+.confidence { display: inline-block; width: max-content; margin-top: 4px; padding: 5px 9px; border-radius: 99px; color: #356327; background: #eaf5e4; font-size: 12px; font-weight: 800; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.status-select-field { position: relative; display: block; }
+.status-select-field select { padding-left: 32px; }
+.status-dot { position: absolute; z-index: 1; top: 50%; left: 12px; width: 9px; height: 9px; border-radius: 50%; transform: translateY(-50%); pointer-events: none; }
+.status-saved, .status-withdrawn { background: #475569; }
+.status-applied { background: #0066ff; }
+.status-interviewing { background: #4f33ff; }
+.status-offer { background: #15803d; }
+.status-rejected { background: #dc2626; }
+.actions { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; margin-top: 4px; }
+.success-mark { display: grid; place-items: center; width: 50px; height: 50px; margin-bottom: 16px; border-radius: 50%; color: #fff; background: #3f7b2f; font-size: 25px; font-weight: 900; }
+#saved-view button { width: 100%; margin-top: 10px; }

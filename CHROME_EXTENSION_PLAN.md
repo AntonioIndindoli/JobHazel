@@ -1,13 +1,13 @@
 # Chrome Extension Implementation Plan
 
-Status: Phases 1–4 implemented; manual Chrome validation pending
+Status: Phases 1–4 and the authenticated side-panel revision implemented; manual Chrome validation pending
 Created: September 10, 2026
 
 ## Objective
 
-Let a user highlight a job description, click the JobHazel extension, review the captured information in JobHazel, and save it to their pipeline. Reuse the web application's authentication, parsing, import review, and duplicate detection.
+Let a user highlight a job description, click the JobHazel extension, review the captured information inside the extension, and save it to their pipeline without leaving the posting. Reuse the backend parsing, import, and duplicate-detection services.
 
-The MVP captures information only after a user action. Automatic applications, background browsing monitoring, job-board account synchronization, and extension-specific authentication are outside this plan.
+The MVP captures information only after a user action. Automatic applications, background browsing monitoring, and job-board account synchronization are outside this plan. The extension requires its own authenticated session before it creates or saves drafts.
 
 ## Existing foundation
 
@@ -24,18 +24,18 @@ These parts already exist in the repository:
 
 The actual backend routes are `POST /imports/create-draft`, `GET /imports/:id`, and `POST /imports/:id/convert`, relative to the configured API base. Use the existing frontend request helper rather than assuming the README's `/api` prefix.
 
-## Proposed flow
+## Implemented flow
 
 1. The user opens a job posting and optionally highlights its description.
 2. The extension captures the URL, title, source domain, and selected text.
-3. The service worker stores the capture temporarily under a random ID.
-4. The extension opens `https://jobhazel.com/?capture=<id>`.
-5. JobHazel retrieves the capture through extension messaging and preserves it while the user signs in.
-6. Once authenticated, JobHazel creates an import draft and opens the existing review drawer.
-7. The user corrects fields and confirms saving.
-8. The existing conversion endpoint creates the application with status `SAVED`.
+3. The service worker opens the dedicated Chrome side panel and stores the capture temporarily under a random ID.
+4. If needed, the side panel asks the user to sign in and preserves the pending capture during authentication.
+5. The authenticated extension creates an idempotent import draft and displays the parsed fields in its own review form.
+6. The user corrects fields and confirms saving.
+7. The existing conversion endpoint creates the application in the user's account.
+8. After success, an explicit **Open in JobHazel** button can open the web application.
 
-Only the capture ID goes in the URL. Job descriptions and authentication tokens do not.
+Capturing never creates or navigates a browser tab. Access and rotating refresh tokens are kept in extension-only storage and never placed in URLs.
 
 ## Phase 1 — Scaffold the extension and define the handoff
 
@@ -161,6 +161,15 @@ Implemented September 10, 2026. Captures now create a draft automatically after 
 Network and parsing failures remain visible in the drawer without discarding the capture. Conversion retries reconcile an already-converted draft by closing the drawer and refreshing applications, while duplicate responses remain in review with an inline warning. Prisma generation, the optimized frontend build, lint, 29 frontend tests, 78 backend tests, and 10 extension tests pass. The database migration must be applied in each environment before deploying the updated backend.
 
 ## Phase 5 — Verify the complete workflow
+
+### Side-panel revision completed September 10, 2026
+
+- [x] Replace the automatic web-app tab handoff with a Manifest V3 side panel.
+- [x] Add extension login, rotating refresh, logout, and backend CORS configuration.
+- [x] Create and restore idempotent drafts inside the extension.
+- [x] Add editable review, duplicate override, and application conversion inside the extension.
+- [x] Show **Open in JobHazel** only after an application is saved.
+- [x] Add an automated assertion that toolbar capture never calls `chrome.tabs.create()`.
 
 ### Automated checks
 

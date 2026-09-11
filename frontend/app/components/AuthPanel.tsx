@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { AppIcon } from "./AppIcon";
 import type { AuthStatus, Mode } from "../lib/types";
@@ -31,6 +31,8 @@ export function AuthPanel({
     onPasswordChange,
     onSubmit,
 }: AuthPanelProps) {
+    const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+
     useEffect(() => {
         function closeOnEscape(event: KeyboardEvent) {
             if (event.key === "Escape") onClose();
@@ -45,6 +47,11 @@ export function AuthPanel({
     }, [onClose]);
 
     const isChecking = authStatus === "checking";
+
+    function changeMode(nextMode: Mode) {
+        setIsPasswordVisible(false);
+        onModeChange(nextMode);
+    }
 
     return (
         <div className="auth-modal-backdrop" role="presentation" onMouseDown={onClose}>
@@ -78,7 +85,7 @@ export function AuthPanel({
                         className={mode === "signup" ? "active" : ""}
                         role="tab"
                         aria-selected={mode === "signup"}
-                        onClick={() => onModeChange("signup")}
+                        onClick={() => changeMode("signup")}
                     >
                         Create account
                     </button>
@@ -87,7 +94,7 @@ export function AuthPanel({
                         className={mode === "login" ? "active" : ""}
                         role="tab"
                         aria-selected={mode === "login"}
-                        onClick={() => onModeChange("login")}
+                        onClick={() => changeMode("login")}
                     >
                         Sign in
                     </button>
@@ -105,17 +112,30 @@ export function AuthPanel({
                             required
                         />
                     </label>
-                    <label>
-                        <span>Password</span>
-                        <input
-                            type="password"
-                            placeholder={mode === "signup" ? "Create a password" : "Enter your password"}
-                            value={password}
-                            onChange={(event) => onPasswordChange(event.target.value)}
-                            autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                            required
-                        />
-                    </label>
+                    <div className="auth-field">
+                        <label htmlFor="auth-password">Password</label>
+                        <span className="auth-password-control">
+                            <input
+                                id="auth-password"
+                                type={isPasswordVisible ? "text" : "password"}
+                                placeholder={mode === "signup" ? "Create a password" : "Enter your password"}
+                                value={password}
+                                onChange={(event) => onPasswordChange(event.target.value)}
+                                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                                required
+                            />
+                            <button
+                                type="button"
+                                className="auth-password-toggle"
+                                aria-label={isPasswordVisible ? "Hide password" : "Show password"}
+                                aria-controls="auth-password"
+                                aria-pressed={isPasswordVisible}
+                                onClick={() => setIsPasswordVisible((isVisible) => !isVisible)}
+                            >
+                                <AppIcon name={isPasswordVisible ? "view-off" : "view"} size={19} />
+                            </button>
+                        </span>
+                    </div>
                     <button className="auth-submit" disabled={isChecking}>
                         {isChecking ? "Checking your session…" : mode === "signup" ? "Create my account" : "Sign in"}
                         {!isChecking && <AppIcon name="arrow-right" size={18} />}

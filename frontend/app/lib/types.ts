@@ -304,6 +304,7 @@ export type AppIconName =
     | "trash"
     | "trend"
     | "view"
+    | "view-off"
     | "warning"
     | "x";
 

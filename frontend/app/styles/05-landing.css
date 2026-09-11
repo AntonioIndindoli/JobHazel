@@ -989,12 +989,14 @@ body.auth-modal-open {
     margin-top: 23px;
 }
 
-.auth-form label {
+.auth-form label,
+.auth-form .auth-field {
     display: grid;
     gap: 7px;
 }
 
-.auth-form label>span {
+.auth-form label>span,
+.auth-form .auth-field>label {
     color: var(--landing-copy);
     font-size: 12px;
     font-weight: 750;
@@ -1021,6 +1023,42 @@ body.auth-modal-open {
 
 .auth-form input::placeholder {
     color: var(--landing-faint);
+}
+
+.auth-password-control {
+    position: relative;
+    display: block;
+}
+
+.auth-form .auth-password-control input {
+    padding-right: 48px;
+}
+
+.auth-password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 7px;
+    display: grid;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    place-items: center;
+    color: var(--landing-copy);
+    background: transparent;
+    transform: translateY(-50%);
+}
+
+.auth-password-toggle:hover,
+.auth-password-toggle:focus-visible {
+    color: var(--landing-ink);
+    background: var(--landing-surface);
+}
+
+.auth-password-toggle:focus-visible {
+    outline: 2px solid #4daa63;
+    outline-offset: 1px;
 }
 
 .auth-submit {

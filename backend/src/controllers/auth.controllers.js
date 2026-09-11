@@ -5,6 +5,7 @@ import {
   deleteAccount,
   getAccountUser,
   login,
+  loginExtension,
   refreshSession,
   revokeSession,
   signup,
@@ -64,6 +65,25 @@ export async function refreshController(req, res) {
 export async function logoutController(req, res) {
   await revokeSession(getCookie(req, REFRESH_COOKIE_NAME));
   res.clearCookie(REFRESH_COOKIE_NAME, { path: "/auth" });
+  return res.status(204).send();
+}
+
+export async function extensionLoginController(req, res) {
+  const result = await loginExtension(req.body);
+  if (result.status !== 200) return res.status(result.status).json(result.body);
+  const { refreshTokenExpiresAt, ...body } = result.body;
+  return res.status(200).json({ ...body, refreshTokenExpiresAt: refreshTokenExpiresAt.toISOString() });
+}
+
+export async function extensionRefreshController(req, res) {
+  const result = await refreshSession(req.body.refreshToken);
+  if (result.status !== 200) return res.status(result.status).json(result.body);
+  const { refreshTokenExpiresAt, ...body } = result.body;
+  return res.status(200).json({ ...body, refreshTokenExpiresAt: refreshTokenExpiresAt.toISOString() });
+}
+
+export async function extensionLogoutController(req, res) {
+  await revokeSession(req.body.refreshToken);
   return res.status(204).send();
 }
 

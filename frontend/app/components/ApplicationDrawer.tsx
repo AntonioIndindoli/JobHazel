@@ -2,9 +2,10 @@
 
 import type { FormEvent } from "react";
 
-import { SOURCE_OPTIONS, STATUSES, STATUS_LABELS } from "../lib/constants";
+import { SOURCE_OPTIONS } from "../lib/constants";
 import type { Application, ApplicationFormValues, ResumeVersion } from "../lib/types";
 import { AppIcon } from "./AppIcon";
+import { ApplicationStatusSelect } from "./ApplicationStatusSelect";
 import { DrawerBackdrop } from "./DrawerBackdrop";
 
 type ApplicationDrawerProps = {
@@ -103,18 +104,12 @@ export function ApplicationDrawer({
                         </label>
                         <label>
                             Status
-                            <select
+                            <ApplicationStatusSelect
                                 value={form.status}
-                                onChange={(event) =>
-                                    onFormChange({ ...form, status: event.target.value })
+                                onChange={(status) =>
+                                    onFormChange({ ...form, status })
                                 }
-                            >
-                                {STATUSES.map((status) => (
-                                    <option key={status} value={status}>
-                                        {STATUS_LABELS[status]}
-                                    </option>
-                                ))}
-                            </select>
+                            />
                         </label>
                         {formErrors.status && (
                             <span className="field-error">{formErrors.status}</span>

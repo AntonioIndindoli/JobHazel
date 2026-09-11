@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react";
 
-import { SOURCE_OPTIONS, STATUSES, STATUS_LABELS } from "../lib/constants";
+import { SOURCE_OPTIONS } from "../lib/constants";
 import type {
     Application,
     ImportCaptureValues,
@@ -11,6 +11,7 @@ import type {
     ParserDebug,
 } from "../lib/types";
 import { AppIcon } from "./AppIcon";
+import { ApplicationStatusSelect } from "./ApplicationStatusSelect";
 import { DrawerBackdrop } from "./DrawerBackdrop";
 
 type ImportDrawerProps = {
@@ -213,21 +214,15 @@ export function ImportDrawer({
                             </label>
                             <label>
                                 Status
-                                <select
+                                <ApplicationStatusSelect
                                     value={importReview.status}
-                                    onChange={(event) =>
+                                    onChange={(status) =>
                                         onReviewChange({
                                             ...importReview,
-                                            status: event.target.value,
+                                            status,
                                         })
                                     }
-                                >
-                                    {STATUSES.map((status) => (
-                                        <option key={status} value={status}>
-                                            {STATUS_LABELS[status]}
-                                        </option>
-                                    ))}
-                                </select>
+                                />
                             </label>
                             {importErrors.status && (
                                 <span className="field-error">{importErrors.status}</span>

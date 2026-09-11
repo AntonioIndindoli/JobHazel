@@ -208,6 +208,17 @@ export const EMPTY_APPLICATION_FORM: ApplicationFormValues = {
     resumeVersionId: "",
 };
 
+export function getTodayDateInput(now = new Date()): string {
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+export function createApplicationFormDefaults(now = new Date()): ApplicationFormValues {
+    return { ...EMPTY_APPLICATION_FORM, dateApplied: getTodayDateInput(now) };
+}
+
 export const EMPTY_INTERVIEW_FORM: InterviewFormValues = {
     applicationId: "",
     type: "RECRUITER_SCREEN",
@@ -259,6 +270,10 @@ export const EMPTY_IMPORT_REVIEW: ImportReviewValues = {
     notes: "",
     dateApplied: "",
 };
+
+export function createImportReviewDefaults(now = new Date()): ImportReviewValues {
+    return { ...EMPTY_IMPORT_REVIEW, dateApplied: getTodayDateInput(now) };
+}
 
 export const WEEKLY_CHART_HEIGHT = 132;
 export const WEEKLY_CHART_WIDTH = 540;

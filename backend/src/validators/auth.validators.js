@@ -51,6 +51,16 @@ export const loginSchema = {
   },
 };
 
+export const extensionRefreshSchema = {
+  safeParse(input = {}) {
+    const refreshToken = String(input.refreshToken ?? "");
+    if (!refreshToken || refreshToken.length > 256) {
+      return resultError([{ path: ["refreshToken"], message: "A valid refresh token is required." }]);
+    }
+    return resultSuccess({ refreshToken });
+  },
+};
+
 export const profileSchema = {
   safeParse(input = {}) {
     const issues = [];

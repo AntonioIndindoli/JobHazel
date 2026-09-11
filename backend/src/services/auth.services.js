@@ -67,7 +67,7 @@ function buildExpiryDate() {
   return expiresAt;
 }
 
-async function issueSession(user, prismaOverride) {
+export async function issueSession(user, prismaOverride) {
   const prisma = prismaOverride ?? await getPrismaAsync();
   const refreshToken = crypto.randomBytes(REFRESH_TOKEN_BYTES).toString("base64url");
   const expiresAt = buildExpiryDate();
@@ -169,6 +169,11 @@ export async function revokeSession(rawRefreshToken) {
     where: { tokenHash: hashRefreshToken(rawRefreshToken), revokedAt: null },
     data: { revokedAt: new Date() },
   });
+}
+
+export async function loginExtension(credentials) {
+  const result = await login(credentials);
+  return result;
 }
 
 export async function getAccountUser(userId) {

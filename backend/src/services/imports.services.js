@@ -159,7 +159,7 @@ export async function convertImportDraft(userId, id, overrides = {}) {
   if (!payload.title) return { missingFields: ["title"] };
 
   const duplicateCandidates = await findDuplicateApplications(prisma, userId, payload);
-  if (duplicateCandidates.length) return { duplicateCandidates };
+  if (duplicateCandidates.length && !overrides.allowDuplicate) return { duplicateCandidates };
 
   const result = await prisma.$transaction(async (tx) => {
     const company = await findOrCreateCompany(tx, userId, payload.companyName);

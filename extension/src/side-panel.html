@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>JobHazel</title>
+    <link rel="stylesheet" href="side-panel.css">
+  </head>
+  <body>
+    <header class="brand"><img src="icons/icon.png" alt=""><div><strong>JobHazel</strong><span>Save jobs without leaving the posting</span></div></header>
+    <main>
+      <section id="loading-view" class="card"><p>Loading JobHazel…</p></section>
+      <section id="login-view" class="card hidden">
+        <h1>Connect your account</h1>
+        <p class="muted">Sign in before capturing and saving job postings.</p>
+        <form id="login-form">
+          <label>Email<input id="email" type="email" autocomplete="username" required></label>
+          <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
+          <p id="login-error" class="error hidden" role="alert"></p>
+          <button class="primary" type="submit">Sign in</button>
+        </form>
+        <button id="create-account" class="text-button" type="button">Create an account on JobHazel</button>
+      </section>
+      <section id="ready-view" class="card hidden">
+        <div class="account-row"><div><strong id="account-email"></strong></div><button id="sign-out" class="text-button" type="button">Sign out</button></div>
+        <div class="empty-state"><h1>Capture a job</h1><p>Select the job description on the page, then click the JobHazel toolbar icon.</p></div>
+      </section>
+      <section id="working-view" class="card hidden"><div class="spinner"></div><h1>Creating your draft</h1><p class="muted">JobHazel is reading the captured posting.</p></section>
+      <section id="review-view" class="hidden">
+        <div class="account-bar"><span id="review-account"></span><button id="review-sign-out" class="text-button" type="button">Sign out</button></div>
+        <form id="review-form" class="card review-card">
+          <p class="eyebrow">REVIEW DRAFT</p><h1>Confirm the job details</h1>
+          <div id="confidence" class="confidence hidden"></div>
+          <div id="duplicates" class="warning hidden" role="alert"></div>
+          <label id="allow-duplicate-row" class="check-row hidden"><input id="allowDuplicate" type="checkbox">Save this job anyway</label>
+          <label>Job title *<input id="title" required maxlength="200"></label>
+          <label>Company<input id="companyName" maxlength="200"></label>
+          <div class="grid"><label>Status<span class="status-select-field"><span id="status-dot" class="status-dot status-saved" aria-hidden="true"></span><select id="status"><option value="SAVED">Saved</option><option value="APPLIED">Applied</option><option value="INTERVIEWING">Interviewing</option><option value="OFFER">Offer</option><option value="REJECTED">Rejected</option><option value="WITHDRAWN">Withdrawn</option></select></span></label><label>Date applied<input id="dateApplied" type="date"></label></div>
+          <label>Location<input id="location" maxlength="200"></label>
+          <label>Source<input id="source" maxlength="100"></label>
+          <label>Job URL<input id="sourceUrl" type="url" maxlength="2000"></label>
+          <div class="grid"><label>Salary min<input id="salaryMin" inputmode="numeric"></label><label>Salary max<input id="salaryMax" inputmode="numeric"></label></div>
+          <label>Description<textarea id="description" rows="8"></textarea></label>
+          <label>Notes<textarea id="notes" rows="4"></textarea></label>
+          <p id="review-error" class="error hidden" role="alert"></p>
+          <div class="actions"><button id="cancel-review" class="secondary" type="button">Discard</button><button class="primary" type="submit">Save application</button></div>
+        </form>
+      </section>
+      <section id="saved-view" class="card hidden">
+        <div class="success-mark">✓</div><p class="eyebrow">APPLICATION SAVED</p><h1 id="saved-title"></h1><p id="saved-company" class="muted"></p>
+        <button id="open-jobhazel" class="primary" type="button">Open in JobHazel</button>
+        <button id="capture-another" class="secondary" type="button">Capture another job</button>
+      </section>
+    </main>
+    <script type="module" src="side-panel.js"></script>
+  </body>
+</html>

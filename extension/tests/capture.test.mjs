@@ -9,10 +9,6 @@ import {
   isStoredCapture,
   selectCaptureKeysToRemove,
 } from "../dist/development/capture.js";
-import {
-  getAuthorizedSenderOrigin,
-  parseExternalRequest,
-} from "../dist/development/handoff.js";
 
 test("buildJobCapture derives the domain and keeps selected text", () => {
   const capture = buildJobCapture(
@@ -105,53 +101,4 @@ test("storage pruning removes expired, malformed, and oldest excess captures", (
     "jobhazel.capture.10",
     "jobhazel.capture.bad",
   ]);
-});
-
-test("external handoff accepts only the configured exact origin", () => {
-  const allowed = ["https://jobhazel.com", "http://localhost:3000"];
-  assert.equal(
-    getAuthorizedSenderOrigin(
-      { origin: "https://jobhazel.com", url: "https://jobhazel.com/?capture=x" },
-      allowed,
-    ),
-    "https://jobhazel.com",
-  );
-  assert.equal(
-    getAuthorizedSenderOrigin({ url: "https://evil.example/?capture=x" }, allowed),
-    null,
-  );
-  assert.equal(
-    getAuthorizedSenderOrigin(
-      { origin: "https://evil.example", url: "https://jobhazel.com/?capture=x" },
-      allowed,
-    ),
-    null,
-  );
-  assert.equal(
-    getAuthorizedSenderOrigin({ url: "http://localhost:4000/?capture=x" }, allowed),
-    null,
-  );
-});
-
-test("external handoff validates message version, type, and capture ID", () => {
-  const captureId = "123e4567-e89b-42d3-a456-426614174000";
-  assert.deepEqual(
-    parseExternalRequest({ version: 1, type: "jobhazel.capture.retrieve", captureId }),
-    {
-      ok: true,
-      request: { version: 1, type: "jobhazel.capture.retrieve", captureId },
-    },
-  );
-  assert.deepEqual(
-    parseExternalRequest({ version: 2, type: "jobhazel.capture.retrieve", captureId }),
-    { ok: false, reason: "UNSUPPORTED_VERSION" },
-  );
-  assert.deepEqual(
-    parseExternalRequest({ version: 1, type: "unknown", captureId }),
-    { ok: false, reason: "INVALID_MESSAGE" },
-  );
-  assert.deepEqual(
-    parseExternalRequest({ version: 1, type: "jobhazel.capture.retrieve", captureId: "guessable" }),
-    { ok: false, reason: "INVALID_MESSAGE" },
-  );
 });

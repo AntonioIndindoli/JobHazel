@@ -48,6 +48,7 @@
 .contact-drawer .field { display: grid; gap: 7px; color: var(--text-secondary); font-size: 13px; font-weight: 700; }
 .contact-drawer .field.full { grid-column: 1 / -1; }
 .contact-drawer input, .contact-drawer select, .contact-drawer textarea { width: 100%; border: 1px solid var(--border); border-radius: 9px; padding: 11px 12px; background: var(--surface-soft); color: var(--text-primary); font: inherit; font-weight: 400; }
+.contact-drawer select { appearance: none; padding-right: 42px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23667085' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 15px center; background-size: 12px 8px; }
 .contact-drawer textarea { min-height: 130px; resize: vertical; }
 .contact-drawer .form-message { margin: 0 24px; color: var(--danger); font-size: 13px; }
 .contact-drawer .drawer-actions { margin-top: auto; display: flex; justify-content: flex-end; gap: 10px; padding: 20px 24px; border-top: 1px solid var(--border); }

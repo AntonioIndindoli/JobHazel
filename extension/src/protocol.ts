@@ -24,26 +24,6 @@ export type JobCapture = {
   warnings: CaptureWarning[];
 };
 
-export type CaptureRequest = {
-  version: typeof PROTOCOL_VERSION;
-  type: "jobhazel.capture";
-};
-
-export type RetrieveCaptureRequest = {
-  version: typeof PROTOCOL_VERSION;
-  type: "jobhazel.capture.retrieve";
-  captureId: string;
-};
-
-export type AcknowledgeCaptureRequest = {
-  version: typeof PROTOCOL_VERSION;
-  type: "jobhazel.capture.acknowledge";
-  captureId: string;
-};
-
-// External pages may retrieve/acknowledge; capture is extension-internal only.
-export type ExternalRequest = RetrieveCaptureRequest | AcknowledgeCaptureRequest;
-
 export type ProtocolErrorCode =
   | "INVALID_MESSAGE"
   | "UNSUPPORTED_VERSION"
@@ -54,21 +34,3 @@ export type ProtocolErrorCode =
   | "CAPTURE_FAILED"
   | "PAYLOAD_TOO_LARGE"
   | "STORAGE_FAILED";
-
-export type ErrorResponse = {
-  version: typeof PROTOCOL_VERSION;
-  ok: false;
-  error: { code: ProtocolErrorCode; message: string };
-};
-
-export type CaptureResponse =
-  | { version: 1; ok: true; type: "jobhazel.capture"; captureId: string }
-  | ErrorResponse;
-
-export type RetrieveCaptureResponse =
-  | { version: 1; ok: true; type: "jobhazel.capture.retrieve"; capture: JobCapture }
-  | ErrorResponse;
-
-export type AcknowledgeCaptureResponse =
-  | { version: 1; ok: true; type: "jobhazel.capture.acknowledge"; captureId: string }
-  | ErrorResponse;
