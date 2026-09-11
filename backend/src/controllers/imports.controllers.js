@@ -1,4 +1,4 @@
-import { convertImportDraft, createImportDraft, getImportDraft } from "../services/imports.services.js";
+import { convertImportDraft, createImportDraft, getImportDraftResult } from "../services/imports.services.js";
 
 export async function createImportDraftController(req, res) {
   const result = await createImportDraft(req.auth.sub, req.validatedImportDraft);
@@ -6,9 +6,9 @@ export async function createImportDraftController(req, res) {
 }
 
 export async function getImportDraftController(req, res) {
-  const importDraft = await getImportDraft(req.auth.sub, req.params.id);
-  if (!importDraft) return res.status(404).json({ message: "Import draft not found." });
-  return res.status(200).json({ importDraft });
+  const result = await getImportDraftResult(req.auth.sub, req.params.id);
+  if (!result) return res.status(404).json({ message: "Import draft not found." });
+  return res.status(200).json(result);
 }
 
 export async function convertImportDraftController(req, res) {

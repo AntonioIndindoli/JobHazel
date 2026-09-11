@@ -6,8 +6,10 @@ import { APPLICATION_INCLUDE, withApplicationRelations } from "./applications.se
 
 function decorateDraft(draft) {
   if (!draft) return null;
+  const publicDraft = { ...draft };
+  delete publicDraft.captureId;
   const sourceInfo = detectJobSource({ sourceUrl: draft.sourceUrl, sourceDomain: draft.sourceDomain });
-  return { ...draft, source: sourceInfo.source };
+  return { ...publicDraft, source: sourceInfo.source };
 }
 
 async function findOrCreateCompany(prisma, userId, companyName) {
@@ -75,23 +77,48 @@ function buildConversionPayload(draft, overrides = {}) {
 
 export async function createImportDraft(userId, payload) {
   const prisma = await getPrismaAsync();
+  if (payload.captureId) {
+    const existing = await prisma.importDraft.findUnique({
+      where: { userId_captureId: { userId, captureId: payload.captureId } },
+    });
+    if (existing) {
+      const importDraft = decorateDraft(existing);
+      const duplicateCandidates = await findDuplicateApplications(
+        prisma,
+        userId,
+        buildDuplicatePayloadFromDraft(importDraft),
+      );
+      return { importDraft, duplicateCandidates, skills: [], debug: null, reused: true };
+    }
+  }
+
   const parsed = await parseJobDescriptionWithFetch(payload);
-  const importDraft = await prisma.importDraft.create({
-    data: {
-      userId,
-      sourceUrl: parsed.sourceUrl,
-      sourceDomain: parsed.sourceDomain,
-      pageTitle: parsed.pageTitle,
-      rawText: parsed.rawText,
-      parsedTitle: parsed.parsedTitle,
-      parsedCompany: parsed.parsedCompany,
-      parsedLocation: parsed.parsedLocation,
-      parsedSalaryMin: parsed.parsedSalaryMin,
-      parsedSalaryMax: parsed.parsedSalaryMax,
-      parsedDescription: parsed.parsedDescription,
-      confidence: parsed.confidence,
-    },
-  });
+  let importDraft;
+  try {
+    importDraft = await prisma.importDraft.create({
+      data: {
+        userId,
+        captureId: payload.captureId,
+        sourceUrl: parsed.sourceUrl,
+        sourceDomain: parsed.sourceDomain,
+        pageTitle: parsed.pageTitle,
+        rawText: parsed.rawText,
+        parsedTitle: parsed.parsedTitle,
+        parsedCompany: parsed.parsedCompany,
+        parsedLocation: parsed.parsedLocation,
+        parsedSalaryMin: parsed.parsedSalaryMin,
+        parsedSalaryMax: parsed.parsedSalaryMax,
+        parsedDescription: parsed.parsedDescription,
+        confidence: parsed.confidence,
+      },
+    });
+  } catch (error) {
+    if (error?.code !== "P2002" || !payload.captureId) throw error;
+    importDraft = await prisma.importDraft.findUnique({
+      where: { userId_captureId: { userId, captureId: payload.captureId } },
+    });
+    if (!importDraft) throw error;
+  }
 
   const duplicateCandidates = await findDuplicateApplications(prisma, userId, buildDuplicatePayloadFromDraft(parsed));
 
@@ -107,6 +134,19 @@ export async function getImportDraft(userId, id) {
   const prisma = await getPrismaAsync();
   const draft = await prisma.importDraft.findFirst({ where: { id, userId } });
   return decorateDraft(draft);
+}
+
+export async function getImportDraftResult(userId, id) {
+  const prisma = await getPrismaAsync();
+  const draft = await prisma.importDraft.findFirst({ where: { id, userId } });
+  if (!draft) return null;
+  const importDraft = decorateDraft(draft);
+  const duplicateCandidates = await findDuplicateApplications(
+    prisma,
+    userId,
+    buildDuplicatePayloadFromDraft(importDraft),
+  );
+  return { importDraft, duplicateCandidates };
 }
 
 export async function convertImportDraft(userId, id, overrides = {}) {

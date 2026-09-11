@@ -38,11 +38,20 @@ import {
     ExtensionBridgeError,
     clearPendingExtensionCapture,
     getExtensionCaptureMessage,
-    readPendingExtensionCapture,
+    readPendingExtensionHandoff,
     receiveExtensionCapture,
     removeCaptureParameter,
+    storeExtensionDraftReference,
+    type ExtensionDraftReference,
     type ExtensionJobCapture,
 } from "./lib/extension-bridge";
+import {
+    ImportDraftRequestError,
+    requestExistingImportDraft,
+    requestImportDraft,
+    type ImportDraftCapture,
+    type ImportDraftResult,
+} from "./lib/import-draft-api";
 import { setApplicationResume as updateApplicationResume } from "./lib/application-resume-api";
 import {
     completeResumeUpload,
@@ -83,6 +92,7 @@ import type {
     ContactFormValues,
     DashboardView,
     ImportDraft,
+    ImportCaptureValues,
     ImportReviewValues,
     Interview,
     InterviewFormValues,
@@ -164,6 +174,8 @@ export default function MainPage() {
     const [message, setMessage] = useState("");
     const [extensionCapture, setExtensionCapture] =
         useState<ExtensionJobCapture | null>(null);
+    const [extensionDraftReference, setExtensionDraftReference] =
+        useState<ExtensionDraftReference | null>(null);
     const [extensionCaptureNotice, setExtensionCaptureNotice] = useState<{
         kind: "info" | "error";
         message: string;
@@ -171,6 +183,10 @@ export default function MainPage() {
     } | null>(null);
     const [extensionCaptureRetry, setExtensionCaptureRetry] = useState(0);
     const openedExtensionCaptureId = useRef<string | null>(null);
+    const automaticDraftAttempts = useRef(new Set<string>());
+    const activeDraftRequest = useRef<string | null>(null);
+    const activeConversionRequest = useRef(false);
+    const restoredDraftId = useRef<string | null>(null);
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [applications, setApplications] = useState<Application[]>([]);
     const [interviews, setInterviews] = useState<Interview[]>([]);
@@ -276,12 +292,16 @@ export default function MainPage() {
             const captureId = new URL(window.location.href).searchParams.get("capture");
             try {
                 let pendingCapture: ExtensionJobCapture | null = null;
+                let pendingDraft: ExtensionDraftReference | null = null;
                 try {
-                    pendingCapture = readPendingExtensionCapture();
+                    const pending = readPendingExtensionHandoff();
+                    if (pending?.kind === "capture") pendingCapture = pending.capture;
+                    else if (pending?.kind === "draft") pendingDraft = pending;
                 } catch (error) {
                     if (!captureId) throw error;
                 }
-                if (captureId && pendingCapture?.captureId !== captureId) {
+                const pendingCaptureId = pendingCapture?.captureId ?? pendingDraft?.captureId;
+                if (captureId && pendingCaptureId !== captureId) {
                     setExtensionCaptureNotice({
                         kind: "info",
                         message: "Retrieving your captured job…",
@@ -292,15 +312,19 @@ export default function MainPage() {
                         getJobHazelExtensionId(),
                     );
                     pendingCapture = receipt.capture;
+                    pendingDraft = null;
                 }
 
                 if (ignore) return;
                 if (captureId) removeCaptureParameter();
-                if (!pendingCapture) return;
+                if (!pendingCapture && !pendingDraft) return;
                 setExtensionCapture(pendingCapture);
+                setExtensionDraftReference(pendingDraft);
                 setExtensionCaptureNotice({
                     kind: "info",
-                    message: "Captured job received. Sign in if needed, then review the details.",
+                    message: pendingDraft
+                        ? "Import draft restored. Sign in if needed to continue reviewing it."
+                        : "Captured job received. Sign in if needed, then review the details.",
                     retry: false,
                 });
             } catch (error) {
@@ -332,7 +356,7 @@ export default function MainPage() {
     }, [extensionCaptureRetry]);
 
     useEffect(() => {
-        if (!extensionCapture) return;
+        if (!extensionCapture && !extensionDraftReference) return;
 
         if (authStatus === "signedOut") {
             setMode("login");
@@ -345,21 +369,37 @@ export default function MainPage() {
             return;
         }
 
-        if (
-            authStatus !== "signedIn" ||
-            !token ||
-            openedExtensionCaptureId.current === extensionCapture.captureId
-        ) {
+        if (authStatus !== "signedIn" || !token) return;
+
+        if (extensionDraftReference) {
+            if (restoredDraftId.current === extensionDraftReference.draftId) return;
+            restoredDraftId.current = extensionDraftReference.draftId;
+            setIsApplicationFormOpen(false);
+            setIsInterviewFormOpen(false);
+            setIsTaskFormOpen(false);
+            setIsImportDrawerOpen(true);
+            setIsImportSubmitting(true);
+            setExtensionCaptureNotice({
+                kind: "info",
+                message: "Restoring your import draft…",
+                retry: false,
+            });
+            void restoreExtensionDraft(extensionDraftReference, token);
             return;
         }
 
+        if (!extensionCapture || openedExtensionCaptureId.current === extensionCapture.captureId)
+            return;
+
         openedExtensionCaptureId.current = extensionCapture.captureId;
-        setImportStep("capture");
-        setImportCapture({
+        const capturedValues: ImportDraftCapture = {
             sourceUrl: extensionCapture.sourceUrl,
+            sourceDomain: extensionCapture.sourceDomain,
             pageTitle: extensionCapture.pageTitle,
             rawText: extensionCapture.rawText,
-        });
+        };
+        setImportStep("capture");
+        setImportCapture(capturedValues);
         setImportReview(EMPTY_IMPORT_REVIEW);
         setImportDraft(null);
         setParserDebug(null);
@@ -371,19 +411,24 @@ export default function MainPage() {
         setIsTaskFormOpen(false);
         setIsImportDrawerOpen(true);
 
-        const wasTruncated = extensionCapture.warnings.some((warning) =>
-            ["PAGE_TITLE_TRUNCATED", "SELECTED_TEXT_TRUNCATED"].includes(warning),
-        );
         setExtensionCaptureNotice({
             kind: "info",
-            message: wasTruncated
-                ? "Captured job opened for review. Some captured text was shortened to fit import limits."
-                : extensionCapture.warnings.includes("NO_TEXT_SELECTED")
-                  ? "Captured URL and title opened for review. Add any missing job details before creating the draft."
-                  : "Captured job opened for review.",
+            message: "Creating a review draft from your captured job…",
             retry: false,
         });
-    }, [authStatus, extensionCapture, token]);
+
+        if (!automaticDraftAttempts.current.has(extensionCapture.captureId)) {
+            automaticDraftAttempts.current.add(extensionCapture.captureId);
+            void submitImportDraft(capturedValues, {
+                activeToken: token,
+                captureId: extensionCapture.captureId,
+                automatic: true,
+            });
+        }
+        // These component-local async helpers read the current authenticated
+        // request state; refs prevent duplicate work across rerenders.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [authStatus, extensionCapture, extensionDraftReference, token]);
 
     useEffect(() => {
         if (!extensionCapture) return;
@@ -1061,8 +1106,18 @@ export default function MainPage() {
             // In-memory state is still cleared when browser storage is blocked.
         }
         setExtensionCapture(null);
+        setExtensionDraftReference(null);
         openedExtensionCaptureId.current = null;
+        restoredDraftId.current = null;
+        activeDraftRequest.current = null;
+        activeConversionRequest.current = false;
+        setIsImportSubmitting(false);
         setExtensionCaptureNotice(null);
+    }
+
+    function retryExtensionCaptureFlow() {
+        restoredDraftId.current = null;
+        setExtensionCaptureRetry((retry) => retry + 1);
     }
 
     function openImportDrawer() {
@@ -1076,7 +1131,7 @@ export default function MainPage() {
     function closeImportDrawer() {
         resetImportFlow();
         setIsImportDrawerOpen(false);
-        if (extensionCapture) clearExtensionCaptureState();
+        if (extensionCapture || extensionDraftReference) clearExtensionCaptureState();
     }
 
     function buildImportReview(draft: ImportDraft): ImportReviewValues {
@@ -1093,6 +1148,137 @@ export default function MainPage() {
             notes: "",
             dateApplied: "",
         };
+    }
+
+    function applyImportDraftResult(result: ImportDraftResult) {
+        setImportDraft(result.importDraft);
+        setImportReview(buildImportReview(result.importDraft));
+        setParserDebug(result.parserDebug);
+        setImportDuplicates(result.duplicateCandidates);
+        setImportErrors({});
+        setImportStep("review");
+        setIsImportDrawerOpen(true);
+        setMessage(
+            result.duplicateCandidates.length
+                ? "Possible duplicate found. Review before saving."
+                : "Import draft ready.",
+        );
+    }
+
+    async function restoreExtensionDraft(
+        reference: ExtensionDraftReference,
+        activeToken: string,
+    ) {
+        const requestKey = `restore:${reference.draftId}`;
+        activeDraftRequest.current = requestKey;
+        try {
+            const result = await requestExistingImportDraft(
+                (path, init) => authedFetch(path, init, activeToken),
+                reference.draftId,
+            );
+            if (activeDraftRequest.current !== requestKey) return;
+            applyImportDraftResult(result);
+            setExtensionCaptureNotice(null);
+        } catch (error) {
+            if (activeDraftRequest.current !== requestKey) return;
+            const errorMessage =
+                error instanceof Error ? error.message : "JobHazel could not restore this draft.";
+            const missingDraft = error instanceof ImportDraftRequestError && error.status === 404;
+            if (missingDraft) {
+                clearExtensionCaptureState();
+                setIsImportDrawerOpen(false);
+            }
+            setImportErrors({ submit: errorMessage });
+            setExtensionCaptureNotice({
+                kind: "error",
+                message: missingDraft
+                    ? "This import draft is no longer available. Capture the job again."
+                    : errorMessage,
+                retry: !missingDraft,
+            });
+        } finally {
+            if (activeDraftRequest.current === requestKey) {
+                activeDraftRequest.current = null;
+                setIsImportSubmitting(false);
+            }
+        }
+    }
+
+    async function submitImportDraft(
+        capture: ImportDraftCapture,
+        options: {
+            activeToken?: string;
+            captureId?: string;
+            automatic: boolean;
+        },
+    ) {
+        if (!validateImportCapture(capture) || activeDraftRequest.current) return;
+        const requestKey = options.captureId ?? `manual:${Date.now()}`;
+        activeDraftRequest.current = requestKey;
+        setIsImportSubmitting(true);
+        setImportErrors({});
+        try {
+            const result = await requestImportDraft(
+                (path, init) => authedFetch(path, init, options.activeToken ?? token),
+                capture,
+                options.captureId,
+            );
+            if (activeDraftRequest.current !== requestKey) return;
+            applyImportDraftResult(result);
+
+            if (options.captureId) {
+                let reference: ExtensionDraftReference | null = null;
+                try {
+                    reference = storeExtensionDraftReference(
+                        options.captureId,
+                        result.importDraft.id,
+                    );
+                    restoredDraftId.current = result.importDraft.id;
+                } catch (error) {
+                    try {
+                        clearPendingExtensionCapture();
+                    } catch {
+                        // The open review remains usable when browser storage is blocked.
+                    }
+                    setExtensionCaptureNotice({
+                        kind: "error",
+                        message:
+                            error instanceof Error
+                                ? error.message
+                                : "The draft is ready, but it cannot be restored after a reload.",
+                        retry: false,
+                    });
+                }
+                setExtensionDraftReference(reference);
+                setExtensionCapture(null);
+                openedExtensionCaptureId.current = null;
+                if (reference) setExtensionCaptureNotice(null);
+            }
+        } catch (error) {
+            if (activeDraftRequest.current !== requestKey) return;
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "Import failed. Your captured job is still available.";
+            setImportErrors({
+                submit: options.automatic
+                    ? `${errorMessage} Click Create draft to retry.`
+                    : errorMessage,
+            });
+            setMessage(errorMessage);
+            if (options.captureId) {
+                setExtensionCaptureNotice({
+                    kind: "error",
+                    message: errorMessage,
+                    retry: false,
+                });
+            }
+        } finally {
+            if (activeDraftRequest.current === requestKey) {
+                activeDraftRequest.current = null;
+                setIsImportSubmitting(false);
+            }
+        }
     }
 
     function validateApplicationForm() {
@@ -1250,16 +1436,17 @@ export default function MainPage() {
         };
     }
 
-    function validateImportCapture() {
+    function validateImportCapture(capture: ImportCaptureValues = importCapture) {
         const errors: Record<string, string> = {};
         const hasInput =
-            importCapture.sourceUrl.trim() ||
-            importCapture.pageTitle.trim() ||
-            importCapture.rawText.trim();
+            capture.sourceUrl.trim() ||
+            capture.pageTitle.trim() ||
+            capture.rawText.trim();
         if (!hasInput) errors.rawText = "Add a job URL, page title, or description.";
-        if (importCapture.sourceUrl.trim()) {
+        if (capture.sourceUrl.trim()) {
             try {
-                new URL(importCapture.sourceUrl);
+                const parsed = new URL(capture.sourceUrl);
+                if (!["http:", "https:"].includes(parsed.protocol)) throw new Error();
             } catch {
                 errors.sourceUrl = "Enter a valid URL, including https://.";
             }
@@ -1311,34 +1498,24 @@ export default function MainPage() {
 
     async function createImportDraft(event: FormEvent) {
         event.preventDefault();
-        if (!validateImportCapture()) return;
-        setIsImportSubmitting(true);
-        const res = await authedFetch("/imports/create-draft", {
-            method: "POST",
-            body: JSON.stringify({ ...importCapture, debug: true }),
-        });
-        const data = await res.json().catch(() => ({}));
-        setIsImportSubmitting(false);
-        if (!res.ok) return setMessage(data.message ?? "Import failed");
-
-        setImportDraft(data.importDraft);
-        setImportReview(buildImportReview(data.importDraft));
-        setParserDebug(data.debug ?? null);
-        setImportDuplicates(data.duplicateCandidates ?? []);
-        setImportErrors({});
-        setImportStep("review");
-        if (extensionCapture) clearExtensionCaptureState();
-        setMessage(
-            data.duplicateCandidates?.length
-                ? "Possible duplicate found. Review before saving."
-                : "Import draft ready.",
+        await submitImportDraft(
+            {
+                ...importCapture,
+                sourceDomain: extensionCapture?.sourceDomain,
+            },
+            {
+                captureId: extensionCapture?.captureId,
+                automatic: false,
+            },
         );
     }
 
     async function convertImportDraft(event: FormEvent) {
         event.preventDefault();
-        if (!importDraft || !validateImportReview()) return;
+        if (!importDraft || !validateImportReview() || activeConversionRequest.current) return;
+        activeConversionRequest.current = true;
         setIsImportSubmitting(true);
+        setImportErrors({});
         const payload = {
             ...importReview,
             salaryMin: importReview.salaryMin.trim()
@@ -1349,22 +1526,44 @@ export default function MainPage() {
                 : null,
             dateApplied: importReview.dateApplied || null,
         };
-        const res = await authedFetch(`/imports/${importDraft.id}/convert`, {
-            method: "POST",
-            body: JSON.stringify(payload),
-        });
-        const data = await res.json().catch(() => ({}));
-        setIsImportSubmitting(false);
-        if (res.status === 409 && data.duplicates) {
-            setImportDuplicates(data.duplicates);
-            return setMessage("Possible duplicate detected. Save was blocked.");
-        }
-        if (!res.ok) return setMessage(data.message ?? "Import conversion failed");
+        try {
+            const res = await authedFetch(`/imports/${importDraft.id}/convert`, {
+                method: "POST",
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.status === 409 && data.duplicates) {
+                setImportDuplicates(data.duplicates);
+                setImportErrors({ submit: "Possible duplicate detected. Save was blocked." });
+                setMessage("Possible duplicate detected. Save was blocked.");
+                return;
+            }
+            if (res.status === 409 && data.importDraft?.convertedAt) {
+                closeImportDrawer();
+                setMessage("This imported job was already saved.");
+                loadApplications();
+                loadTasks();
+                return;
+            }
+            if (!res.ok) {
+                const errorMessage = data.message ?? "Import conversion failed";
+                setImportErrors({ submit: errorMessage });
+                setMessage(errorMessage);
+                return;
+            }
 
-        closeImportDrawer();
-        setMessage("Imported job saved.");
-        loadApplications();
-        loadTasks();
+            closeImportDrawer();
+            setMessage("Imported job saved.");
+            loadApplications();
+            loadTasks();
+        } catch {
+            const errorMessage = "The save result is unclear. Click Save to check the draft again.";
+            setImportErrors({ submit: errorMessage });
+            setMessage(errorMessage);
+        } finally {
+            activeConversionRequest.current = false;
+            setIsImportSubmitting(false);
+        }
     }
 
     async function saveApplication(event: FormEvent) {
@@ -1720,7 +1919,7 @@ export default function MainPage() {
                         onDismiss={() => setExtensionCaptureNotice(null)}
                         onRetry={
                             extensionCaptureNotice.retry
-                                ? () => setExtensionCaptureRetry((retry) => retry + 1)
+                                ? retryExtensionCaptureFlow
                                 : undefined
                         }
                     />
@@ -1876,7 +2075,7 @@ export default function MainPage() {
                     onDismiss={() => setExtensionCaptureNotice(null)}
                     onRetry={
                         extensionCaptureNotice.retry
-                            ? () => setExtensionCaptureRetry((retry) => retry + 1)
+                            ? retryExtensionCaptureFlow
                             : undefined
                     }
                 />

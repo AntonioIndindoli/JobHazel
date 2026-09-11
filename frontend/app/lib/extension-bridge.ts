@@ -60,6 +60,18 @@ export type CaptureReceipt = {
     acknowledged: boolean;
 };
 
+export type ExtensionDraftReference = {
+    version: 1;
+    kind: "draft";
+    captureId: string;
+    draftId: string;
+    createdAt: number;
+};
+
+export type PendingExtensionHandoff =
+    | { kind: "capture"; capture: ExtensionJobCapture }
+    | ExtensionDraftReference;
+
 export type ExtensionBridgeErrorCode =
     | "INVALID_CAPTURE_ID"
     | "EXTENSION_NOT_CONFIGURED"
@@ -315,14 +327,79 @@ export function readPendingExtensionCapture(
     storage: Storage = window.sessionStorage,
     now = Date.now(),
 ): ExtensionJobCapture | null {
+    const pending = readPendingExtensionHandoff(storage, now);
+    return pending?.kind === "capture" ? pending.capture : null;
+}
+
+function isDraftReference(value: unknown): value is ExtensionDraftReference {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+    const reference = value as Partial<ExtensionDraftReference>;
+    return Boolean(
+        reference.version === 1 &&
+            reference.kind === "draft" &&
+            isCaptureId(reference.captureId) &&
+            typeof reference.draftId === "string" &&
+            /^[a-z0-9]{20,64}$/i.test(reference.draftId) &&
+            typeof reference.createdAt === "number" &&
+            Number.isFinite(reference.createdAt),
+    );
+}
+
+export function readPendingExtensionHandoff(
+    storage: Storage = window.sessionStorage,
+    now = Date.now(),
+): PendingExtensionHandoff | null {
     const raw = storage.getItem(PENDING_CAPTURE_STORAGE_KEY);
     if (!raw) return null;
     try {
-        return validateFreshCapture(JSON.parse(raw), undefined, now);
+        const parsed: unknown = JSON.parse(raw);
+        if (isJobCapture(parsed)) {
+            return { kind: "capture", capture: validateFreshCapture(parsed, undefined, now) };
+        }
+        if (isDraftReference(parsed)) {
+            if (parsed.createdAt + CAPTURE_MAX_AGE_MS <= now) {
+                throw new ExtensionBridgeError(
+                    "CAPTURE_EXPIRED",
+                    "This import session expired. Capture the job again or open Import Job manually.",
+                );
+            }
+            return parsed;
+        }
+        throw new ExtensionBridgeError(
+            "INVALID_RESPONSE",
+            "The saved import session is invalid. Capture the job again.",
+        );
     } catch (error) {
         storage.removeItem(PENDING_CAPTURE_STORAGE_KEY);
         throw error;
     }
+}
+
+export function storeExtensionDraftReference(
+    captureId: string,
+    draftId: string,
+    createdAt = Date.now(),
+    storage: Storage = window.sessionStorage,
+): ExtensionDraftReference {
+    const reference: ExtensionDraftReference = {
+        version: 1,
+        kind: "draft",
+        captureId,
+        draftId,
+        createdAt,
+    };
+    if (!isDraftReference(reference)) {
+        throw new ExtensionBridgeError("INVALID_RESPONSE", "JobHazel received an invalid draft reference.");
+    }
+    try {
+        storage.setItem(PENDING_CAPTURE_STORAGE_KEY, JSON.stringify(reference));
+    } catch {
+        throw new ExtensionBridgeError(
+            "STORAGE_FAILED",
+            "The draft is ready, but JobHazel could not preserve it across a reload.",
+        );
+    }
+    return reference;
 }
 
 export function clearPendingExtensionCapture(

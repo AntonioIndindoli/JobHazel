@@ -296,6 +296,7 @@ model ImportDraft {
   id                String    @id @default(cuid())
   userId            String
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  captureId         String?
   sourceUrl         String?
   sourceDomain      String?
   pageTitle         String?
@@ -311,6 +312,7 @@ model ImportDraft {
   convertedAt       DateTime?
 
   @@index([userId, createdAt])
+  @@unique([userId, captureId])
 }
 
 model ActivityLog {

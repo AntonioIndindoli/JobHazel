@@ -69,6 +69,7 @@ export function LandingPage({
     }, []);
 
     function movePreview(event: PointerEvent<HTMLDivElement>) {
+        if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
         const bounds = event.currentTarget.getBoundingClientRect();
         const x = (event.clientX - bounds.left) / bounds.width - 0.5;
@@ -123,9 +124,6 @@ export function LandingPage({
                             Start tracking for free
                             <AppIcon name="arrow-right" size={18} />
                         </button>
-                        <a className="landing-secondary-button" href="#how-it-works">
-                            See how it works
-                        </a>
                     </div>
                     <div className="landing-proof">
                         <span><AppIcon name="check" size={15} /> Free to get started</span>

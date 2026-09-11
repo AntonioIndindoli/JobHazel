@@ -7,8 +7,10 @@ import {
     clearPendingExtensionCapture,
     isJobCapture,
     readPendingExtensionCapture,
+    readPendingExtensionHandoff,
     receiveExtensionCapture,
     removeCaptureParameter,
+    storeExtensionDraftReference,
 } from "./extension-bridge";
 
 const extensionId = "abcdefghijklmnopabcdefghijklmnop";
@@ -168,5 +170,20 @@ describe("extension bridge", () => {
             { replaceState, state: null },
         );
         expect(replaceState).toHaveBeenCalledWith(null, "", "/?view=jobs#saved");
+    });
+
+    it("replaces raw capture data with a reload-safe draft reference", () => {
+        sessionStorage.setItem(PENDING_CAPTURE_STORAGE_KEY, JSON.stringify(capture()));
+        const reference = storeExtensionDraftReference(
+            captureId,
+            "cm12345678901234567890123",
+            2_000,
+            sessionStorage,
+        );
+        expect(readPendingExtensionHandoff(sessionStorage, 2_100)).toEqual(reference);
+        expect(sessionStorage.getItem(PENDING_CAPTURE_STORAGE_KEY)).not.toContain(
+            "Responsibilities and qualifications",
+        );
+        expect(readPendingExtensionCapture(sessionStorage, 2_100)).toBeNull();
     });
 });

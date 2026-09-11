@@ -1,6 +1,7 @@
 import { getDomainFromUrl, normalizeUrl } from "../utils/url.js";
 
 const APP_STATUSES = new Set(["SAVED", "APPLIED", "INTERVIEWING", "OFFER", "REJECTED", "WITHDRAWN"]);
+const CAPTURE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function normalizeOptional(value) {
   if (value === undefined || value === null) return null;
@@ -76,7 +77,11 @@ export function validateParserPayload(req, res, next) {
 
 export function validateCreateDraftPayload(req, res, next) {
   try {
-    req.validatedImportDraft = normalizeParserPayload(req.body);
+    const captureId = normalizeOptional(req.get("Idempotency-Key"));
+    if (captureId && !CAPTURE_ID_PATTERN.test(captureId)) {
+      throw new Error("Idempotency-Key must be a valid capture ID.");
+    }
+    req.validatedImportDraft = { ...normalizeParserPayload(req.body), captureId };
     return next();
   } catch (error) {
     return res.status(400).json({ message: error.message });

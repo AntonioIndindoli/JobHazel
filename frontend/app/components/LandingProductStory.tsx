@@ -8,21 +8,7 @@ import { AppIcon } from "./AppIcon";
 export function LandingProductStory({ onGetStarted }: { onGetStarted: () => void }) {
     return (
         <div className="landing-story">
-            <nav className="story-overview" aria-label="Explore JobHazel features">
-                <span>Your search. All together.</span>
-                <a href="#pipeline"><AppIcon name="applications" size={18} /> Applications</a>
-                <a href="#follow-through"><AppIcon name="calendar" size={18} /> Interviews</a>
-                <a href="#follow-through"><AppIcon name="contacts" size={18} /> Contacts</a>
-                <a href="#follow-through"><AppIcon name="checklist" size={18} /> Follow-ups</a>
-                <a href="#insights"><AppIcon name="analytics" size={18} /> Insights</a>
-            </nav>
-
             <section className="story-features story-container" id="features" aria-labelledby="story-features-title">
-                <div className="story-section-heading" data-reveal>
-                    <h2 id="story-features-title">Organize your job search.</h2>
-                    <p>Time is money. Stop wasting it sifting through inboxes, emails, and spreadsheets.</p>
-                </div>
-
                 <article className="story-pipeline" id="pipeline" data-reveal>
                     <div className="story-feature-copy">
                         <span className="story-eyebrow"><AppIcon name="pipeline" size={16} /> Application tracking</span>

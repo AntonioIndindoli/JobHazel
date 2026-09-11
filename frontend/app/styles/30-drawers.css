@@ -113,6 +113,16 @@
     font-size: 12px;
 }
 
+.import-request-error {
+    padding: 10px 12px;
+    border: 1px solid var(--danger-border);
+    border-radius: 8px;
+    background: var(--danger-surface);
+    color: var(--danger);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
 .duplicate-warning {
     margin: 16px 24px 0;
     padding: 10px 12px;

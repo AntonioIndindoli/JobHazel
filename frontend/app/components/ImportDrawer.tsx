@@ -126,6 +126,11 @@ export function ImportDrawer({
                                     {importErrors.rawText}
                                 </span>
                             )}
+                            {importErrors.submit && (
+                                <div className="import-request-error" role="alert">
+                                    {importErrors.submit}
+                                </div>
+                            )}
                         </section>
                         <footer className="drawer-footer">
                             <button type="button" className="secondary" onClick={onClose}>
@@ -362,6 +367,11 @@ export function ImportDrawer({
                                 />
                             </label>
                         </section>
+                        {importErrors.submit && (
+                            <div className="import-request-error" role="alert">
+                                {importErrors.submit}
+                            </div>
+                        )}
                         <footer className="drawer-footer">
                             <button
                                 type="button"

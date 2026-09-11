@@ -1,10 +1,10 @@
 # JobHazel Chrome extension
 
-Phases 1–3 are implemented. Clicking the toolbar icon captures the active job
+Phases 1–4 are implemented. Clicking the toolbar icon captures the active job
 page and opens JobHazel with a temporary capture ID. The app securely retrieves
-the capture, preserves it through sign-in, and opens the existing import drawer.
-Automatic draft creation remains Phase 4 work, so the user confirms **Create
-draft** after reviewing the captured URL, title, and selected text.
+the capture, preserves it through sign-in, creates an idempotent import draft,
+and opens the existing review step. The user reviews the parsed fields before
+saving an application.
 
 ## Build and load locally
 
@@ -25,7 +25,7 @@ npm run build:dev
    click **JobHazel (Development)**. It captures the page and opens
    `http://localhost:3000/?capture=<random-id>`.
 6. If signed out, sign in in the opened tab. The capture remains in that tab and
-   opens in the import drawer after authentication succeeds.
+   opens as a parsed review draft after authentication succeeds.
 7. A green check means the full selection was captured. `URL` means no text was
    selected, `CUT` means a field was shortened to the backend limit, and `!`
    means capture failed. Hover over the extension icon for details and click it

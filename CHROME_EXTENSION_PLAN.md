@@ -1,6 +1,6 @@
 # Chrome Extension Implementation Plan
 
-Status: Phases 1–3 implemented; manual Chrome validation pending
+Status: Phases 1–4 implemented; manual Chrome validation pending
 Created: September 10, 2026
 
 ## Objective
@@ -127,7 +127,7 @@ The service worker binds each stored capture to a newly created destination tab 
 
 ### Implementation verification
 
-Implemented September 10, 2026. Ten extension tests cover exact-origin authorization, message validation, destination-tab enforcement, separate retrieval and idempotent acknowledgment, expiry cleanup, and the Phase 2 capture behavior. Seven frontend bridge tests cover payload validation, store-before-acknowledge ordering, blocked browser storage, missing or unreachable extensions, typed protocol errors, tab-local expiry, cleanup, and URL sanitization.
+Implemented September 10, 2026. Ten extension tests cover exact-origin authorization, message validation, destination-tab enforcement, separate retrieval and idempotent acknowledgment, expiry cleanup, and the Phase 2 capture behavior. Eight frontend bridge tests cover payload validation, store-before-acknowledge ordering, blocked browser storage, missing or unreachable extensions, typed protocol errors, tab-local expiry, cleanup, URL sanitization, and reload-safe draft references.
 
 Frontend lint, TypeScript, and the optimized production build pass. The app shows capture and recovery notices, resumes a tab-local capture after sign-in or reload, and opens the populated capture step without creating a backend draft. A real unpacked-Chrome sign-in and reload walkthrough remains the manual validation step.
 
@@ -135,14 +135,14 @@ Frontend lint, TypeScript, and the optimized production build pass. The app show
 
 ### Tasks
 
-- [ ] Extract a reusable draft-creation function from the current form handler in `frontend/app/page.tsx` so manual imports and extension captures share the same behavior.
-- [ ] Submit only `sourceUrl`, `sourceDomain`, `pageTitle`, and `rawText` through the existing authenticated request helper.
-- [ ] Open `ImportDrawer` with the returned draft, parsed fields, and duplicate candidates.
-- [ ] Show recoverable parsing and network errors while preserving the capture for retry.
-- [ ] Prevent duplicate draft submissions caused by rerenders, repeated messages, or refreshes; retain the resulting draft ID for resumption.
-- [ ] Define retry behavior for an ambiguous network failure. If automatic retries are needed, add user-scoped backend idempotency keyed by capture ID before enabling them.
-- [ ] Preserve the existing conversion endpoint and review-before-save behavior.
-- [ ] Verify duplicate and already-converted responses leave the UI in a usable state.
+- [x] Extract a reusable draft-creation function from the current form handler in `frontend/app/page.tsx` so manual imports and extension captures share the same behavior.
+- [x] Submit only `sourceUrl`, `sourceDomain`, `pageTitle`, and `rawText` through the existing authenticated request helper.
+- [x] Open `ImportDrawer` with the returned draft, parsed fields, and duplicate candidates.
+- [x] Show recoverable parsing and network errors while preserving the capture for retry.
+- [x] Prevent duplicate draft submissions caused by rerenders, repeated messages, or refreshes; retain the resulting draft ID for resumption.
+- [x] Define retry behavior for an ambiguous network failure. Automatic retries are disabled; manual retry uses a user-scoped backend idempotency key carried in the `Idempotency-Key` header.
+- [x] Preserve the existing conversion endpoint and review-before-save behavior.
+- [x] Verify duplicate and already-converted responses leave the UI in a usable state.
 
 ### Acceptance criteria
 
@@ -151,6 +151,14 @@ Frontend lint, TypeScript, and the optimized production build pass. The app show
 - Duplicate candidates are shown before an accidental second application is created.
 - Cancelling review creates no application.
 - Manual URL and text imports continue to work.
+
+### Implementation verification
+
+Implemented September 10, 2026. Captures now create a draft automatically after authentication and transition directly to the editable review step. Manual imports call the same API helper. The request body contains only the four capture fields; extension requests send the random capture ID as an `Idempotency-Key` header.
+
+`ImportDraft.captureId` is nullable and unique per user. The backend returns an existing draft for repeated keys and handles concurrent unique-key races, preventing reloads or repeated delivery from creating duplicate drafts. After creation, the browser replaces raw capture text with a short draft reference and restores the user-scoped draft through `GET /imports/:id`, including current duplicate candidates.
+
+Network and parsing failures remain visible in the drawer without discarding the capture. Conversion retries reconcile an already-converted draft by closing the drawer and refreshing applications, while duplicate responses remain in review with an inline warning. Prisma generation, the optimized frontend build, lint, 29 frontend tests, 78 backend tests, and 10 extension tests pass. The database migration must be applied in each environment before deploying the updated backend.
 
 ## Phase 5 — Verify the complete workflow
 
