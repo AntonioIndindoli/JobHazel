@@ -39,7 +39,11 @@ function createPrismaStub(accountCount) {
   return {
     calls,
     prisma: {
-      $transaction: async (operation) => operation(transaction),
+      $transaction: async (operation) => typeof operation === "function" ? operation(transaction) : Promise.all(operation),
+      authToken: {
+        deleteMany: async () => { calls.push("authToken.deleteMany"); },
+        create: async () => { calls.push("authToken.create"); },
+      },
       refreshToken: {
         create: async () => {
           calls.push("refreshToken.create");
@@ -55,11 +59,12 @@ test("signup counts accounts and creates an account below the limit", async () =
   const result = await signup(
     { name: "  Taylor Doe  ", email: "taylor@example.com", password: "password123" },
     prisma,
+    { sendEmail: async () => { calls.push("sendEmail"); } },
   );
 
   assert.equal(result.status, 201);
-  assert.equal(result.body.user.email, "taylor@example.com");
-  assert.deepEqual(calls, ["lock", "findUnique", "count", "create", "refreshToken.create"]);
+  assert.equal(result.body.email, "taylor@example.com");
+  assert.deepEqual(calls, ["lock", "findUnique", "count", "create", "authToken.deleteMany", "authToken.create", "sendEmail"]);
 });
 
 test("signup rejects account creation when the account limit is reached", async () => {

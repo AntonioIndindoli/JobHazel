@@ -15,6 +15,7 @@ type LandingPageProps = {
     email: string;
     isAuthOpen: boolean;
     message: string;
+    canResendVerification: boolean;
     mode: Mode;
     password: string;
     onAuthClose: () => void;
@@ -23,6 +24,7 @@ type LandingPageProps = {
     onModeChange: (mode: Mode) => void;
     onPasswordChange: (password: string) => void;
     onSubmit: ComponentProps<typeof AuthPanel>["onSubmit"];
+    onResendVerification: () => void;
 };
 
 export function LandingPage({
@@ -30,6 +32,7 @@ export function LandingPage({
     email,
     isAuthOpen,
     message,
+    canResendVerification,
     mode,
     password,
     onAuthClose,
@@ -38,6 +41,7 @@ export function LandingPage({
     onModeChange,
     onPasswordChange,
     onSubmit,
+    onResendVerification,
 }: LandingPageProps) {
     const pageRef = useRef<HTMLElement>(null);
 
@@ -187,11 +191,13 @@ export function LandingPage({
                     password={password}
                     authStatus={authStatus}
                     message={message}
+                    canResendVerification={canResendVerification}
                     onClose={onAuthClose}
                     onModeChange={onModeChange}
                     onEmailChange={onEmailChange}
                     onPasswordChange={onPasswordChange}
                     onSubmit={onSubmit}
+                    onResendVerification={onResendVerification}
                 />
             )}
         </main>

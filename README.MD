@@ -4,7 +4,7 @@ JobHazel is a full-stack job application tracker for organizing applications, in
 
 **App:** [jobhazel.com](https://jobhazel.com/)
 
-This README describes the implementation in this repository as of **September 10, 2026**, including current workspace changes. It does not confirm that every change has been deployed or verified in production. The Chrome extension and external account integrations are not implemented.
+This README describes the implementation in this repository as of **September 12, 2026**, including current workspace changes. It does not confirm that every change has been deployed or verified in production. External account integrations and Chrome Web Store distribution are not implemented.
 
 ## Implemented features
 
@@ -14,6 +14,7 @@ This README describes the implementation in this repository as of **September 10
 | Applications | Create, edit, delete, search, and filter applications. Store company, role, source, URL, location, workplace/employment type, salary, priority, dates, description, and notes. |
 | Kanban | Drag applications between fixed stages and persist status changes. Application activity history records changes. |
 | Imports | Paste a URL or description, create a parsed draft, review/edit extracted fields, and convert the draft into an application. |
+| Chrome extension | Capture the active page URL, title, and optional selected text in a Manifest V3 side panel; sign in, review an idempotent parsed draft, handle duplicate warnings, and save the application without leaving the panel. |
 | Duplicate detection | Detect normalized URL matches or exact company/title matches, ignoring company/title case and surrounding whitespace. |
 | Interviews | Create, edit, and delete interviews linked to applications; record type, schedule, duration, location, meeting URL, interviewer, notes, and outcome. View upcoming interviews. |
 | Tasks | Create, edit, delete, complete, and reopen tasks. Support follow-ups, preparation, thank-you notes, reminders, due dates, and overdue/upcoming views. |
@@ -21,7 +22,7 @@ This README describes the implementation in this repository as of **September 10
 | Contacts | Manage recruiters, referrals, hiring managers, employees, and other contacts, with company/application associations, email, LinkedIn URL, role, and notes. |
 | Resume library | Upload immutable PDF versions; list, rename, annotate, download, archive/unarchive, and permanently delete unreferenced resumes. |
 | Application resumes | Select one resume per application, change/remove it, download it from application details, and filter by resume or “No resume.” Association changes create history events. |
-| Dashboard and analytics | Application and conversion metrics, pipeline visualization, source comparisons, weekly application volume, and a geographic application map. |
+| Dashboard and analytics | Application and conversion metrics, pipeline visualization, source comparisons, weekly application volume, a geographic application map, and backend-aggregated performance metrics by resume version. |
 | Data export | Download account data as JSON or application records as CSV. Resume exports include metadata, not file bytes or private storage credentials. |
 | Appearance | Dark mode, responsive layouts, and mobile navigation. |
 
@@ -33,7 +34,13 @@ The six fixed application statuses are **Saved, Applied, Interviewing, Offer, Re
 
 The parser uses deterministic rules, a skills dictionary, HTML metadata, and structured job data where available. It attempts URL fetching when no description text is supplied, and extracts candidate title, company, location, salary, description, source, and skills for review.
 
-Fetching does not guarantee extraction from every job board. Access restrictions and dynamically rendered pages can require pasted text and manual corrections. There is no AI parsing or browser extension. Duplicate detection does not implement fuzzy role-name matching.
+Fetching does not guarantee extraction from every job board. Access restrictions and dynamically rendered pages can require pasted or extension-captured selected text and manual corrections. Parsing is deterministic rather than AI-powered. Duplicate detection does not implement fuzzy role-name matching.
+
+### Chrome extension
+
+The `extension/` package implements a Chrome Manifest V3 side panel. It captures the active HTTP(S) page's URL and title plus optional selected text, stores bounded captures temporarily, and sends them through the same import-draft and conversion APIs used by the web interface. The panel has its own login, rotating refresh-token session, editable review form, duplicate override, and post-save link to JobHazel.
+
+Development builds use the checked-in extension key to keep a stable unpacked extension ID. Production release work remains: create the store ZIP and listing assets, verify current Chrome Web Store requirements, publish through the project owner's account, set the resulting production ID in the frontend/backend configuration, and smoke-test it against the deployed service.
 
 ### Resume management
 
@@ -53,31 +60,31 @@ Application saving and resume association use separate requests. If association 
 
 A scheduled cleanup entry exists in `backend/vercel.json`. Actual bucket privacy, credentials, CORS, migrations, scheduler execution, and cleanup behavior still need verification in the deployed environment.
 
-The [resume feature document](frontend/RESUME-FEATURE.md) describes the broader phased scope. Storage, library UI, application associations, and lifecycle-hardening code exist. Resume performance analytics, parsing, matching, and generalized application documents remain future work.
+The [resume feature document](RESUME-FEATURE.md) describes the broader phased scope. Storage, library UI, application associations, lifecycle hardening, and resume performance analytics are implemented. PDF text extraction, job matching, tailoring, and generalized application documents remain future work.
 
 ## Implemented foundations with remaining limitations
 
 | Area | What is still missing or limited |
 | --- | --- |
 | Task automation | Creates in-app tasks, not email/push notifications. Thank-you tasks are created when an interview is added, with a due date based on its schedule; there is no background detection of interview completion. |
-| Analytics | Calculated in the frontend from applications, interviews, and activity history. No dedicated backend analytics endpoints or resume-version performance reports. |
+| Analytics | Most dashboard metrics are calculated in the frontend from applications, interviews, and activity history. Resume-version performance is aggregated by `GET /resumes/analytics`; there is no general-purpose backend analytics API. |
 | Resume intelligence | The schema has an optional extracted-text field, but no PDF text-extraction pipeline, scoring, matching, or tailoring workflow. |
 | Account access | Signed-in password changes exist; forgotten-password recovery, email verification, and social sign-in do not. |
 | Companies | Company records support applications and contacts, but there is no dedicated company-management screen/API. |
 | Mobile | Responsive web UI exists; installable PWA and offline support do not. |
-| Imports | URL/text review works, but browser-extension capture and CSV import are absent. |
+| Imports | URL/text review and Chrome-extension capture work, but CSV import is absent. |
+| Chrome extension | The side-panel workflow is implemented and tested locally, but Chrome Web Store packaging, listing, publication, production-ID rollout, and deployed smoke testing remain. |
 
 ## Not implemented / future work
 
 These are potential extensions, not available features or release commitments:
 
-- Chrome extension, including selected-text capture and authenticated one-click saving.
 - Gmail import and application-confirmation email detection.
 - Google Calendar sync and interview detection.
 - LinkedIn/Indeed application-history synchronization.
 - CSV import (CSV export already exists).
 - AI-powered job parsing and interview-preparation generation.
-- Resume text extraction, performance comparisons, matching, scoring, rewriting, and tailoring.
+- Resume text extraction, job matching, scoring, rewriting, and tailoring. Resume-version outcome comparisons are implemented.
 - Cover-letter, portfolio, writing-sample, and take-home document management; DOC/DOCX uploads.
 - Custom pipeline stages.
 - Email/push follow-up reminders.
@@ -99,8 +106,9 @@ JobHazel does not submit job applications on users' behalf.
 | Files | Cloudflare R2 through the AWS S3 SDK, using signed upload/download URLs. |
 | Tests | Node test runner for the backend; Vitest and Testing Library for the frontend. |
 | Deployment support | Static frontend export (`frontend/out`) and a Vercel Express entry point/configuration for the backend. |
+| Browser extension | Standalone TypeScript Manifest V3 package with a service worker, side panel, Chrome session/local storage, and production/development builds. |
 
-The frontend calls the Express API, which accesses PostgreSQL and issues signed R2 URLs. There is no extension package. Frontend and backend dependencies are installed separately; there is no root application package.
+The frontend and extension call the Express API, which accesses PostgreSQL and issues signed R2 URLs. Frontend, backend, and extension dependencies are installed separately; there is no root application package.
 
 ## Local development
 
@@ -152,6 +160,17 @@ npm run dev
 
 Open [localhost:3000](http://localhost:3000). The API exposes `/health/live` and `/health/ready` on port 4000.
 
+### 5. Build and load the Chrome extension
+
+From `extension/`, install dependencies and create the development build:
+
+```sh
+npm install
+npm run build:dev
+```
+
+In Chrome, open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select `extension/dist/development`. The development build targets the local app/API configuration generated by the build script. See [the extension README](extension/README.md) for the complete workflow and production-build instructions.
+
 ### Builds and deployment configuration
 
 Run `npm run build` from `frontend/` to generate the static site in `frontend/out`. Host that export with a static host; the current configuration is not a server-rendered Next.js deployment. Set `NEXT_PUBLIC_API_BASE_URL` when building.
@@ -167,7 +186,7 @@ Paths are relative to the backend origin, with **no `/api` prefix** in Express. 
 | Area | Routes |
 | --- | --- |
 | Health | `GET /health/live`, `GET /health/ready` |
-| Authentication | `POST /auth/signup`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me` |
+| Authentication | `POST /auth/signup`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, extension-specific `POST /auth/extension/login`, `/refresh`, and `/logout`, plus `GET /auth/me` |
 | Account | `PATCH /auth/profile`, `PATCH /auth/password`, `GET /auth/export` (JSON, or `?format=csv` for applications), `DELETE /auth/account` |
 | Applications | `GET /applications`, `POST /applications`, `GET /applications/:id`, `PUT /applications/:id`, `PATCH /applications/:id/status`, `DELETE /applications/:id` |
 | Application history | `GET /applications/history`, `GET /applications/:id/history`, `DELETE /applications/:id/history/:activityLogId` |
@@ -178,16 +197,16 @@ Paths are relative to the backend origin, with **no `/api` prefix** in Express. 
 | Contacts | `GET /contacts`, `POST /contacts`, `GET /contacts/:id`, `PATCH /contacts/:id`, `DELETE /contacts/:id` |
 | Imports | `POST /imports/create-draft`, `GET /imports/:id`, `POST /imports/:id/convert` |
 | Parser | `POST /parser/job-description` |
-| Resumes | `GET /resumes`, `POST /resumes/uploads`, `POST /resumes/:id/complete`, `GET /resumes/:id/download-url`, `PATCH /resumes/:id`, `DELETE /resumes/:id` |
+| Resumes | `GET /resumes`, `GET /resumes/analytics`, `POST /resumes/uploads`, `POST /resumes/:id/complete`, `GET /resumes/:id/download-url`, `PATCH /resumes/:id`, `DELETE /resumes/:id` |
 | Resume maintenance | `GET /resumes/maintenance/status`, `GET /resumes/maintenance/cleanup`, `POST /resumes/maintenance/cleanup` |
 
-There are no `/analytics/*` routes. Analytics are computed in [the frontend analytics module](frontend/app/lib/application-analytics.ts).
+Most analytics are computed in [the frontend analytics module](frontend/app/lib/application-analytics.ts). Resume performance is the exception and uses the authenticated `GET /resumes/analytics` aggregation endpoint.
 
 ## Verification and test coverage
 
-Run `npm test` separately from `backend/` and `frontend/`. The frontend also provides `npm run lint` and `npm run build`.
+Run `npm test` separately from `backend/`, `frontend/`, and `extension/`. The frontend also provides `npm run lint` and `npm run build`; the extension provides `npm run typecheck`, development/production builds, and `npm run verify:local` for its disposable-account integration workflow.
 
-On September 10, 2026, **75 backend tests and 18 frontend tests passed** against the reviewed workspace. Backend coverage includes validation, parsing, signup limits, exports, task automation, resume storage/lifecycle, and application-resume associations. Frontend coverage currently focuses on the resume library, upload flow, API helpers, and application-resume experience.
+On September 12, 2026, **83 backend tests, 35 frontend tests, and 14 extension tests passed** against the reviewed workspace. The frontend production build and extension TypeScript/development build also passed. Backend coverage includes validation, parsing, signup limits, exports, task automation, resume storage/lifecycle and analytics, and application-resume associations. Frontend coverage focuses on authentication UI, resume workflows, API helpers, extension handoff behavior, and application-resume interactions. Extension coverage includes session refresh, capture validation and limits, storage pruning, side-panel behavior, draft creation, and application defaults.
 
 These suites include mocked dependencies. Passing tests does not verify live migrations, R2 permissions/CORS, scheduled maintenance, all browser workflows, or production deployment. Broad browser end-to-end coverage and a production-like manual pass remain verification work.
 

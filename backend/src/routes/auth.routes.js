@@ -7,27 +7,38 @@ import {
   extensionLoginController,
   extensionLogoutController,
   extensionRefreshController,
+  forgotPasswordController,
   logoutController,
   meController,
   refreshController,
+  resendVerificationController,
+  resetPasswordController,
   signupController,
   updateProfileController,
+  verifyEmailController,
 } from "../controllers/auth.controllers.js";
 import { requireAuth } from "../middleware/auth.middleware.js";
 import { validateBody } from "../middleware/validate.middleware.js";
 import {
   deleteAccountSchema,
   extensionRefreshSchema,
+  emailSchema,
   loginSchema,
   passwordChangeSchema,
+  passwordResetSchema,
   profileSchema,
   signupSchema,
+  tokenSchema,
 } from "../validators/auth.validators.js";
 
 const router = Router();
 
 router.post("/signup", validateBody(signupSchema), signupController);
 router.post("/login", validateBody(loginSchema), loginController);
+router.post("/verify-email", validateBody(tokenSchema), verifyEmailController);
+router.post("/resend-verification", validateBody(emailSchema), resendVerificationController);
+router.post("/forgot-password", validateBody(emailSchema), forgotPasswordController);
+router.post("/reset-password", validateBody(passwordResetSchema), resetPasswordController);
 router.post("/extension/login", validateBody(loginSchema), extensionLoginController);
 router.post("/extension/refresh", validateBody(extensionRefreshSchema), extensionRefreshController);
 router.post("/extension/logout", validateBody(extensionRefreshSchema), extensionLogoutController);

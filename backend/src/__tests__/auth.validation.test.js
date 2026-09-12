@@ -7,10 +7,13 @@ import { errorHandler, notFoundHandler } from "../middleware/error.middleware.js
 import {
   deleteAccountSchema,
   extensionRefreshSchema,
+  emailSchema,
   loginSchema,
   passwordChangeSchema,
+  passwordResetSchema,
   profileSchema,
   signupSchema,
+  tokenSchema,
 } from "../validators/auth.validators.js";
 
 async function withServer(app, fn) {
@@ -133,4 +136,14 @@ test("extension refresh validation accepts a bounded token", () => {
   });
   assert.equal(extensionRefreshSchema.safeParse({}).success, false);
   assert.equal(extensionRefreshSchema.safeParse({ refreshToken: "x".repeat(257) }).success, false);
+});
+
+test("recovery validation normalizes email and requires strong token payloads", () => {
+  assert.deepEqual(emailSchema.safeParse({ email: " Person@Example.com " }), {
+    success: true,
+    data: { email: "person@example.com" },
+  });
+  assert.equal(tokenSchema.safeParse({ token: "short" }).success, false);
+  assert.equal(passwordResetSchema.safeParse({ token: "x".repeat(43), newPassword: "short" }).success, false);
+  assert.equal(passwordResetSchema.safeParse({ token: "x".repeat(43), newPassword: "new-password" }).success, true);
 });

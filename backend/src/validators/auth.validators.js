@@ -51,6 +51,35 @@ export const loginSchema = {
   },
 };
 
+export const emailSchema = {
+  safeParse(input = {}) {
+    const email = normalizeEmail(input.email);
+    return isValidEmail(email)
+      ? resultSuccess({ email })
+      : resultError([{ path: ["email"], message: "Email must be valid." }]);
+  },
+};
+
+export const tokenSchema = {
+  safeParse(input = {}) {
+    const token = String(input.token ?? "");
+    return token.length >= 32 && token.length <= 256
+      ? resultSuccess({ token })
+      : resultError([{ path: ["token"], message: "A valid token is required." }]);
+  },
+};
+
+export const passwordResetSchema = {
+  safeParse(input = {}) {
+    const token = String(input.token ?? "");
+    const newPassword = String(input.newPassword ?? "");
+    const issues = [];
+    if (token.length < 32 || token.length > 256) issues.push({ path: ["token"], message: "A valid token is required." });
+    if (newPassword.length < 8) issues.push({ path: ["newPassword"], message: "New password must be at least 8 characters." });
+    return issues.length ? resultError(issues) : resultSuccess({ token, newPassword });
+  },
+};
+
 export const extensionRefreshSchema = {
   safeParse(input = {}) {
     const refreshToken = String(input.refreshToken ?? "");

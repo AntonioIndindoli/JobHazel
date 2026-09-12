@@ -257,6 +257,10 @@ function createAccountPrisma() {
         return {};
       },
     },
+    authToken: {
+      async deleteMany() { return { count: 0 }; },
+      async create() { return {}; },
+    },
     resumeVersion: {
       async findMany() {
         return [...resumeObjects];
@@ -266,7 +270,7 @@ function createAccountPrisma() {
       return [];
     },
     async $transaction(operation) {
-      return operation(prisma);
+      return typeof operation === "function" ? operation(prisma) : Promise.all(operation);
     },
   };
   return { prisma, getUser: () => user };
@@ -277,6 +281,7 @@ test("account deletion preserves the account until every private resume object i
   await signup(
     { name: "Test User", email: "test@example.com", password: "SecurePassword123!" },
     db.prisma,
+    { sendEmail: async () => undefined },
   );
   const deletedKeys = new Set();
   let failSecondObject = true;

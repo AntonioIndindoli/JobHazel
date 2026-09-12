@@ -38,6 +38,10 @@
 }
 
 @media (max-width: 1600px) {
+    .stats-timeframe-filter {
+        display: none;
+    }
+
     .pipeline-stats-container {
         grid-template-columns: minmax(0, 1fr);
         grid-template-areas:
@@ -67,8 +71,7 @@
     }
 
     .stats-panel-header {
-        justify-content: flex-end;
-        padding: 0 0 10px;
+        display: none;
     }
 
     .stats-panel h2 {

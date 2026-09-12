@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
     countActiveApplications,
@@ -181,6 +181,24 @@ export function DashboardStats({
     const [isGoalEditorOpen, setIsGoalEditorOpen] = useState(false);
     const [statsTimeframe, setStatsTimeframe] =
         useState<DashboardTimeframe>("");
+
+    useEffect(() => {
+        const compactDashboardQuery = window.matchMedia("(max-width: 1600px)");
+
+        function resetCompactTimeframe(event: MediaQueryListEvent | MediaQueryList) {
+            if (event.matches) setStatsTimeframe("");
+        }
+
+        resetCompactTimeframe(compactDashboardQuery);
+        compactDashboardQuery.addEventListener("change", resetCompactTimeframe);
+
+        return () =>
+            compactDashboardQuery.removeEventListener(
+                "change",
+                resetCompactTimeframe,
+            );
+    }, []);
+
     const now = new Date();
     const statsApplications = filterApplicationsByTimeframe(
         applications,

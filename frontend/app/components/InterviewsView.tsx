@@ -13,6 +13,8 @@ import type { Application, Interview } from "../lib/types";
 import { AddInterviewButton } from "./AddInterviewButton";
 import { AppIcon } from "./AppIcon";
 import { ActiveFilterChips, type ActiveFilterChip } from "./ActiveFilterChips";
+import { CollectionPaneCollapse, CollectionPaneDivider } from "./CollectionPaneControls";
+import { useCollectionDetailPane } from "./useCollectionDetailPane";
 
 type InterviewsViewProps = {
     applications: Application[];
@@ -118,9 +120,7 @@ export function InterviewsView({
     const [filters, setFilters] = useState<InterviewFilters>(INITIAL_FILTERS);
     const [sortKey, setSortKey] = useState<SortKey>("scheduledAt");
     const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-    const [selectedInterviewId, setSelectedInterviewId] = useState<string | null>(
-        focusedInterviewId ?? null,
-    );
+    const detailPane = useCollectionDetailPane("jobhazel-interviews-detail-pane", focusedInterviewId);
     const [isDetailMenuOpen, setIsDetailMenuOpen] = useState(false);
     const [isEditingNotes, setIsEditingNotes] = useState(false);
     const [notesDraft, setNotesDraft] = useState("");
@@ -160,9 +160,7 @@ export function InterviewsView({
     }, [filteredInterviews, sortDirection, sortKey]);
 
     const selectedInterview =
-        sortedInterviews.find((interview) => interview.id === selectedInterviewId) ??
-        sortedInterviews[0] ??
-        null;
+        sortedInterviews.find((interview) => interview.id === detailPane.selectedId) ?? null;
     const selectedInterviewerName =
         selectedInterview?.interviewerName?.trim() ?? "";
     const selectedMeetingUrl = selectedInterview?.meetingUrl?.trim() ?? "";
@@ -213,14 +211,16 @@ export function InterviewsView({
 
     function openMobileDetail(interviewId: string) {
         listScrollPosition.current = window.scrollY;
-        setSelectedInterviewId(interviewId);
+        detailPane.select(interviewId);
         setIsEditingNotes(false);
-        setIsMobileDetailOpen(true);
-        requestAnimationFrame(() => window.scrollTo({ top: 0 }));
+        const shouldUseMobileDetail = window.matchMedia?.("(max-width: 900px)").matches ?? false;
+        setIsMobileDetailOpen(shouldUseMobileDetail);
+        if (shouldUseMobileDetail) requestAnimationFrame(() => window.scrollTo({ top: 0 }));
     }
 
     function closeMobileDetail() {
         setIsMobileDetailOpen(false);
+        detailPane.collapse();
         requestAnimationFrame(() =>
             window.scrollTo({ top: listScrollPosition.current, behavior: "auto" }),
         );
@@ -263,7 +263,11 @@ export function InterviewsView({
 
     return (
         <section className={isMobileDetailOpen ? "applications-page interviews-page mobile-page-detail-open" : "applications-page interviews-page"}>
-            <div className={isMobileDetailOpen ? "applications-split-panel interviews-split-panel mobile-detail-open" : "applications-split-panel interviews-split-panel"}>
+            <div
+                ref={detailPane.containerRef}
+                style={detailPane.splitStyle}
+                className={`applications-split-panel interviews-split-panel${selectedInterview && detailPane.isOpen ? " detail-pane-open" : ""}${isMobileDetailOpen ? " mobile-detail-open" : ""}${detailPane.isDragging ? " is-resizing" : ""}`}
+            >
                 <aside className="application-list-panel interviews-list-panel">
                     <div
                         className={isFiltersOpen ? "applications-toolbar collection-filter-toolbar mobile-filters-open" : "applications-toolbar collection-filter-toolbar"}
@@ -431,6 +435,7 @@ export function InterviewsView({
                     )}
                 </aside>
 
+                {selectedInterview && detailPane.isOpen && <CollectionPaneDivider onResizeStart={detailPane.beginResize} onResizeBy={detailPane.resizeWithKeyboard} />}
                 <aside
                     className={`application-detail-panel interview-detail-panel status-accent ${selectedInterview?.outcome.toLowerCase() ?? ""}`}
                     aria-label="Selected interview"
@@ -441,6 +446,7 @@ export function InterviewsView({
                                 <AppIcon name="arrow-left" size={20} />
                                 Interviews
                             </button>
+                            <CollectionPaneCollapse label="interview" onCollapse={() => { detailPane.collapse(); setIsMobileDetailOpen(false); }} />
                             <header className="application-detail-header interview-detail-header">
                                 <div className="application-detail-top-row">
                                     <div className="application-detail-heading">

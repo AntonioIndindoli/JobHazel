@@ -12,11 +12,13 @@ type AuthPanelProps = {
     password: string;
     authStatus: AuthStatus;
     message: string;
+    canResendVerification?: boolean;
     onClose: () => void;
     onModeChange: (mode: Mode) => void;
     onEmailChange: (email: string) => void;
     onPasswordChange: (password: string) => void;
     onSubmit: (event: FormEvent) => void;
+    onResendVerification?: () => void;
 };
 
 export function AuthPanel({
@@ -25,11 +27,13 @@ export function AuthPanel({
     password,
     authStatus,
     message,
+    canResendVerification = false,
     onClose,
     onModeChange,
     onEmailChange,
     onPasswordChange,
     onSubmit,
+    onResendVerification,
 }: AuthPanelProps) {
     const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
@@ -76,10 +80,10 @@ export function AuthPanel({
                     <span>JobHazel</span>
                 </div>
                 <div className="auth-heading">
-                    <h2 id="auth-title">{mode === "signup" ? "Start your job search" : "Welcome back"}</h2>
-                    <p>{mode === "signup" ? "Create your free workspace in a few seconds." : "Sign in to pick up where you left off."}</p>
+                    <h2 id="auth-title">{{ signup: "Start your job search", login: "Welcome back", forgot: "Reset your password", reset: "Choose a new password" }[mode]}</h2>
+                    <p>{{ signup: "Create your free workspace in a few seconds.", login: "Sign in to pick up where you left off.", forgot: "We’ll email you a secure recovery link.", reset: "Enter a new password for your account." }[mode]}</p>
                 </div>
-                <div className="auth-tabs" role="tablist" aria-label="Account action">
+                {(mode === "signup" || mode === "login") && <div className="auth-tabs" role="tablist" aria-label="Account action">
                     <button
                         type="button"
                         className={mode === "signup" ? "active" : ""}
@@ -98,9 +102,9 @@ export function AuthPanel({
                     >
                         Sign in
                     </button>
-                </div>
+                </div>}
                 <form onSubmit={onSubmit} className="auth-form">
-                    <label>
+                    {mode !== "reset" && <label>
                         <span>Email address</span>
                         <input
                             type="email"
@@ -111,17 +115,17 @@ export function AuthPanel({
                             autoFocus
                             required
                         />
-                    </label>
-                    <div className="auth-field">
-                        <label htmlFor="auth-password">Password</label>
+                    </label>}
+                    {mode !== "forgot" && <div className="auth-field">
+                        <label htmlFor="auth-password">{mode === "reset" ? "New password" : "Password"}</label>
                         <span className="auth-password-control">
                             <input
                                 id="auth-password"
                                 type={isPasswordVisible ? "text" : "password"}
-                                placeholder={mode === "signup" ? "Create a password" : "Enter your password"}
+                                placeholder={mode === "signup" || mode === "reset" ? "Create a password" : "Enter your password"}
                                 value={password}
                                 onChange={(event) => onPasswordChange(event.target.value)}
-                                autoComplete={mode === "signup" ? "new-password" : "current-password"}
+                                autoComplete={mode === "signup" || mode === "reset" ? "new-password" : "current-password"}
                                 required
                             />
                             <button
@@ -135,13 +139,16 @@ export function AuthPanel({
                                 <AppIcon name={isPasswordVisible ? "view-off" : "view"} size={19} />
                             </button>
                         </span>
-                    </div>
+                    </div>}
+                    {mode === "login" && <button type="button" className="auth-text-action" onClick={() => changeMode("forgot")}>Forgot password?</button>}
                     <button className="auth-submit" disabled={isChecking}>
-                        {isChecking ? "Checking your session…" : mode === "signup" ? "Create my account" : "Sign in"}
+                        {isChecking ? "Please wait…" : { signup: "Create my account", login: "Sign in", forgot: "Send reset link", reset: "Reset password" }[mode]}
                         {!isChecking && <AppIcon name="arrow-right" size={18} />}
                     </button>
                     {message && <p className="auth-message" role="status">{message}</p>}
+                    {canResendVerification && onResendVerification && <button type="button" className="auth-text-action auth-resend" onClick={onResendVerification}>Resend verification email</button>}
                 </form>
+                {(mode === "forgot" || mode === "reset") && <button type="button" className="auth-back" onClick={() => changeMode("login")}>Back to sign in</button>}
                 <p className="auth-terms">By continuing, you agree to use JobHazel responsibly.</p>
             </section>
         </div>

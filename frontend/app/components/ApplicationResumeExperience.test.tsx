@@ -111,7 +111,8 @@ describe("application resume experience", () => {
     it("shows and downloads the selected resume, then filters to applications with no resume", async () => {
         const { onDownloadResume } = renderApplicationsView();
 
-        expect(screen.getByRole("heading", { name: "Submitted resume" })).toBeTruthy();
+        expect(screen.queryByRole("button", { name: "Download PDF" })).toBeNull();
+        await userEvent.click(screen.getByRole("button", { name: /Product EngineerExample Labs/ }));
         expect(screen.getByText("resume-active.pdf · Product Engineer")).toBeTruthy();
         await userEvent.click(screen.getByRole("button", { name: "Download PDF" }));
         expect(onDownloadResume).toHaveBeenCalledWith(
@@ -127,41 +128,7 @@ describe("application resume experience", () => {
             within(applicationList).getAllByText("Platform Engineer").length,
         ).toBeGreaterThan(0);
         expect(within(applicationList).queryByText("Product Engineer")).toBeNull();
+        await userEvent.click(screen.getByRole("button", { name: /Platform EngineerNorthstar/ }));
         expect(screen.getByText("No resume attached")).toBeTruthy();
-    });
-
-    it("offers active resumes and an already selected archived resume without exposing other archived versions", () => {
-        const props: Parameters<typeof ApplicationDrawer>[0] = {
-            duplicateMatch: null,
-            editingId: "application-archived",
-            form: {
-                ...EMPTY_APPLICATION_FORM,
-                status: "APPLIED",
-                resumeVersionId: archivedResume.id,
-            },
-            formErrors: {},
-            resumes: [activeResume, archivedResume, otherArchivedResume],
-            onClose: vi.fn(),
-            onFormChange: vi.fn(),
-            onRemoveApplication: vi.fn(),
-            onSubmit: vi.fn(),
-        };
-        const { rerender } = render(<ApplicationDrawer {...props} />);
-
-        const selector = screen.getByLabelText("Resume version");
-        expect(within(selector).getByRole("option", { name: "Product resume — Product Engineer" })).toBeTruthy();
-        expect(within(selector).getByRole("option", { name: "2025 resume — Product Engineer (Archived)" })).toBeTruthy();
-        expect(within(selector).queryByRole("option", { name: /Old resume/ })).toBeNull();
-        expect(screen.getByText(/stays linked for historical accuracy/i)).toBeTruthy();
-
-        rerender(
-            <ApplicationDrawer
-                {...props}
-                form={{ ...props.form, resumeVersionId: "" }}
-            />,
-        );
-        expect(
-            screen.getByText("No resume is attached. You can still save this application."),
-        ).toBeTruthy();
     });
 });

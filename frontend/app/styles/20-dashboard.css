@@ -182,7 +182,7 @@
 .pipeline-header h2 {
     margin: 0;
     color: var(--green);
-font-weight: 800;
+    font-weight: 800;
     font-size: 17px;
     line-height: 1.2;
 }
@@ -1924,7 +1924,7 @@ html[data-theme="dark"] .pipeline-view-switcher button[aria-pressed="true"] {
     min-width: 0;
     min-height: 330px;
     border-radius: 11px 11px 8px 8px;
-    background: linear-gradient(180deg, var(--surface-muted) 0%, var(--surface-muted) 100%);
+    background: linear-gradient(180deg, var(--surface-muted-light) 0%, var(--surface-muted-light) 100%);
 }
 
 .tracker-panel .lane-header {

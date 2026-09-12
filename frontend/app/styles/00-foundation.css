@@ -12,8 +12,10 @@
     --surface-translucent: rgba(255, 255, 255, .96);
     --surface-soft: #fbfdff;
     --surface-muted: #e9e9e9;
+    --surface-muted-light: #eeeeee;
     --surface-slate: #f1f5f9;
     --surface-blue: #eef6ff;
+    --surface-green: #d2f7db;
     --surface-blue-strong: #eaf3ff;
     --surface-sidebar: #fdfdfd;
     --text-heading: #14213d;
@@ -40,22 +42,22 @@
     --tooltip-background: #14213d;
 
     --application-status-saved: #0e7490;
-    --application-status-saved-background: #ecfeff;
+    --application-status-saved-background: #e5feff;
 
     --application-status-applied: #2563eb;
-    --application-status-applied-background: #eff6ff;
+    --application-status-applied-background: #dbebff;
 
     --application-status-interviewing: #7c3aed;
-    --application-status-interviewing-background: #f5f3ff;
+    --application-status-interviewing-background: #e7e2ff;
 
     --application-status-offer: #15803d;
-    --application-status-offer-background: #f0fdf4;
+    --application-status-offer-background: #d4ffe1;
 
     --application-status-rejected: #dc2626;
-    --application-status-rejected-background: #fef2f2;
+    --application-status-rejected-background: #ffdfdf;
 
     --application-status-withdrawn: #64748b;
-    --application-status-withdrawn-background: #f8fafc;
+    --application-status-withdrawn-background: #f2f6fa;
 }
 
 html[data-theme="dark"] {
@@ -70,7 +72,9 @@ html[data-theme="dark"] {
     --surface-translucent: rgba(17, 24, 32, .96);
     --surface-soft: #151e28;
     --surface-muted: #1a2531;
+    --surface-muted-light: #1f2c3b;
     --surface-slate: #202c39;
+    --surface-green: #16381c;
     --surface-blue: #162238;
     --surface-blue-strong: #1b2b42;
     --surface-sidebar: #0d1518;

@@ -144,7 +144,6 @@ export function ApplicationDrawer({
                     <section className="form-section application-resume-form-section">
                         <h3>Submitted resume</h3>
                         <label>
-                            Resume version
                             <select
                                 aria-label="Resume version"
                                 value={form.resumeVersionId}
@@ -178,11 +177,6 @@ export function ApplicationDrawer({
                                     This archived resume stays linked for historical accuracy.
                                 </p>
                             )}
-                        {form.status === "APPLIED" && !form.resumeVersionId && (
-                            <p className="application-resume-warning" role="status">
-                                No resume is attached. You can still save this application.
-                            </p>
-                        )}
                     </section>
                     <section className="form-section">
                         <h3>Source details</h3>
@@ -258,7 +252,6 @@ export function ApplicationDrawer({
                     <section className="form-section">
                         <h3>Notes</h3>
                         <label>
-                            Notes
                             <textarea
                                 value={form.notes}
                                 onChange={(event) =>

@@ -17,6 +17,8 @@ import type {
 } from "../lib/types";
 import { AppIcon } from "./AppIcon";
 import { ActiveFilterChips, type ActiveFilterChip } from "./ActiveFilterChips";
+import { CollectionPaneCollapse, CollectionPaneDivider } from "./CollectionPaneControls";
+import { useCollectionDetailPane } from "./useCollectionDetailPane";
 
 type TasksViewProps = {
     applications: Application[];
@@ -107,7 +109,7 @@ export function TasksView({
     const [filters, setFilters] = useState<TaskFilters>(INITIAL_FILTERS);
     const [sortKey, setSortKey] = useState<SortKey>("dueDate");
     const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-    const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+    const detailPane = useCollectionDetailPane("jobhazel-tasks-detail-pane");
     const [isDetailMenuOpen, setIsDetailMenuOpen] = useState(false);
     const [isEditingDescription, setIsEditingDescription] = useState(false);
     const [descriptionDraft, setDescriptionDraft] = useState("");
@@ -149,7 +151,7 @@ export function TasksView({
     }, [filteredTasks, sortDirection, sortKey]);
 
     const selectedTask =
-        sortedTasks.find((task) => task.id === selectedTaskId) ?? sortedTasks[0] ?? null;
+        sortedTasks.find((task) => task.id === detailPane.selectedId) ?? null;
     const selectedTaskApplication = selectedTask?.applicationId
         ? applications.find((application) => application.id === selectedTask.applicationId) ?? null
         : null;
@@ -198,14 +200,16 @@ export function TasksView({
 
     function openMobileDetail(taskId: string) {
         listScrollPosition.current = window.scrollY;
-        setSelectedTaskId(taskId);
+        detailPane.select(taskId);
         setIsEditingDescription(false);
-        setIsMobileDetailOpen(true);
-        requestAnimationFrame(() => window.scrollTo({ top: 0 }));
+        const shouldUseMobileDetail = window.matchMedia?.("(max-width: 900px)").matches ?? false;
+        setIsMobileDetailOpen(shouldUseMobileDetail);
+        if (shouldUseMobileDetail) requestAnimationFrame(() => window.scrollTo({ top: 0 }));
     }
 
     function closeMobileDetail() {
         setIsMobileDetailOpen(false);
+        detailPane.collapse();
         requestAnimationFrame(() =>
             window.scrollTo({ top: listScrollPosition.current, behavior: "auto" }),
         );
@@ -248,7 +252,11 @@ export function TasksView({
 
     return (
         <section className={isMobileDetailOpen ? "applications-page tasks-page mobile-page-detail-open" : "applications-page tasks-page"}>
-            <div className={isMobileDetailOpen ? "applications-split-panel tasks-split-panel mobile-detail-open" : "applications-split-panel tasks-split-panel"}>
+            <div
+                ref={detailPane.containerRef}
+                style={detailPane.splitStyle}
+                className={`applications-split-panel tasks-split-panel${selectedTask && detailPane.isOpen ? " detail-pane-open" : ""}${isMobileDetailOpen ? " mobile-detail-open" : ""}${detailPane.isDragging ? " is-resizing" : ""}`}
+            >
                 <aside className="application-list-panel tasks-list-panel">
                     <div
                         className={isFiltersOpen ? "applications-toolbar collection-filter-toolbar mobile-filters-open" : "applications-toolbar collection-filter-toolbar"}
@@ -452,6 +460,7 @@ export function TasksView({
                     )}
                 </aside>
 
+                {selectedTask && detailPane.isOpen && <CollectionPaneDivider onResizeStart={detailPane.beginResize} onResizeBy={detailPane.resizeWithKeyboard} />}
                 <aside
                     className={`application-detail-panel task-detail-panel status-accent ${selectedTask ? getTaskStatusClass(selectedTask) : ""}`}
                     aria-label="Selected task"
@@ -462,6 +471,7 @@ export function TasksView({
                                 <AppIcon name="arrow-left" size={20} />
                                 Tasks
                             </button>
+                            <CollectionPaneCollapse label="task" onCollapse={() => { detailPane.collapse(); setIsMobileDetailOpen(false); }} />
                             <header className="application-detail-header task-detail-header">
                                 <div className="application-detail-top-row">
                                     <div className="application-detail-heading">

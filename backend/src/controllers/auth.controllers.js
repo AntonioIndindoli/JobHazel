@@ -6,9 +6,13 @@ import {
   getAccountUser,
   login,
   loginExtension,
+  requestPasswordReset,
+  resendVerification,
+  resetPassword,
   refreshSession,
   revokeSession,
   signup,
+  verifyEmail,
   updateProfile,
 } from "../services/auth.services.js";
 import { env } from "../config/env.js";
@@ -66,6 +70,26 @@ export async function logoutController(req, res) {
   await revokeSession(getCookie(req, REFRESH_COOKIE_NAME));
   res.clearCookie(REFRESH_COOKIE_NAME, { path: "/auth" });
   return res.status(204).send();
+}
+
+export async function resendVerificationController(req, res) {
+  const result = await resendVerification(req.body.email);
+  return res.status(result.status).json(result.body);
+}
+
+export async function verifyEmailController(req, res) {
+  const result = await verifyEmail(req.body.token);
+  return res.status(result.status).json(result.body);
+}
+
+export async function forgotPasswordController(req, res) {
+  const result = await requestPasswordReset(req.body.email);
+  return res.status(result.status).json(result.body);
+}
+
+export async function resetPasswordController(req, res) {
+  const result = await resetPassword(req.body.token, req.body.newPassword);
+  return res.status(result.status).json(result.body);
 }
 
 export async function extensionLoginController(req, res) {

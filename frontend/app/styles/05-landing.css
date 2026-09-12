@@ -1571,6 +1571,22 @@ body.auth-modal-open {
     }
 }
 
+.auth-text-action,
+.auth-back {
+    width: fit-content;
+    padding: 0;
+    border: 0;
+    color: var(--landing-green-dark);
+    background: transparent;
+    font-size: 12px;
+    font-weight: 750;
+}
+
+.auth-text-action { margin: -7px 0 -4px auto; }
+.auth-resend { margin: -7px auto 0; }
+.auth-back { display: block; margin: 17px auto 0; }
+.auth-text-action:hover, .auth-back:hover { text-decoration: underline; }
+
 /* Keep the decorative hero tree out of the mobile scroll/compositing path. */
 @media (max-width: 980px) {
     .hero-growth-natural .hero-growth-canopy {

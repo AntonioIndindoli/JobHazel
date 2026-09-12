@@ -24,6 +24,8 @@ import type {
 } from "../lib/types";
 import { AppIcon } from "./AppIcon";
 import { ActiveFilterChips, type ActiveFilterChip } from "./ActiveFilterChips";
+import { CollectionPaneCollapse, CollectionPaneDivider } from "./CollectionPaneControls";
+import { useCollectionDetailPane } from "./useCollectionDetailPane";
 
 type ApplicationsViewProps = {
     applications: Application[];
@@ -177,9 +179,7 @@ export function ApplicationsView({
         Boolean(focusedApplicationId),
     );
     const listScrollPosition = useRef(0);
-    const [selectedApplicationId, setSelectedApplicationId] = useState<
-        string | null
-    >(focusedApplicationId ?? null);
+    const detailPane = useCollectionDetailPane("jobhazel-applications-detail-pane", focusedApplicationId);
     const sourceOptions = useMemo(() => {
         const sources = new Set<string>(SOURCES);
         applications.forEach((application) => {
@@ -272,10 +272,8 @@ export function ApplicationsView({
 
     const selectedApplication =
         sortedApplications.find(
-            (application) => application.id === selectedApplicationId,
-        ) ??
-        sortedApplications[0] ??
-        null;
+            (application) => application.id === detailPane.selectedId,
+        ) ?? null;
     const selectedNotes = selectedApplication?.notes?.trim() ?? "";
     const selectedApplicationIdForInterviews = selectedApplication?.id ?? null;
     const selectedInterviews = selectedApplicationIdForInterviews
@@ -354,14 +352,16 @@ export function ApplicationsView({
 
     function openMobileDetail(applicationId: string) {
         listScrollPosition.current = window.scrollY;
-        setSelectedApplicationId(applicationId);
+        detailPane.select(applicationId);
         setIsEditingNotes(false);
-        setIsMobileDetailOpen(true);
-        requestAnimationFrame(() => window.scrollTo({ top: 0 }));
+        const shouldUseMobileDetail = window.matchMedia?.("(max-width: 900px)").matches ?? false;
+        setIsMobileDetailOpen(shouldUseMobileDetail);
+        if (shouldUseMobileDetail) requestAnimationFrame(() => window.scrollTo({ top: 0 }));
     }
 
     function closeMobileDetail() {
         setIsMobileDetailOpen(false);
+        detailPane.collapse();
         requestAnimationFrame(() =>
             window.scrollTo({ top: listScrollPosition.current, behavior: "auto" }),
         );
@@ -403,7 +403,11 @@ export function ApplicationsView({
 
     return (
         <section className={isMobileDetailOpen ? "applications-page mobile-page-detail-open" : "applications-page"}>
-            <div className={isMobileDetailOpen ? "applications-split-panel mobile-detail-open" : "applications-split-panel"}>
+            <div
+                ref={detailPane.containerRef}
+                style={detailPane.splitStyle}
+                className={`applications-split-panel${selectedApplication && detailPane.isOpen ? " detail-pane-open" : ""}${isMobileDetailOpen ? " mobile-detail-open" : ""}${detailPane.isDragging ? " is-resizing" : ""}`}
+            >
                 <aside className="application-list-panel">
 
                     <div className={isFiltersOpen ? "applications-toolbar mobile-filters-open" : "applications-toolbar"} aria-label="Application table filters">
@@ -415,7 +419,7 @@ export function ApplicationsView({
                                 onChange={(event) =>
                                     setFilters({ ...filters, query: event.target.value })
                                 }
-                                placeholder="Search title, company, location, source"
+                                placeholder="Search title, company, location"
                             />
                         </label>
                         <button
@@ -475,7 +479,7 @@ export function ApplicationsView({
                             if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsAppliedDateOpen(false);
                         }}>
                             <button type="button" className="applications-date-filter-trigger" aria-haspopup="dialog" aria-expanded={isAppliedDateOpen} onClick={() => setIsAppliedDateOpen((open) => !open)}>
-                                <span>Applied date: {filters.startDate || filters.endDate
+                                <span>Date: {filters.startDate || filters.endDate
                                     ? `${filters.startDate ? formatFilterDate(filters.startDate) : "Any"} – ${filters.endDate ? formatFilterDate(filters.endDate) : "Any"}`
                                     : "Any time"}</span>
                             </button>
@@ -587,6 +591,7 @@ export function ApplicationsView({
                     )}
                 </aside>
 
+                {selectedApplication && detailPane.isOpen && <CollectionPaneDivider onResizeStart={detailPane.beginResize} onResizeBy={detailPane.resizeWithKeyboard} />}
                 <aside className={`application-detail-panel status-accent ${selectedApplication?.status.toLowerCase() ?? ""}`}>
                     {selectedApplication ? (
                         <>
@@ -594,6 +599,7 @@ export function ApplicationsView({
                                 <AppIcon name="arrow-left" size={20} />
                                 Applications
                             </button>
+                            <CollectionPaneCollapse label="application" onCollapse={() => { detailPane.collapse(); setIsMobileDetailOpen(false); }} />
                             <header className="application-detail-header">
                                 <div className="application-detail-top-row">
                                     <div className="application-detail-heading">

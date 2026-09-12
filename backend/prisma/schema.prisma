@@ -109,9 +109,30 @@ model User {
   importDrafts            ImportDraft[]
   activityLogs            ActivityLog[]
   refreshTokens           RefreshToken[]
+  authTokens              AuthToken[]
+  emailVerifiedAt         DateTime?
   resumeEndpointRateLimits ResumeEndpointRateLimit[]
   createdAt               DateTime        @default(now())
   updatedAt               DateTime        @updatedAt
+}
+
+enum AuthTokenPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+model AuthToken {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String           @unique
+  purpose   AuthTokenPurpose
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, purpose])
+  @@index([expiresAt])
 }
 
 model RefreshToken {

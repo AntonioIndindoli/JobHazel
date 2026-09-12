@@ -21,9 +21,12 @@ import type { ActivityLog, Application } from "../../lib/types";
 type PipelineNodeId = ApplicationPipelineNode;
 
 type PipelineNodeDatum = {
-    id: PipelineNodeId;
+    id: string;
     label: string;
     color: string;
+    column: number;
+    order: number;
+    isRoutingNode?: boolean;
 };
 
 type PipelineLinkDatum = {
@@ -62,7 +65,7 @@ const PIPELINE_NODE_ORDER: PipelineNodeId[] = [
 const NODE_COLUMN: Record<PipelineNodeId, number> = {
     APPLIED: 0,
     INTERVIEWING: 1,
-    NO_RESPONSE: 1,
+    NO_RESPONSE: 2,
     OFFER: 2,
     REJECTED: 2,
     WITHDRAWN: 2,
@@ -77,54 +80,48 @@ const NODE_ORDER: Record<PipelineNodeId, number> = {
     NO_RESPONSE: 3,
 };
 
-const LINK_ORDER: Record<PipelineNodeId, Partial<Record<PipelineNodeId, number>>> = {
-    APPLIED: {
-        INTERVIEWING: 0,
-        REJECTED: 1,
-        WITHDRAWN: 2,
-        NO_RESPONSE: 3,
-    },
-    INTERVIEWING: {
-        OFFER: 0,
-        REJECTED: 1,
-        WITHDRAWN: 2,
-    },
-    OFFER: {},
-    REJECTED: {},
-    WITHDRAWN: {},
-    NO_RESPONSE: {},
-};
-
 const NODE_CATALOG: Record<PipelineNodeId, PipelineNodeDatum> = {
     APPLIED: {
         id: "APPLIED",
         label: "Applied",
         color: APPLICATION_STATUS_COLORS.APPLIED,
+        column: NODE_COLUMN.APPLIED,
+        order: NODE_ORDER.APPLIED,
     },
     INTERVIEWING: {
         id: "INTERVIEWING",
         label: "Interview",
         color: APPLICATION_STATUS_COLORS.INTERVIEWING,
+        column: NODE_COLUMN.INTERVIEWING,
+        order: NODE_ORDER.INTERVIEWING,
     },
     NO_RESPONSE: {
         id: "NO_RESPONSE",
         label: "No Response",
         color: APPLICATION_STATUS_COLORS.APPLIED,
+        column: NODE_COLUMN.NO_RESPONSE,
+        order: NODE_ORDER.NO_RESPONSE,
     },
     OFFER: {
         id: "OFFER",
         label: "Offer",
         color: APPLICATION_STATUS_COLORS.OFFER,
+        column: NODE_COLUMN.OFFER,
+        order: NODE_ORDER.OFFER,
     },
     REJECTED: {
         id: "REJECTED",
         label: "Rejected",
         color: APPLICATION_STATUS_COLORS.REJECTED,
+        column: NODE_COLUMN.REJECTED,
+        order: NODE_ORDER.REJECTED,
     },
     WITHDRAWN: {
         id: "WITHDRAWN",
         label: "Withdrawn",
         color: APPLICATION_STATUS_COLORS.WITHDRAWN,
+        column: NODE_COLUMN.WITHDRAWN,
+        order: NODE_ORDER.WITHDRAWN,
     },
 };
 
@@ -155,6 +152,7 @@ const SANKEY_MARGIN = {
 const SANKEY_NODE_PADDING_MIN = 32;
 const SANKEY_NODE_PADDING_MAX = 72;
 const SANKEY_NODE_WIDTH = 8;
+const SANKEY_LINK_CLEARANCE = 8;
 
 const VISUALIZATION_OPTIONS: Array<{
     value: VisualizationKind;
@@ -197,14 +195,14 @@ function spreadSankeyNodes(
 
     for (const node of graph.nodes) {
         // Group by the actual column configuration, not node.depth.
-        const columnId = NODE_COLUMN[node.id];
+        const columnId = node.column;
 
         const column = columns.get(columnId) ?? [];
         column.push(node);
         columns.set(columnId, column);
     }
 
-    for (const [columnId, nodes] of columns) {
+    for (const nodes of columns.values()) {
         nodes.sort(compareNodes);
 
         const heights = nodes.map(
@@ -222,10 +220,38 @@ function spreadSankeyNodes(
             const node = nodes[0];
             const height = heights[0];
 
-            const y =
-                columnId === 0
-                    ? top + (columnHeight - height) / 2
-                    : top;
+            // Leave room for direct links that are ordered above this
+            // intermediate node. Otherwise those links are drawn through it.
+            const incomingClearance = (node.targetLinks ?? []).reduce(
+                (largestClearance, incomingLink) => {
+                    if (typeof incomingLink.source !== "object") {
+                        return largestClearance;
+                    }
+
+                    const precedingLinkWidth = (
+                        incomingLink.source.sourceLinks ?? []
+                    )
+                        .filter(
+                            (sourceLink) =>
+                                compareLinks(sourceLink, incomingLink) < 0,
+                        )
+                        .reduce(
+                            (total, sourceLink) =>
+                                total + Math.max(1, sourceLink.width ?? 1),
+                            0,
+                        );
+
+                    return Math.max(largestClearance, precedingLinkWidth);
+                },
+                0,
+            );
+
+            const y = Math.min(
+                bottom - height,
+                top +
+                    incomingClearance +
+                    (incomingClearance ? SANKEY_LINK_CLEARANCE : 0),
+            );
 
             node.y0 = y;
             node.y1 = y + height;
@@ -262,25 +288,23 @@ function compareNodes(
     first: SankeyNode<PipelineNodeDatum, PipelineLinkDatum>,
     second: SankeyNode<PipelineNodeDatum, PipelineLinkDatum>,
 ) {
-    return NODE_ORDER[first.id] - NODE_ORDER[second.id];
+    return first.order - second.order;
+}
+
+function getSankeyEndOrder(
+    end: string | number | SankeyNode<PipelineNodeDatum, PipelineLinkDatum>,
+) {
+    return typeof end === "object" ? end.order : 0;
 }
 
 function compareLinks(
     first: SankeyLink<PipelineNodeDatum, PipelineLinkDatum>,
     second: SankeyLink<PipelineNodeDatum, PipelineLinkDatum>,
 ) {
-    const firstSource = getSankeyEndId(first.source) as PipelineNodeId;
-    const secondSource = getSankeyEndId(second.source) as PipelineNodeId;
-    const firstTarget = getSankeyEndId(first.target) as PipelineNodeId;
-    const secondTarget = getSankeyEndId(second.target) as PipelineNodeId;
-
-    const firstOrder =
-        LINK_ORDER[firstSource]?.[firstTarget] ?? NODE_ORDER[firstTarget];
-    const secondOrder =
-        LINK_ORDER[secondSource]?.[secondTarget] ?? NODE_ORDER[secondTarget];
-
-    if (firstOrder !== secondOrder) return firstOrder - secondOrder;
-    return NODE_ORDER[firstSource] - NODE_ORDER[secondSource];
+    const targetOrderDifference =
+        getSankeyEndOrder(first.target) - getSankeyEndOrder(second.target);
+    if (targetOrderDifference !== 0) return targetOrderDifference;
+    return getSankeyEndOrder(first.source) - getSankeyEndOrder(second.source);
 }
 
 function buildPipelineSankey(
@@ -337,19 +361,42 @@ function buildPipelineSankey(
         });
     });
 
-    const rawLinks: Array<SankeyLink<PipelineNodeDatum, PipelineLinkDatum>> =
-        Array.from(linkTotals.values()).map(({ source, target, value }) => ({
-            source,
-            target,
-            value,
-            color: LINK_COLORS[target],
-            label: `${NODE_CATALOG[source].label} to ${NODE_CATALOG[target].label}`,
-        }));
+    const routingNodes: PipelineNodeDatum[] = [];
+    const rawLinks: Array<SankeyLink<PipelineNodeDatum, PipelineLinkDatum>> = [];
+
+    for (const { source, target, value } of linkTotals.values()) {
+        const color = LINK_COLORS[target];
+        const label = `${NODE_CATALOG[source].label} to ${NODE_CATALOG[target].label}`;
+        const crossesColumn = NODE_COLUMN[target] - NODE_COLUMN[source] > 1;
+
+        if (!crossesColumn) {
+            rawLinks.push({ source, target, value, color, label });
+            continue;
+        }
+
+        // Sankey links that skip a layer can pass through nodes in that layer.
+        // Insert a zero-width routing node so every edge advances one column at
+        // a time and participates in the layout's collision avoidance.
+        const routingNodeId = `ROUTE:${source}:${target}`;
+        routingNodes.push({
+            id: routingNodeId,
+            label: "",
+            color,
+            column: NODE_COLUMN[source] + 1,
+            order: NODE_ORDER[target],
+            isRoutingNode: true,
+        });
+        rawLinks.push(
+            { source, target: routingNodeId, value, color, label },
+            { source: routingNodeId, target, value, color, label },
+        );
+    }
 
     const graphInput: PipelineGraph = {
         nodes: PIPELINE_NODE_ORDER.map((nodeId) => NODE_CATALOG[nodeId])
-            .filter((node) => usedNodeIds.has(node.id))
-            .map((node) => ({ ...node })),
+            .filter((node) => usedNodeIds.has(node.id as PipelineNodeId))
+            .map((node) => ({ ...node }))
+            .concat(routingNodes),
         links: rawLinks.map((link) => ({ ...link })),
     };
 
@@ -394,7 +441,7 @@ function buildPipelineSankey(
             .nodeWidth(SANKEY_NODE_WIDTH)
             .nodePadding(nodePadding)
             .nodeAlign((node, columns) =>
-                Math.min(NODE_COLUMN[node.id], columns - 1)
+                Math.min(node.column, columns - 1)
             )
             .nodeSort(compareNodes)
             .linkSort(compareLinks)
@@ -409,6 +456,15 @@ function buildPipelineSankey(
     // Move nodes apart vertically.
     spreadSankeyNodes(graph, layoutTop, layoutBottom);
 
+    // Routing nodes affect vertical layout but should not appear as an extra
+    // stage. Collapse them horizontally so their two link segments join.
+    graph.nodes.forEach((node) => {
+        if (!node.isRoutingNode) return;
+        const midpoint = ((node.x0 ?? 0) + (node.x1 ?? 0)) / 2;
+        node.x0 = midpoint;
+        node.x1 = midpoint;
+    });
+
     // Recalculate where the links connect after moving the nodes.
     sankeyGenerator.update(graph);
 
@@ -419,12 +475,6 @@ function buildPipelineSankey(
         offerRate: Math.round((counts.OFFER / Math.max(total, 1)) * 100),
         exitCount,
     };
-}
-
-function getSankeyEndLabel(
-    end: string | number | SankeyNode<PipelineNodeDatum, PipelineLinkDatum>,
-) {
-    return typeof end === "object" ? end.label : String(end);
 }
 
 function getStartOfWeek(date: Date) {
@@ -894,23 +944,25 @@ export function PipelineVisualization({
                             >
                                 <g className="sankey-links">
                                     {pipeline.graph.links.map((link) => {
-                                        const source = getSankeyEndLabel(link.source);
-                                        const target = getSankeyEndLabel(link.target);
+                                        const sourceId = getSankeyEndId(link.source);
+                                        const targetId = getSankeyEndId(link.target);
                                         return (
                                             <path
-                                                key={`${source}-${target}`}
+                                                key={`${sourceId}-${targetId}`}
                                                 d={linkPath(link) ?? undefined}
                                                 stroke={link.color}
                                                 strokeWidth={Math.max(1, link.width ?? 1)}
                                                 className="sankey-link"
                                             >
-                                                <title>{`${source} to ${target}: ${link.value}`}</title>
+                                                <title>{`${link.label}: ${link.value}`}</title>
                                             </path>
                                         );
                                     })}
                                 </g>
                                 <g className="sankey-nodes">
                                     {pipeline.graph.nodes.map((node) => {
+                                        if (node.isRoutingNode) return null;
+
                                         const x0 = node.x0 ?? 0;
                                         const x1 = node.x1 ?? 0;
                                         const y0 = node.y0 ?? 0;

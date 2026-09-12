@@ -2,13 +2,15 @@ import crypto from "crypto";
 import { getPrismaAsync } from "../db/prisma.js";
 import { env } from "../config/env.js";
 import { getResumeStorage } from "./resume-storage.services.js";
+import { sendAccountEmail } from "./email.services.js";
 
 const SALT_BYTES = 16;
 const KEYLEN = 64;
 const DIGEST = "sha512";
 const ITERATIONS = 120000;
 const REFRESH_TOKEN_BYTES = 48;
-const SAFE_USER_SELECT = { id: true, name: true, email: true, createdAt: true };
+const AUTH_TOKEN_BYTES = 32;
+const SAFE_USER_SELECT = { id: true, name: true, email: true, emailVerifiedAt: true, createdAt: true };
 export const ACCOUNT_RESUME_VERSION_SELECT = Object.freeze({
   id: true,
   name: true,
@@ -61,6 +63,32 @@ function hashRefreshToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+function hashAuthToken(token) {
+  return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+async function createAuthToken(prisma, userId, purpose, ttlMinutes) {
+  const token = crypto.randomBytes(AUTH_TOKEN_BYTES).toString("base64url");
+  const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
+  await prisma.$transaction([
+    prisma.authToken.deleteMany({ where: { userId, purpose, usedAt: null } }),
+    prisma.authToken.create({ data: { userId, purpose, tokenHash: hashAuthToken(token), expiresAt } }),
+  ]);
+  return token;
+}
+
+async function sendVerificationEmail(user, prisma, sendEmail = sendAccountEmail) {
+  const token = await createAuthToken(prisma, user.id, "EMAIL_VERIFICATION", 24 * 60);
+  await sendEmail({
+    to: user.email,
+    subject: "Verify your JobHazel email",
+    heading: "Verify your email",
+    copy: "Confirm this email address to finish creating your JobHazel account. This link expires in 24 hours.",
+    actionLabel: "Verify email",
+    actionUrl: `${env.APP_URL}/?verify=${encodeURIComponent(token)}`,
+  });
+}
+
 function buildExpiryDate() {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + env.REFRESH_TOKEN_TTL_DAYS);
@@ -99,7 +127,7 @@ export function verifyAccessToken(token) {
   return parsed;
 }
 
-export async function signup({ name, email, password }, prismaOverride) {
+export async function signup({ name, email, password }, prismaOverride, overrides = {}) {
   const prisma = prismaOverride ?? await getPrismaAsync();
   const passwordHash = hashPassword(password);
 
@@ -127,8 +155,11 @@ export async function signup({ name, email, password }, prismaOverride) {
 
   if (!result.user) return result;
 
-  const session = await issueSession(result.user, prisma);
-  return { status: 201, body: session };
+  await sendVerificationEmail(result.user, prisma, overrides.sendEmail);
+  return {
+    status: 201,
+    body: { message: "Check your email to verify your account before signing in.", email: result.user.email },
+  };
 }
 
 export async function login({ email, password }) {
@@ -137,6 +168,10 @@ export async function login({ email, password }) {
 
   if (!user || !user.passwordHash || !verifyPassword(password, user.passwordHash)) {
     return { status: 401, body: { message: "Invalid credentials." } };
+  }
+
+  if (!user.emailVerifiedAt) {
+    return { status: 403, body: { code: "EMAIL_NOT_VERIFIED", message: "Verify your email before signing in." } };
   }
 
   const safeUser = { id: user.id, name: user.name, email: user.email, createdAt: user.createdAt };
@@ -224,6 +259,77 @@ export async function changePassword(userId, currentPassword, newPassword) {
   };
   const session = await issueSession(safeUser);
   return { status: 200, body: session };
+}
+
+export async function resendVerification(email, overrides = {}) {
+  const prisma = overrides.prisma ?? await getPrismaAsync();
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (user && !user.emailVerifiedAt) {
+    await sendVerificationEmail(user, prisma, overrides.sendEmail);
+  }
+  return { status: 200, body: { message: "If that account still needs verification, a new link has been sent." } };
+}
+
+export async function verifyEmail(rawToken, overrides = {}) {
+  const prisma = overrides.prisma ?? await getPrismaAsync();
+  const token = await prisma.authToken.findUnique({ where: { tokenHash: hashAuthToken(rawToken) } });
+  if (!token || token.purpose !== "EMAIL_VERIFICATION" || token.usedAt || token.expiresAt < new Date()) {
+    return { status: 400, body: { message: "This verification link is invalid or has expired." } };
+  }
+
+  const user = await prisma.$transaction(async (tx) => {
+    const consumed = await tx.authToken.updateMany({
+      where: { id: token.id, usedAt: null, expiresAt: { gt: new Date() } },
+      data: { usedAt: new Date() },
+    });
+    if (consumed.count !== 1) return null;
+    return tx.user.update({
+      where: { id: token.userId },
+      data: { emailVerifiedAt: new Date() },
+      select: SAFE_USER_SELECT,
+    });
+  });
+  if (!user) return { status: 400, body: { message: "This verification link has already been used." } };
+  return { status: 200, body: { message: "Email verified. You can now sign in." } };
+}
+
+export async function requestPasswordReset(email, overrides = {}) {
+  const prisma = overrides.prisma ?? await getPrismaAsync();
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (user?.emailVerifiedAt) {
+    const token = await createAuthToken(prisma, user.id, "PASSWORD_RESET", 60);
+    await (overrides.sendEmail ?? sendAccountEmail)({
+      to: user.email,
+      subject: "Reset your JobHazel password",
+      heading: "Reset your password",
+      copy: "Use this secure link to choose a new password. This link expires in one hour.",
+      actionLabel: "Reset password",
+      actionUrl: `${env.APP_URL}/?reset=${encodeURIComponent(token)}`,
+    });
+  }
+  return { status: 200, body: { message: "If an account exists for that email, a reset link has been sent." } };
+}
+
+export async function resetPassword(rawToken, newPassword, overrides = {}) {
+  const prisma = overrides.prisma ?? await getPrismaAsync();
+  const token = await prisma.authToken.findUnique({ where: { tokenHash: hashAuthToken(rawToken) } });
+  if (!token || token.purpose !== "PASSWORD_RESET" || token.usedAt || token.expiresAt < new Date()) {
+    return { status: 400, body: { message: "This password reset link is invalid or has expired." } };
+  }
+
+  const changed = await prisma.$transaction(async (tx) => {
+    const consumed = await tx.authToken.updateMany({
+      where: { id: token.id, usedAt: null, expiresAt: { gt: new Date() } },
+      data: { usedAt: new Date() },
+    });
+    if (consumed.count !== 1) return false;
+    await tx.user.update({ where: { id: token.userId }, data: { passwordHash: hashPassword(newPassword) } });
+    await tx.refreshToken.updateMany({ where: { userId: token.userId, revokedAt: null }, data: { revokedAt: new Date() } });
+    return true;
+  });
+  return changed
+    ? { status: 200, body: { message: "Password reset. You can now sign in." } }
+    : { status: 400, body: { message: "This password reset link has already been used." } };
 }
 
 export async function deleteAccount(userId, password, overrides = {}) {

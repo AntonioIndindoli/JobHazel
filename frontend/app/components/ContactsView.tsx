@@ -5,6 +5,8 @@ import { CONTACT_RELATIONSHIPS, CONTACT_RELATIONSHIP_LABELS, EMPTY_CONTACT_FORM 
 import type { Application, Contact, ContactFormValues } from "../lib/types";
 import { AppIcon } from "./AppIcon";
 import { ActiveFilterChips } from "./ActiveFilterChips";
+import { CollectionPaneCollapse, CollectionPaneDivider } from "./CollectionPaneControls";
+import { useCollectionDetailPane } from "./useCollectionDetailPane";
 
 type Props = {
     applications: Application[];
@@ -22,7 +24,17 @@ function initials(name: string) {
 export function ContactsView({ applications, contacts, createRequest, onSave, onRemove, onSummaryChange }: Props) {
     const [query, setQuery] = useState("");
     const [relationship, setRelationship] = useState("");
-    const [selectedId, setSelectedId] = useState<string | null>(contacts[0]?.id ?? null);
+    const {
+        containerRef: setSplitPaneNode,
+        selectedId: selectedContactId,
+        isOpen: isDetailPaneOpen,
+        isDragging: isResizingDetailPane,
+        select: selectContact,
+        collapse: collapseDetailPane,
+        beginResize,
+        resizeWithKeyboard,
+        splitStyle,
+    } = useCollectionDetailPane("jobhazel-contacts-detail-pane");
     const [editingId, setEditingId] = useState<string | null>(null);
     const [isFormOpen, setIsFormOpen] = useState(createRequest > 0);
     const [form, setForm] = useState<ContactFormValues>(EMPTY_CONTACT_FORM);
@@ -37,7 +49,7 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
         const haystack = [contact.name, contact.role, contact.email, contact.companyName, contact.applicationTitle].join(" ").toLowerCase();
         return (!query.trim() || haystack.includes(query.trim().toLowerCase())) && (!relationship || contact.relationship === relationship);
     }), [contacts, query, relationship]);
-    const selected = contacts.find((contact) => contact.id === selectedId) ?? filtered[0] ?? null;
+    const selected = contacts.find((contact) => contact.id === selectedContactId) ?? null;
 
     function openCreate() {
         setEditingId(null); setForm({ ...EMPTY_CONTACT_FORM }); setError(""); setIsFormOpen(true);
@@ -49,13 +61,15 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
     }
     function openMobileDetail(contactId: string) {
         listScrollPosition.current = window.scrollY;
-        setSelectedId(contactId);
+        selectContact(contactId);
         setIsDetailMenuOpen(false);
-        setIsMobileDetailOpen(true);
-        requestAnimationFrame(() => window.scrollTo({ top: 0 }));
+        const shouldUseMobileDetail = window.matchMedia?.("(max-width: 900px)").matches ?? false;
+        setIsMobileDetailOpen(shouldUseMobileDetail);
+        if (shouldUseMobileDetail) requestAnimationFrame(() => window.scrollTo({ top: 0 }));
     }
     function closeMobileDetail() {
         setIsMobileDetailOpen(false);
+        collapseDetailPane();
         requestAnimationFrame(() => window.scrollTo({ top: listScrollPosition.current, behavior: "auto" }));
     }
     async function submit(event: FormEvent) {
@@ -76,7 +90,11 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
 
     return <section className={isMobileDetailOpen ? "applications-page contacts-page mobile-page-detail-open" : "applications-page contacts-page"}>
         {contacts.length === 0 ? <div className="panel contacts-empty"><span><AppIcon name="contacts" size={34} /></span><h2>Build your network</h2><p>Keep recruiters, referrals, hiring managers, and people you meet during your search in one place.</p><button className="primary" type="button" onClick={openCreate}><AppIcon name="plus" size={18} /> Add your first contact</button></div> :
-        <div className={isMobileDetailOpen ? "applications-split-panel contacts-layout mobile-detail-open" : "applications-split-panel contacts-layout"}>
+        <div
+            ref={setSplitPaneNode}
+            style={splitStyle}
+            className={`applications-split-panel contacts-layout${selected && isDetailPaneOpen ? " detail-pane-open" : ""}${isMobileDetailOpen ? " mobile-detail-open" : ""}${isResizingDetailPane ? " is-resizing" : ""}`}
+        >
             <div className="application-list-panel contacts-list" aria-label="Contacts list">
                 <div className={isFiltersOpen ? "applications-toolbar contacts-toolbar mobile-filters-open" : "applications-toolbar contacts-toolbar"} aria-label="Contact filters">
                     <label className="applications-search-field contacts-search"><AppIcon name="search" size={18} /><input aria-label="Search contacts" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name, company, role, or email" /></label>
@@ -89,10 +107,12 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
                     <span className="contact-avatar">{initials(contact.name)}</span><span className="contact-row-copy"><strong>{contact.name}</strong><span>{contact.role || CONTACT_RELATIONSHIP_LABELS[contact.relationship]}</span><small>{contact.companyName || "No company linked"}</small></span><AppIcon name="arrow-right" size={17} />
                 </button>) : <div className="contacts-no-results"><AppIcon name="search" size={26} /><strong>No contacts found</strong><span>Try a different search or filter.</span></div>}
             </div>
+            {selected && isDetailPaneOpen && <CollectionPaneDivider onResizeStart={beginResize} onResizeBy={resizeWithKeyboard} />}
             <aside className="application-detail-panel contact-detail status-accent">
                 {selected ? <>
                     <button type="button" className="mobile-detail-back" onClick={closeMobileDetail}><AppIcon name="arrow-left" size={20} /> Contacts</button>
-                    <header className="contact-detail-header"><span className="contact-avatar large">{initials(selected.name)}</span><div><span className="contact-badge">{CONTACT_RELATIONSHIP_LABELS[selected.relationship]}</span><h2>{selected.name}</h2><p>{selected.role || "Role not set"}{selected.companyName ? ` at ${selected.companyName}` : ""}</p></div><div className="application-detail-header-actions"><button className="alternative icon-button" aria-label="Edit contact" onClick={() => openEdit(selected)}><AppIcon name="edit" size={20} /></button><div className="application-detail-menu" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsDetailMenuOpen(false); }}><button type="button" className="application-detail-menu-trigger" aria-label="More contact actions" aria-haspopup="menu" aria-expanded={isDetailMenuOpen} onClick={() => setIsDetailMenuOpen((open) => !open)}><AppIcon name="dots-vertical" size={25} /></button>{isDetailMenuOpen && <div className="application-detail-menu-popover" role="menu"><button type="button" role="menuitem" className="danger-text" onClick={async () => { setIsDetailMenuOpen(false); if (window.confirm(`Delete ${selected.name}?`)) { await onRemove(selected.id); setSelectedId(null); } }}><AppIcon name="trash" size={15} /> Delete contact</button></div>}</div></div></header>
+                    <CollectionPaneCollapse label="contact" onCollapse={() => { collapseDetailPane(); setIsMobileDetailOpen(false); }} />
+                    <header className="contact-detail-header"><span className="contact-avatar large">{initials(selected.name)}</span><div><span className="contact-badge">{CONTACT_RELATIONSHIP_LABELS[selected.relationship]}</span><h2>{selected.name}</h2><p>{selected.role || "Role not set"}{selected.companyName ? ` at ${selected.companyName}` : ""}</p></div><div className="application-detail-header-actions"><button className="alternative icon-button" aria-label="Edit contact" onClick={() => openEdit(selected)}><AppIcon name="edit" size={20} /></button><div className="application-detail-menu" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsDetailMenuOpen(false); }}><button type="button" className="application-detail-menu-trigger" aria-label="More contact actions" aria-haspopup="menu" aria-expanded={isDetailMenuOpen} onClick={() => setIsDetailMenuOpen((open) => !open)}><AppIcon name="dots-vertical" size={25} /></button>{isDetailMenuOpen && <div className="application-detail-menu-popover" role="menu"><button type="button" role="menuitem" className="danger-text" onClick={async () => { setIsDetailMenuOpen(false); if (window.confirm(`Delete ${selected.name}?`)) { await onRemove(selected.id); collapseDetailPane(); } }}><AppIcon name="trash" size={15} /> Delete contact</button></div>}</div></div></header>
                     <dl className="contact-facts">
                         <div><dt>Email</dt><dd>{selected.email ? <a href={`mailto:${selected.email}`}>{selected.email}</a> : <span>Not added</span>}</dd></div>
                         <div><dt>LinkedIn</dt><dd>{selected.linkedinUrl ? <a href={selected.linkedinUrl} target="_blank" rel="noreferrer">View profile <AppIcon name="external-link" size={14} /></a> : <span>Not added</span>}</dd></div>

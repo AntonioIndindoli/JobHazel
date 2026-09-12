@@ -58,6 +58,13 @@ test("unsupported pages still open the panel without creating a tab", async () =
   assert.equal(createdTabCount, 0);
 });
 
+test("capture does not require Chrome to expose the tab URL", async () => {
+  const before = Object.keys(values).length;
+  await actionListener({ id: 44 });
+  assert.equal(openedPanelTabId, 44);
+  assert.equal(Object.keys(values).length, before + 1);
+});
+
 test("the side panel can request capture of the active job", async () => {
   const before = Object.keys(values).length;
   const response = await new Promise((resolve) => {

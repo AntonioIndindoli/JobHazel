@@ -347,7 +347,7 @@
 }
 
 .application-detail-summary {
-    gap: 16px;
+    gap: 10px;
     font-size: 14px;
 }
 
@@ -690,10 +690,10 @@
 .applications-page .application-detail-menu-trigger {
     display: grid;
     place-items: center;
-    width: 42px;
-    min-width: 42px;
-    height: 42px;
-    min-height: 42px;
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
     padding: 0;
     border: 1px solid var(--border-strong);
     border-radius: 11px;
@@ -795,7 +795,6 @@
 }
 
 .applications-page .application-detail-summary {
-    gap: clamp(20px, 3vw, 38px);
     margin: 0;
     padding: 18px 0 19px;
     border-top: 1px solid var(--border-strong);
@@ -983,9 +982,20 @@
     font-size: 15px;
 }
 
-@media (min-width: 1411px) {
+@media (min-width: 901px) {
     .applications-page .applications-split-panel {
-        grid-template-columns: minmax(690px, 2fr) minmax(400px, 1.35fr);
+        align-items: stretch;
+        min-height: calc(100dvh - 90px);
+    }
+
+    .applications-page .applications-split-panel > .application-list-panel,
+    .applications-page .applications-split-panel.detail-pane-open > .application-detail-panel,
+    .applications-page .applications-split-panel.detail-pane-open > .collection-pane-divider {
+        min-height: calc(100dvh - 90px);
+    }
+
+    .applications-page .applications-split-panel:not(.detail-pane-open) {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 

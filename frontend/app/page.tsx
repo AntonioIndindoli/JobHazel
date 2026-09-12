@@ -176,6 +176,7 @@ export default function MainPage() {
     const [token, setToken] = useState("");
     const [authStatus, setAuthStatus] = useState<AuthStatus>("checking");
     const [message, setMessage] = useState("");
+    const [canResendVerification, setCanResendVerification] = useState(false);
     const [extensionCapture, setExtensionCapture] =
         useState<ExtensionJobCapture | null>(null);
     const [extensionDraftReference, setExtensionDraftReference] =
@@ -192,6 +193,7 @@ export default function MainPage() {
     const activeConversionRequest = useRef(false);
     const restoredDraftId = useRef<string | null>(null);
     const [isAuthOpen, setIsAuthOpen] = useState(false);
+    const [resetToken, setResetToken] = useState("");
     const [applications, setApplications] = useState<Application[]>([]);
     const [interviews, setInterviews] = useState<Interview[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
@@ -298,6 +300,34 @@ export default function MainPage() {
             }),
         [applications, editingId, form.companyName, form.sourceUrl, form.title],
     );
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const verificationToken = params.get("verify");
+        const passwordResetToken = params.get("reset");
+
+        if (passwordResetToken) {
+            setResetToken(passwordResetToken);
+            setMode("reset");
+            setIsAuthOpen(true);
+            setMessage("");
+        } else if (verificationToken) {
+            setMode("login");
+            setIsAuthOpen(true);
+            void fetch(`${API_BASE_URL}/auth/verify-email`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ token: verificationToken }),
+            }).then(async (response) => {
+                const data = await response.json().catch(() => ({}));
+                setMessage(data.message ?? (response.ok ? "Email verified. You can now sign in." : "Verification failed."));
+            }).catch(() => setMessage("We could not verify that link. Please try again."));
+        }
+
+        if (verificationToken || passwordResetToken) {
+            window.history.replaceState({}, "", window.location.pathname);
+        }
+    }, []);
 
     useEffect(() => {
         let ignore = false;
@@ -565,15 +595,37 @@ export default function MainPage() {
 
     async function authSubmit(event: FormEvent) {
         event.preventDefault();
-        const response = await fetch(`${API_BASE_URL}/auth/${mode}`, {
+        const endpoint = mode === "forgot" ? "forgot-password" : mode === "reset" ? "reset-password" : mode;
+        const body = mode === "reset"
+            ? { token: resetToken, newPassword: password }
+            : mode === "forgot"
+                ? { email }
+                : { email, password };
+        const response = await fetch(`${API_BASE_URL}/auth/${endpoint}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify({ email, password }),
+            body: JSON.stringify(body),
         });
-        const data = await response.json();
-        if (!response.ok) return setMessage(data.message ?? "Auth failed");
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            setCanResendVerification(data.code === "EMAIL_NOT_VERIFIED");
+            return setMessage(data.message ?? "Auth failed");
+        }
+        if (mode === "signup" || mode === "forgot") {
+            setPassword("");
+            setMode("login");
+            setCanResendVerification(mode === "signup");
+            return setMessage(data.message);
+        }
+        if (mode === "reset") {
+            setPassword("");
+            setResetToken("");
+            setMode("login");
+            return setMessage(data.message);
+        }
         setToken(data.accessToken);
+        setCanResendVerification(false);
         setUserEmail(data.user.email);
         setUserName(data.user.name ?? "");
         setMemberSince(data.user.createdAt ?? "");
@@ -796,6 +848,16 @@ export default function MainPage() {
         const data = await res.json().catch(() => ({}));
         if (!res.ok) return setMessage(data.message ?? "Failed loading contacts");
         setContacts(data.contacts ?? []);
+    }
+
+    async function resendVerificationEmail() {
+        const response = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+        });
+        const data = await response.json().catch(() => ({}));
+        setMessage(data.message ?? (response.ok ? "Verification email sent." : "Could not send verification email."));
     }
 
     async function loadResumeLibrary(activeToken = token) {
@@ -1945,6 +2007,7 @@ export default function MainPage() {
                     password={password}
                     authStatus={authStatus}
                     message={message}
+                    canResendVerification={canResendVerification}
                     isAuthOpen={isAuthOpen}
                     onAuthClose={() => setIsAuthOpen(false)}
                     onAuthOpen={(nextMode) => {
@@ -1956,6 +2019,7 @@ export default function MainPage() {
                     onEmailChange={setEmail}
                     onPasswordChange={setPassword}
                     onSubmit={authSubmit}
+                    onResendVerification={() => void resendVerificationEmail()}
                 />
                 {extensionCaptureNotice && (
                     <ExtensionCaptureNotice

@@ -57,9 +57,7 @@ type CaptureResult = { ok: true } | { ok: false; message: string };
 
 async function captureTab(tab: chrome.tabs.Tab): Promise<CaptureResult> {
   try {
-    if (!tab.id || !tab.url || !/^https?:\/\//i.test(tab.url)) {
-      throw new CaptureError("UNSUPPORTED_PAGE", "Open an HTTP or HTTPS job posting and retry.");
-    }
+    if (!tab.id) throw new CaptureError("UNSUPPORTED_PAGE", "Open a job posting and retry.");
     const injection = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: readPageContext,

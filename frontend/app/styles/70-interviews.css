@@ -164,9 +164,8 @@
 .interviews-reset-button {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 6px;
-  margin-left: auto;
+  margin-left: 0;
   border: 0;
   border-radius: 7px;
   padding: 9px 8px;

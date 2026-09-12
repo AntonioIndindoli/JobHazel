@@ -114,6 +114,9 @@ export function loadEnv(source = process.env) {
       "chrome-extension://nlbcijcaamjlllibnbkgmbeniaiagdkl",
     ),
     COOKIE_SECURE: optional(source, "COOKIE_SECURE", "false") === "true",
+    APP_URL: optional(source, "APP_URL", "http://localhost:3000").replace(/\/$/, ""),
+    RESEND_API_KEY: optional(source, "RESEND_API_KEY", null),
+    EMAIL_FROM: optional(source, "EMAIL_FROM", "JobHazel <onboarding@resend.dev>"),
     RESUME_UPLOAD_MAX_BYTES: integer(source, "RESUME_UPLOAD_MAX_BYTES", 5 * 1024 * 1024),
     RESUME_ACTIVE_LIMIT: integer(source, "RESUME_ACTIVE_LIMIT", 10),
     RESUME_SIGNED_URL_TTL_SECONDS: integer(source, "RESUME_SIGNED_URL_TTL_SECONDS", 300, {

@@ -335,12 +335,6 @@ export function ResumeLibraryView({
     if (isLoading) {
         return (
             <section className="resume-page" aria-labelledby="resume-library-heading" aria-busy="true">
-                <div className="resume-page-intro">
-                    <div>
-                        <span className="resume-page-kicker">Document library</span>
-                        <h2 id="resume-library-heading">Your resume versions</h2>
-                    </div>
-                </div>
                 <div className="resume-loading-grid" aria-label="Loading resumes">
                     {[0, 1, 2].map((item) => <div className="resume-card-skeleton" key={item} />)}
                 </div>
@@ -363,20 +357,6 @@ export function ResumeLibraryView({
 
     return (
         <section className="resume-page" aria-labelledby="resume-library-heading">
-            <div className="resume-page-intro">
-                <div>
-                    <span className="resume-page-kicker">Document library</span>
-                    <h2 id="resume-library-heading">Your resume versions</h2>
-                    <p>Keep role-specific PDFs organized and ready to use.</p>
-                </div>
-                {resumes.length > 0 && (
-                    <dl className="resume-library-summary" aria-label="Resume library summary">
-                        <div><dt>Active</dt><dd>{activeResumes.length}</dd></div>
-                        <div><dt>Archived</dt><dd>{archivedResumes.length}</dd></div>
-                    </dl>
-                )}
-            </div>
-
             {resumes.length === 0 ? (
                 <div className="resume-empty-state">
                     <span className="resume-empty-illustration"><AppIcon name="document" size={31} /></span>

@@ -225,35 +225,6 @@ export function DashboardShell({
                 </header>
                 <div className="dashboard-page-content">{children}</div>
             </main>
-            <nav className="mobile-bottom-nav" aria-label="Primary mobile navigation">
-                {NAV_ITEMS.filter((item) =>
-                    ["Dashboard", "Applications", "Interviews", "Tasks"].includes(item.label),
-                ).map((item) => {
-                    const view = getNavItemView(item.label);
-                    const isActive = Boolean(view && currentView === view);
-                    return (
-                        <button
-                            key={item.label}
-                            type="button"
-                            className={isActive ? "active" : ""}
-                            aria-current={isActive ? "page" : undefined}
-                            onClick={() => view && onCurrentViewChange(view)}
-                        >
-                            <AppIcon name={item.icon} size={20} />
-                            <span>{item.label}</span>
-                        </button>
-                    );
-                })}
-                <button
-                    type="button"
-                    aria-label="Open all navigation"
-                    aria-expanded={isMobileNavOpen}
-                    onClick={() => setIsMobileNavOpen(true)}
-                >
-                    <AppIcon name="menu" size={20} />
-                    <span>More</span>
-                </button>
-            </nav>
         </div>
     );
 }
