@@ -10,7 +10,7 @@ This README describes the implementation in this repository as of **September 12
 
 | Area | Current behavior |
 | --- | --- |
-| Accounts | Email/password signup and login, session refresh, logout, profile editing, password changes, and account deletion. Signup is limited to 1,000 current accounts; deletion frees a slot. |
+| Accounts | Email/password signup and verified-email login, verification-email resend, forgot-password recovery, session refresh, logout, profile editing, signed-in password changes, and account deletion. Signup is limited to 1,000 current accounts; deletion frees a slot. |
 | Applications | Create, edit, delete, search, and filter applications. Store company, role, source, URL, location, workplace/employment type, salary, priority, dates, description, and notes. |
 | Kanban | Drag applications between fixed stages and persist status changes. Application activity history records changes. |
 | Imports | Paste a URL or description, create a parsed draft, review/edit extracted fields, and convert the draft into an application. |
@@ -29,6 +29,12 @@ This README describes the implementation in this repository as of **September 12
 ### Application stages
 
 The six fixed application statuses are **Saved, Applied, Interviewing, Offer, Rejected, and Withdrawn**. Recruiter screen, technical, manager, panel, final, take-home, and other are interview types, not separate application stages. Custom stages are not supported.
+
+### Account verification and recovery
+
+New accounts must verify their email address before signing in. JobHazel sends verification and password-reset messages through Resend, supports resending verification messages, and uses random, hashed, single-use database tokens. Verification links expire after 24 hours; password-reset links expire after one hour. A successful password reset revokes the account's active refresh tokens.
+
+Requests to resend verification or recover a password return non-enumerating responses whether or not the email identifies an eligible account. Existing accounts created before the verification migration are marked verified by the migration. Dedicated abuse rate limits for these public email endpoints and re-verification after a signed-in email-address change are not yet implemented.
 
 ### Job importing
 
@@ -69,7 +75,7 @@ The [resume feature document](RESUME-FEATURE.md) describes the broader phased sc
 | Task automation | Creates in-app tasks, not email/push notifications. Thank-you tasks are created when an interview is added, with a due date based on its schedule; there is no background detection of interview completion. |
 | Analytics | Most dashboard metrics are calculated in the frontend from applications, interviews, and activity history. Resume-version performance is aggregated by `GET /resumes/analytics`; there is no general-purpose backend analytics API. |
 | Resume intelligence | The schema has an optional extracted-text field, but no PDF text-extraction pipeline, scoring, matching, or tailoring workflow. |
-| Account access | Signed-in password changes exist; forgotten-password recovery, email verification, and social sign-in do not. |
+| Account access | Email verification, verification resend, signed-in password changes, and forgot-password recovery are implemented. Dedicated recovery/resend rate limits, re-verification after changing an account email, social sign-in, and MFA are not. |
 | Companies | Company records support applications and contacts, but there is no dedicated company-management screen/API. |
 | Mobile | Responsive web UI exists; installable PWA and offline support do not. |
 | Imports | URL/text review and Chrome-extension capture work, but CSV import is absent. |
@@ -119,6 +125,8 @@ Use Node.js **20.9 or newer**, npm, and PostgreSQL. Docker is optional for the i
 Copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env.local`. Do not overwrite existing local configuration.
 
 - Set both backend JWT secrets to long random values.
+- Set `APP_URL` to the frontend origin used in verification and password-reset links.
+- Set `RESEND_API_KEY` and a verified `EMAIL_FROM` sender to deliver account emails. Without an API key, development logs account-action links; production treats email delivery as unconfigured.
 - Set `DATABASE_URL`; use `DATABASE_URL_UNPOOLED` for a direct migration connection when using a pooled database service.
 - Local database defaults use port `55489` and database name `jobappledger`.
 - The API defaults to `http://localhost:4000`; the frontend defaults to `http://localhost:3000`.
@@ -186,7 +194,7 @@ Paths are relative to the backend origin, with **no `/api` prefix** in Express. 
 | Area | Routes |
 | --- | --- |
 | Health | `GET /health/live`, `GET /health/ready` |
-| Authentication | `POST /auth/signup`, `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, extension-specific `POST /auth/extension/login`, `/refresh`, and `/logout`, plus `GET /auth/me` |
+| Authentication | `POST /auth/signup`, `POST /auth/login`, `POST /auth/verify-email`, `POST /auth/resend-verification`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `POST /auth/refresh`, `POST /auth/logout`, extension-specific `POST /auth/extension/login`, `/refresh`, and `/logout`, plus `GET /auth/me` |
 | Account | `PATCH /auth/profile`, `PATCH /auth/password`, `GET /auth/export` (JSON, or `?format=csv` for applications), `DELETE /auth/account` |
 | Applications | `GET /applications`, `POST /applications`, `GET /applications/:id`, `PUT /applications/:id`, `PATCH /applications/:id/status`, `DELETE /applications/:id` |
 | Application history | `GET /applications/history`, `GET /applications/:id/history`, `DELETE /applications/:id/history/:activityLogId` |
@@ -206,7 +214,7 @@ Most analytics are computed in [the frontend analytics module](frontend/app/lib/
 
 Run `npm test` separately from `backend/`, `frontend/`, and `extension/`. The frontend also provides `npm run lint` and `npm run build`; the extension provides `npm run typecheck`, development/production builds, and `npm run verify:local` for its disposable-account integration workflow.
 
-On September 12, 2026, **83 backend tests, 35 frontend tests, and 14 extension tests passed** against the reviewed workspace. The frontend production build and extension TypeScript/development build also passed. Backend coverage includes validation, parsing, signup limits, exports, task automation, resume storage/lifecycle and analytics, and application-resume associations. Frontend coverage focuses on authentication UI, resume workflows, API helpers, extension handoff behavior, and application-resume interactions. Extension coverage includes session refresh, capture validation and limits, storage pruning, side-panel behavior, draft creation, and application defaults.
+On September 12, 2026, **84 backend tests, 37 frontend tests, and 14 extension tests passed** against the reviewed workspace. The frontend production build and extension TypeScript/development build also passed. Backend coverage includes authentication and recovery validation, parsing, signup limits, exports, task automation, resume storage/lifecycle and analytics, and application-resume associations. Frontend coverage focuses on authentication UI, resume workflows, API helpers, extension handoff behavior, and application-resume interactions. Extension coverage includes session refresh, capture validation and limits, storage pruning, side-panel behavior, draft creation, and application defaults.
 
 These suites include mocked dependencies. Passing tests does not verify live migrations, R2 permissions/CORS, scheduled maintenance, all browser workflows, or production deployment. Broad browser end-to-end coverage and a production-like manual pass remain verification work.
 

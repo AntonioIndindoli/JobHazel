@@ -12,6 +12,7 @@ type AuthPanelProps = {
     password: string;
     authStatus: AuthStatus;
     message: string;
+    messageTone?: "error" | "success" | "info";
     canResendVerification?: boolean;
     onClose: () => void;
     onModeChange: (mode: Mode) => void;
@@ -27,6 +28,7 @@ export function AuthPanel({
     password,
     authStatus,
     message,
+    messageTone = "error",
     canResendVerification = false,
     onClose,
     onModeChange,
@@ -80,8 +82,8 @@ export function AuthPanel({
                     <span>JobHazel</span>
                 </div>
                 <div className="auth-heading">
-                    <h2 id="auth-title">{{ signup: "Start your job search", login: "Welcome back", forgot: "Reset your password", reset: "Choose a new password" }[mode]}</h2>
-                    <p>{{ signup: "Create your free workspace in a few seconds.", login: "Sign in to pick up where you left off.", forgot: "We’ll email you a secure recovery link.", reset: "Enter a new password for your account." }[mode]}</p>
+                    <h2 id="auth-title">{{ signup: "Start your job search", login: "Welcome back", forgot: "Reset your password", reset: "Choose a new password", verify: "Check your inbox" }[mode]}</h2>
+                    <p>{{ signup: "Create your free workspace in a few seconds.", login: "Sign in to pick up where you left off.", forgot: "We’ll email you a secure recovery link.", reset: "Enter a new password for your account.", verify: "One quick step remains before you can use JobHazel." }[mode]}</p>
                 </div>
                 {(mode === "signup" || mode === "login") && <div className="auth-tabs" role="tablist" aria-label="Account action">
                     <button
@@ -103,7 +105,20 @@ export function AuthPanel({
                         Sign in
                     </button>
                 </div>}
-                <form onSubmit={onSubmit} className="auth-form">
+                {mode === "verify" ? (
+                    <div className="auth-verification" role="status">
+                        <div className="auth-verification-icon" aria-hidden="true">
+                            <AppIcon name="check" size={27} />
+                        </div>
+                        <div>
+                            <strong>Verify your email address</strong>
+                            <p>We sent a verification link to <b>{email}</b>. Open it to activate your account, then return here to sign in.</p>
+                        </div>
+                        {message && <p className={`auth-message ${messageTone}`} role="status">{message}</p>}
+                        {onResendVerification && <button type="button" className="auth-submit" onClick={onResendVerification}>Resend verification email</button>}
+                        <button type="button" className="auth-back" onClick={() => changeMode("login")}>I’ve verified my email — sign in</button>
+                    </div>
+                ) : <form onSubmit={onSubmit} className="auth-form">
                     {mode !== "reset" && <label>
                         <span>Email address</span>
                         <input
@@ -145,9 +160,9 @@ export function AuthPanel({
                         {isChecking ? "Please wait…" : { signup: "Create my account", login: "Sign in", forgot: "Send reset link", reset: "Reset password" }[mode]}
                         {!isChecking && <AppIcon name="arrow-right" size={18} />}
                     </button>
-                    {message && <p className="auth-message" role="status">{message}</p>}
+                    {message && <p className={`auth-message ${messageTone}`} role="status">{message}</p>}
                     {canResendVerification && onResendVerification && <button type="button" className="auth-text-action auth-resend" onClick={onResendVerification}>Resend verification email</button>}
-                </form>
+                </form>}
                 {(mode === "forgot" || mode === "reset") && <button type="button" className="auth-back" onClick={() => changeMode("login")}>Back to sign in</button>}
                 <p className="auth-terms">By continuing, you agree to use JobHazel responsibly.</p>
             </section>

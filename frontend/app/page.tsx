@@ -176,6 +176,7 @@ export default function MainPage() {
     const [token, setToken] = useState("");
     const [authStatus, setAuthStatus] = useState<AuthStatus>("checking");
     const [message, setMessage] = useState("");
+    const [messageTone, setMessageTone] = useState<"error" | "success" | "info">("error");
     const [canResendVerification, setCanResendVerification] = useState(false);
     const [extensionCapture, setExtensionCapture] =
         useState<ExtensionJobCapture | null>(null);
@@ -311,6 +312,7 @@ export default function MainPage() {
             setMode("reset");
             setIsAuthOpen(true);
             setMessage("");
+            setMessageTone("error");
         } else if (verificationToken) {
             setMode("login");
             setIsAuthOpen(true);
@@ -320,8 +322,12 @@ export default function MainPage() {
                 body: JSON.stringify({ token: verificationToken }),
             }).then(async (response) => {
                 const data = await response.json().catch(() => ({}));
+                setMessageTone(response.ok ? "success" : "error");
                 setMessage(data.message ?? (response.ok ? "Email verified. You can now sign in." : "Verification failed."));
-            }).catch(() => setMessage("We could not verify that link. Please try again."));
+            }).catch(() => {
+                setMessageTone("error");
+                setMessage("We could not verify that link. Please try again.");
+            });
         }
 
         if (verificationToken || passwordResetToken) {
@@ -609,19 +615,30 @@ export default function MainPage() {
         });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-            setCanResendVerification(data.code === "EMAIL_NOT_VERIFIED");
+            const needsVerification = data.code === "EMAIL_NOT_VERIFIED";
+            setCanResendVerification(needsVerification);
+            setMessageTone(needsVerification ? "info" : "error");
+            if (needsVerification) setMode("verify");
             return setMessage(data.message ?? "Auth failed");
         }
-        if (mode === "signup" || mode === "forgot") {
+        if (mode === "signup") {
+            setPassword("");
+            setMode("verify");
+            setCanResendVerification(true);
+            setMessageTone("info");
+            return setMessage("");
+        }
+        if (mode === "forgot") {
             setPassword("");
             setMode("login");
-            setCanResendVerification(mode === "signup");
+            setMessageTone("success");
             return setMessage(data.message);
         }
         if (mode === "reset") {
             setPassword("");
             setResetToken("");
             setMode("login");
+            setMessageTone("success");
             return setMessage(data.message);
         }
         setToken(data.accessToken);
@@ -632,6 +649,7 @@ export default function MainPage() {
         setAuthStatus("signedIn");
         setIsAuthOpen(false);
         setMessage(`Welcome ${data.user.email}`);
+        setMessageTone("success");
         loadApplications(data.accessToken);
         loadInterviews(data.accessToken);
         loadTasks(data.accessToken);
@@ -857,6 +875,7 @@ export default function MainPage() {
             body: JSON.stringify({ email }),
         });
         const data = await response.json().catch(() => ({}));
+        setMessageTone(response.ok ? "success" : "error");
         setMessage(data.message ?? (response.ok ? "Verification email sent." : "Could not send verification email."));
     }
 
@@ -2007,12 +2026,15 @@ export default function MainPage() {
                     password={password}
                     authStatus={authStatus}
                     message={message}
+                    messageTone={messageTone}
                     canResendVerification={canResendVerification}
                     isAuthOpen={isAuthOpen}
                     onAuthClose={() => setIsAuthOpen(false)}
                     onAuthOpen={(nextMode) => {
                         setMode(nextMode);
                         setMessage("");
+                        setMessageTone("error");
+                        setCanResendVerification(false);
                         setIsAuthOpen(true);
                     }}
                     onModeChange={setMode}

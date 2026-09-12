@@ -24,7 +24,7 @@ export type ApplicationGoalSettings = {
     period: ApplicationGoalPeriod;
 };
 
-export type Mode = "signup" | "login" | "forgot" | "reset";
+export type Mode = "signup" | "login" | "forgot" | "reset" | "verify";
 export type AuthStatus = "checking" | "signedOut" | "signedIn";
 export type DashboardView =
     | "dashboard"

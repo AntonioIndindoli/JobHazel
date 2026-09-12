@@ -15,6 +15,7 @@ type LandingPageProps = {
     email: string;
     isAuthOpen: boolean;
     message: string;
+    messageTone: "error" | "success" | "info";
     canResendVerification: boolean;
     mode: Mode;
     password: string;
@@ -32,6 +33,7 @@ export function LandingPage({
     email,
     isAuthOpen,
     message,
+    messageTone,
     canResendVerification,
     mode,
     password,
@@ -109,7 +111,7 @@ export function LandingPage({
                         Sign in
                     </button>
                     <button type="button" className="landing-button landing-button-small" onClick={() => onAuthOpen("signup")}>
-                        Get started
+                        Get Started
                     </button>
                 </div>
             </header>
@@ -121,11 +123,11 @@ export function LandingPage({
                         Less tracking. More <span>growing.</span>
                     </h1>
                     <p>
-                        JobHazel brings applications, interviews, contacts, and follow-ups together so you can focus on landing the right role.
+                        Keep every application, resume version, interview, and follow-up connected—and see how your job search is progressing.
                     </p>
                     <div className="landing-hero-actions">
                         <button type="button" className="landing-button" onClick={() => onAuthOpen("signup")}>
-                            Start tracking for free
+                            Start for free
                             <AppIcon name="arrow-right" size={18} />
                         </button>
                     </div>
@@ -191,6 +193,7 @@ export function LandingPage({
                     password={password}
                     authStatus={authStatus}
                     message={message}
+                    messageTone={messageTone}
                     canResendVerification={canResendVerification}
                     onClose={onAuthClose}
                     onModeChange={onModeChange}
