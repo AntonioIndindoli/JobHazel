@@ -273,6 +273,7 @@
 
     .mobile-agenda-card {
         width: 100%;
+        min-width: 0;
         font: inherit;
     }
 
@@ -289,6 +290,11 @@
         display: grid;
         gap: 4px;
         min-width: 0;
+    }
+
+    .mobile-agenda-card:focus-visible {
+        outline: 2px solid var(--green);
+        outline-offset: 3px;
     }
 
     .mobile-agenda-date strong {
@@ -496,25 +502,66 @@
     }
 
     .mobile-agenda-card {
-        grid-template-columns: 76px minmax(0, 1fr) 18px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        padding: 16px;
+    }
 
-        gap: 10px;
-        padding: 13px 12px;
+    .mobile-agenda-card>.mobile-agenda-date {
+        grid-column: 1;
+        grid-row: 1;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 4px 10px;
+    }
+
+    .mobile-agenda-card .mobile-agenda-date strong,
+    .mobile-agenda-card .mobile-agenda-date span {
+        font-size: 12px;
+        line-height: 1.5;
     }
 
     .mobile-agenda-card>.mobile-agenda-copy {
-        grid-column: 2;
+        grid-column: 1 / -1;
+        grid-row: 2;
+        gap: 5px;
+        padding-top: 12px;
+        padding-right: 26px;
+        border-top: 1px solid var(--border);
+    }
+
+    .mobile-agenda-card .mobile-agenda-copy strong,
+    .mobile-agenda-card .mobile-agenda-copy>span {
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .mobile-agenda-card .mobile-agenda-copy strong {
+        font-size: 16px;
+        line-height: 1.4;
+    }
+
+    .mobile-agenda-card .mobile-agenda-copy small {
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    .mobile-agenda-card .mobile-agenda-copy small svg {
+        flex-shrink: 0;
     }
 
     .mobile-agenda-card>.status-pill {
         grid-column: 2;
-        grid-row: 2;
-        justify-self: start;
+        grid-row: 1;
+        justify-self: end;
+        align-self: center;
     }
 
     .mobile-agenda-card>.mobile-record-chevron {
-        grid-column: 3;
-        grid-row: 1 / span 2;
+        grid-column: 2;
+        grid-row: 2;
+        justify-self: end;
         align-self: center;
     }
 
