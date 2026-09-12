@@ -112,8 +112,8 @@ function renderDraft(result: DraftResult): void {
   const value = result.importDraft;
   input("title").value = value.parsedTitle ?? "";
   input("companyName").value = value.parsedCompany ?? "";
-  select("status").value = "SAVED";
-  renderStatusDot("SAVED");
+  select("status").value = "APPLIED";
+  renderStatusDot("APPLIED");
   input("dateApplied").value = todayDateInput();
   input("location").value = value.parsedLocation ?? "";
   input("source").value = value.source ?? "";
@@ -149,6 +149,28 @@ async function signOut(): Promise<void> {
   if (session) await logout(session);
   session = null; draft = null; processingCaptureId = null;
   show("login");
+}
+
+async function captureActiveJob(button: HTMLButtonElement): Promise<void> {
+  const originalLabel = button.textContent ?? "Capture current job";
+  button.disabled = true;
+  button.textContent = "Capturing…";
+  setError("capture-error");
+  try {
+    const result = await chrome.runtime.sendMessage({ type: "jobhazel.capture.active" }) as
+      | { ok: true }
+      | { ok: false; message: string };
+    if (!result?.ok) {
+      show("ready");
+      setError("capture-error", result?.message ?? "JobHazel could not capture the active tab.");
+    }
+  } catch {
+    show("ready");
+    setError("capture-error", "JobHazel could not capture the active tab. Reload the extension and retry.");
+  } finally {
+    button.disabled = false;
+    button.textContent = originalLabel;
+  }
 }
 
 async function initialize(): Promise<void> {
@@ -203,7 +225,11 @@ element("sign-out").addEventListener("click", () => void signOut());
 element("review-sign-out").addEventListener("click", () => void signOut());
 element("create-account").addEventListener("click", () => void chrome.tabs.create({ url: APP_URL }));
 element("open-jobhazel").addEventListener("click", () => void chrome.tabs.create({ url: APP_URL }));
-element("capture-another").addEventListener("click", () => { show("ready"); });
+element("capture-job").addEventListener("click", (event) => void captureActiveJob(event.currentTarget as HTMLButtonElement));
+element("capture-another").addEventListener("click", (event) => {
+  show("ready");
+  void captureActiveJob(event.currentTarget as HTMLButtonElement);
+});
 element("cancel-review").addEventListener("click", () => {
   if (activeCaptureKey) void chrome.storage.session.remove(activeCaptureKey);
   draft = null; activeCaptureKey = null; processingCaptureId = null; show("ready");

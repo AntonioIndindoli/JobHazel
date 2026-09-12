@@ -16,3 +16,9 @@ test("side panel script references only elements present in its HTML", async () 
     assert.ok(htmlIds.has(`${view}-view`), `missing ${view}-view`);
   }
 });
+
+test("captured applications default to applied", async () => {
+  const script = await readFile(new URL("../dist/development/side-panel.js", import.meta.url), "utf8");
+  assert.match(script, /select\("status"\)\.value = "APPLIED"/);
+  assert.match(script, /renderStatusDot\("APPLIED"\)/);
+});

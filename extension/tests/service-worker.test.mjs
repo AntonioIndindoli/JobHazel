@@ -3,6 +3,7 @@ import test from "node:test";
 
 const values = {};
 let actionListener;
+let messageListener;
 let openedPanelTabId;
 let createdTabCount = 0;
 
@@ -15,6 +16,9 @@ globalThis.chrome = {
     setTitle: async () => undefined,
   },
   sidePanel: { open: async ({ tabId }) => { openedPanelTabId = tabId; } },
+  runtime: {
+    onMessage: { addListener: (listener) => { messageListener = listener; } },
+  },
   storage: {
     session: {
       get: async () => ({ ...values }),
@@ -31,7 +35,10 @@ globalThis.chrome = {
       rawText: "Build useful products.",
     } }],
   },
-  tabs: { create: async () => { createdTabCount += 1; return { id: 99 }; } },
+  tabs: {
+    query: async () => [{ id: 42, url: "https://jobs.example.com/role/7" }],
+    create: async () => { createdTabCount += 1; return { id: 99 }; },
+  },
 };
 
 await import("../dist/development/service-worker.js");
@@ -48,5 +55,15 @@ test("toolbar capture opens the side panel and never creates a browser tab", asy
 test("unsupported pages still open the panel without creating a tab", async () => {
   await actionListener({ id: 43, url: "chrome://extensions" });
   assert.equal(openedPanelTabId, 43);
+  assert.equal(createdTabCount, 0);
+});
+
+test("the side panel can request capture of the active job", async () => {
+  const before = Object.keys(values).length;
+  const response = await new Promise((resolve) => {
+    assert.equal(messageListener({ type: "jobhazel.capture.active" }, {}, resolve), true);
+  });
+  assert.deepEqual(response, { ok: true });
+  assert.equal(Object.keys(values).length, before + 1);
   assert.equal(createdTabCount, 0);
 });

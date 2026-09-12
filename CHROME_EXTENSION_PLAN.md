@@ -1,6 +1,6 @@
 # Chrome Extension Implementation Plan
 
-Status: Phases 1–4 and the authenticated side-panel revision implemented; manual Chrome validation pending
+Status: Phases 1–5 implemented and automated/live API verification completed; manual Chrome UI validation pending
 Created: September 10, 2026
 
 ## Objective
@@ -173,12 +173,18 @@ Network and parsing failures remain visible in the drawer without discarding the
 
 ### Automated checks
 
-- [ ] Test message validation, origin/tab restrictions, expiry, payload limits, and acknowledgment behavior.
-- [ ] Test the frontend bridge with missing-extension, timeout, malformed-payload, and success responses.
-- [ ] Test sign-in resumption and repeated delivery without duplicate submission.
-- [ ] Verify existing import routes enforce user ownership and reject invalid payloads.
-- [ ] Add targeted integration tests for any new backend idempotency behavior introduced in Phase 4.
-- [ ] Run the extension build/type check and relevant frontend/backend checks.
+- [x] Test capture validation, unsupported pages, payload limits, storage expiry/pruning, and side-panel messaging.
+- [x] Test the frontend bridge with missing-extension, timeout, malformed-payload, and success responses.
+- [x] Verify extension sign-in, rotating refresh, idempotent draft replay, draft restore, save, duplicate warning, explicit duplicate override, and application visibility against the running development API.
+- [x] Verify import request validation and user-scoped authentication through backend tests and the disposable-account live workflow.
+- [x] Add a repeatable `npm run verify:local` integration check that creates and removes its own disposable account.
+- [x] Run extension type checks/tests and production build, backend tests, and frontend tests and production build.
+
+### Verification result — September 11, 2026
+
+The live workflow passed all ten API checks against `http://localhost:4000`. It uncovered a database constraint that rejected the explicit **Save this job anyway** path with HTTP 500. The application schema now uses a non-unique lookup index for `(userId, sourceUrl)`, while duplicate detection and confirmation remain in the import service. Migration `20260911230000_allow_duplicate_application_source_urls` was applied to the configured development database and the full workflow passed after the fix.
+
+Automated results: 12 extension tests, 79 backend tests, and 34 frontend tests passed. Development and production extension builds and the optimized frontend build also passed. The live check deletes its generated account after every run.
 
 ### Manual Chrome checks
 
@@ -195,7 +201,7 @@ Network and parsing failures remain visible in the drawer without discarding the
 | Expired capture or browser restart | Clear instruction to capture again |
 | Oversized selected text | Bounded payload and visible explanation |
 
-Use the authorized local testing account from `AGENTS.md` when needed; do not copy credentials into extension files, fixtures, or documentation.
+The automated live check creates a unique disposable account and deletes it when the run finishes. Manual checks should use a separate local test account.
 
 ### Acceptance criteria
 

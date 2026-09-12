@@ -237,6 +237,27 @@ export type ResumeMetadataUpdate = {
     archived?: boolean;
 };
 
+export type ResumeAnalyticsRow = {
+    resumeVersionId: string | null;
+    name: string;
+    targetRole: string | null;
+    archivedAt: string | null;
+    isNoResume: boolean;
+    submittedApplications: number;
+    responses: number;
+    responseRate: number;
+    interviews: number;
+    interviewRate: number;
+    offers: number;
+    offerRate: number;
+    eligibleForComparison: boolean;
+};
+
+export type ResumeAnalytics = {
+    minimumSampleSize: number;
+    rows: ResumeAnalyticsRow[];
+};
+
 export type ImportCaptureValues = {
     sourceUrl: string;
     pageTitle: string;

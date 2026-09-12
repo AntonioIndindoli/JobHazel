@@ -28,6 +28,7 @@ import type {
     Interview,
 } from "../../lib/types";
 import { AppIcon } from "../AppIcon";
+import { ActiveFilterChips, type ActiveFilterChip } from "../ActiveFilterChips";
 import { InfoTooltip } from "./InfoTooltip";
 
 type ApplicationTrackerProps = {
@@ -129,12 +130,18 @@ export function ApplicationTracker({
         Partial<Record<DashboardStatus, HTMLButtonElement | null>>
     >({});
     const activeFilterCount = [
-        filters.query,
+        filters.status,
         filters.source,
         filters.company,
         filters.timeframe,
     ].filter(Boolean).length;
     const hasActiveFilters = Object.values(filters).some(Boolean);
+    const activeFilterChips: ActiveFilterChip[] = [
+        ...(filters.status ? [{ id: "status", label: "Status", value: STATUS_LABELS[filters.status as keyof typeof STATUS_LABELS] ?? filters.status, onRemove: () => onFiltersChange({ ...filters, status: "" }) }] : []),
+        ...(filters.source ? [{ id: "source", label: "Source", value: filters.source, onRemove: () => onFiltersChange({ ...filters, source: "" }) }] : []),
+        ...(filters.timeframe ? [{ id: "timeframe", label: "Applied", value: DASHBOARD_TIMEFRAME_OPTIONS.find((option) => option.value === filters.timeframe)?.label ?? filters.timeframe, onRemove: () => onFiltersChange({ ...filters, timeframe: "" }) }] : []),
+        ...(filters.company ? [{ id: "company", label: "Company or role", value: filters.company, onRemove: () => onFiltersChange({ ...filters, company: "" }) }] : []),
+    ];
     const filteredMobileStatus = DASHBOARD_STATUSES.find(
         (status) => status === filters.status,
     );
@@ -444,6 +451,7 @@ export function ApplicationTracker({
                     Show results
                 </button>
             </div>
+            <ActiveFilterChips chips={activeFilterChips} className="dashboard-active-filter-chips" />
             <div
                 className={`mobile-stage-tabs-shell${
                     mobileStageOverflow.start ? " has-overflow-start" : ""

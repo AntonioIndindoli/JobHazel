@@ -193,6 +193,65 @@
     white-space: nowrap;
 }
 
+.topbar-page-heading {
+    display: flex;
+    align-items: baseline;
+    min-width: 0;
+    gap: 14px;
+}
+
+.topbar-page-heading .page-summary {
+    flex: 0 0 auto;
+    min-height: 0;
+}
+
+.topbar-page-heading .applications-status-count.saved {
+    color: color-mix(in srgb, var(--application-status-saved) 24%, var(--muted));
+}
+
+.topbar-page-heading .applications-status-count.applied {
+    color: color-mix(in srgb, var(--application-status-applied) 24%, var(--muted));
+}
+
+.topbar-page-heading .applications-status-count.interviewing {
+    color: color-mix(in srgb, var(--application-status-interviewing) 24%, var(--muted));
+}
+
+.topbar-page-heading .applications-status-count.offer {
+    color: color-mix(in srgb, var(--application-status-offer) 24%, var(--muted));
+}
+
+.topbar-page-heading .applications-status-count.rejected {
+    color: color-mix(in srgb, var(--application-status-rejected) 24%, var(--muted));
+}
+
+.topbar-page-heading .applications-status-count.withdrawn,
+.topbar-page-heading .interviews-status-count.canceled {
+    color: var(--muted);
+}
+
+.topbar-page-heading .interviews-status-count.scheduled {
+    color: color-mix(in srgb, #6d67a8 24%, var(--muted));
+}
+
+.topbar-page-heading .interviews-status-count.completed {
+    color: color-mix(in srgb, #3f6f9f 24%, var(--muted));
+}
+
+.topbar-page-heading .interviews-status-count.passed,
+.topbar-page-heading .tasks-header-meta strong[data-summary-key="completed"] {
+    color: color-mix(in srgb, #4f7b5c 24%, var(--muted));
+}
+
+.topbar-page-heading .interviews-status-count.failed,
+.topbar-page-heading .tasks-header-meta strong[data-summary-key="overdue"] {
+    color: color-mix(in srgb, var(--danger) 24%, var(--muted));
+}
+
+.topbar-page-heading .tasks-header-meta strong[data-summary-key="today"] {
+    color: color-mix(in srgb, var(--warning) 24%, var(--muted));
+}
+
 .topbar-page-actions {
     display: flex;
     align-items: center;

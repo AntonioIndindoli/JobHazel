@@ -53,11 +53,9 @@ function errorMessage(error: unknown): string {
   return "JobHazel could not capture this page. Click to retry.";
 }
 
-async function handleToolbarClick(tab: chrome.tabs.Tab): Promise<void> {
-  if (typeof tab.id === "number") {
-    await chrome.sidePanel.open({ tabId: tab.id }).catch(() => undefined);
-  }
+type CaptureResult = { ok: true } | { ok: false; message: string };
 
+async function captureTab(tab: chrome.tabs.Tab): Promise<CaptureResult> {
   try {
     if (!tab.id || !tab.url || !/^https?:\/\//i.test(tab.url)) {
       throw new CaptureError("UNSUPPORTED_PAGE", "Open an HTTP or HTTPS job posting and retry.");
@@ -75,9 +73,30 @@ async function handleToolbarClick(tab: chrome.tabs.Tab): Promise<void> {
     await chrome.storage.session.set({ [captureStorageKey(capture.captureId)]: record });
     const feedback = successFeedback(capture.warnings);
     await showFeedback(feedback.badge, feedback.color, feedback.title);
+    return { ok: true };
   } catch (error) {
-    await showFeedback("!", "#b3261e", errorMessage(error));
+    const message = errorMessage(error);
+    await showFeedback("!", "#b3261e", message);
+    return { ok: false, message };
   }
 }
 
+async function handleToolbarClick(tab: chrome.tabs.Tab): Promise<void> {
+  if (typeof tab.id === "number") {
+    await chrome.sidePanel.open({ tabId: tab.id }).catch(() => undefined);
+  }
+  await captureTab(tab);
+}
+
 chrome.action.onClicked.addListener((tab) => handleToolbarClick(tab));
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type !== "jobhazel.capture.active") return false;
+  void chrome.tabs.query({ active: true, lastFocusedWindow: true })
+    .then(([tab]) => tab
+      ? captureTab(tab)
+      : ({ ok: false, message: "Open a job posting and try again." } as CaptureResult))
+    .then(sendResponse)
+    .catch(() => sendResponse({ ok: false, message: "JobHazel could not access the active tab." }));
+  return true;
+});

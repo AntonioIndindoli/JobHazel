@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { CONTACT_RELATIONSHIPS, CONTACT_RELATIONSHIP_LABELS, EMPTY_CONTACT_FORM } from "../lib/constants";
 import type { Application, Contact, ContactFormValues } from "../lib/types";
 import { AppIcon } from "./AppIcon";
+import { ActiveFilterChips } from "./ActiveFilterChips";
 
 type Props = {
     applications: Application[];
@@ -11,13 +12,14 @@ type Props = {
     createRequest: number;
     onSave: (values: ContactFormValues, id?: string) => Promise<{ ok: boolean; message?: string }>;
     onRemove: (id: string) => Promise<void>;
+    onSummaryChange?: (summary: { hasActiveFilters: boolean; shown: number }) => void;
 };
 
 function initials(name: string) {
     return name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
 }
 
-export function ContactsView({ applications, contacts, createRequest, onSave, onRemove }: Props) {
+export function ContactsView({ applications, contacts, createRequest, onSave, onRemove, onSummaryChange }: Props) {
     const [query, setQuery] = useState("");
     const [relationship, setRelationship] = useState("");
     const [selectedId, setSelectedId] = useState<string | null>(contacts[0]?.id ?? null);
@@ -68,9 +70,11 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
 
     const hasActiveFilters = Boolean(query.trim() || relationship);
 
-    return <section className={isMobileDetailOpen ? "applications-page contacts-page mobile-page-detail-open" : "applications-page contacts-page"}>
-        <div className="page-summary"><span className="applications-status-meta" aria-label="Contact total"><strong className="applications-status-count">{contacts.length} total {contacts.length === 1 ? "contact" : "contacts"}</strong>{hasActiveFilters && <strong className="applications-status-count applied">{filtered.length} shown</strong>}</span></div>
+    useEffect(() => {
+        onSummaryChange?.({ hasActiveFilters, shown: filtered.length });
+    }, [filtered.length, hasActiveFilters, onSummaryChange]);
 
+    return <section className={isMobileDetailOpen ? "applications-page contacts-page mobile-page-detail-open" : "applications-page contacts-page"}>
         {contacts.length === 0 ? <div className="panel contacts-empty"><span><AppIcon name="contacts" size={34} /></span><h2>Build your network</h2><p>Keep recruiters, referrals, hiring managers, and people you meet during your search in one place.</p><button className="primary" type="button" onClick={openCreate}><AppIcon name="plus" size={18} /> Add your first contact</button></div> :
         <div className={isMobileDetailOpen ? "applications-split-panel contacts-layout mobile-detail-open" : "applications-split-panel contacts-layout"}>
             <div className="application-list-panel contacts-list" aria-label="Contacts list">
@@ -80,6 +84,7 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
                     <select aria-label="Filter contacts by relationship" value={relationship} onChange={(e) => setRelationship(e.target.value)}><option value="">All relationships</option>{CONTACT_RELATIONSHIPS.map((item) => <option key={item} value={item}>{CONTACT_RELATIONSHIP_LABELS[item]}</option>)}</select>
                     <button type="button" className="interviews-reset-button" disabled={!hasActiveFilters} onClick={() => { setQuery(""); setRelationship(""); }}><AppIcon name="history" size={15} /> Reset</button>
                 </div>
+                <ActiveFilterChips chips={relationship ? [{ id: "relationship", label: "Relationship", value: CONTACT_RELATIONSHIP_LABELS[relationship], onRemove: () => setRelationship("") }] : []} />
                 {filtered.length ? filtered.map((contact) => <button key={contact.id} type="button" className={selected?.id === contact.id ? "contact-row active" : "contact-row"} onClick={() => openMobileDetail(contact.id)}>
                     <span className="contact-avatar">{initials(contact.name)}</span><span className="contact-row-copy"><strong>{contact.name}</strong><span>{contact.role || CONTACT_RELATIONSHIP_LABELS[contact.relationship]}</span><small>{contact.companyName || "No company linked"}</small></span><AppIcon name="arrow-right" size={17} />
                 </button>) : <div className="contacts-no-results"><AppIcon name="search" size={26} /><strong>No contacts found</strong><span>Try a different search or filter.</span></div>}

@@ -63,7 +63,7 @@ function buildConversionPayload(draft, overrides = {}) {
   return {
     title: pickOverride(overrides, "title", draft.parsedTitle),
     companyName: pickOverride(overrides, "companyName", draft.parsedCompany),
-    status: pickOverride(overrides, "status", "SAVED") ?? "SAVED",
+    status: pickOverride(overrides, "status", "APPLIED") ?? "APPLIED",
     source: pickOverride(overrides, "source", sourceInfo.source),
     sourceUrl: normalizeUrl(pickOverride(overrides, "sourceUrl", draft.sourceUrl)),
     location: pickOverride(overrides, "location", draft.parsedLocation),

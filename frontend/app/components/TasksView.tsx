@@ -16,6 +16,7 @@ import type {
     Task,
 } from "../lib/types";
 import { AppIcon } from "./AppIcon";
+import { ActiveFilterChips, type ActiveFilterChip } from "./ActiveFilterChips";
 
 type TasksViewProps = {
     applications: Application[];
@@ -115,24 +116,6 @@ export function TasksView({
     const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
     const listScrollPosition = useRef(0);
 
-    const taskSummary = useMemo(() => {
-        const summary = {
-            open: 0,
-            overdue: 0,
-            today: 0,
-            completed: 0,
-        };
-
-        tasks.forEach((task) => {
-            const state = getTaskDueState(task);
-            if (state === "completed") summary.completed += 1;
-            else summary.open += 1;
-            if (state === "overdue") summary.overdue += 1;
-            if (state === "today") summary.today += 1;
-        });
-
-        return summary;
-    }, [tasks]);
 
     const filteredTasks = useMemo(() => {
         const query = filters.query.trim().toLowerCase();
@@ -177,6 +160,16 @@ export function TasksView({
         filters.status,
         filters.applicationId,
     ].filter(Boolean).length;
+    const activeFilterChips: ActiveFilterChip[] = [
+        ...(filters.type ? [{ id: "type", label: "Type", value: getTaskTypeLabel(filters.type), onRemove: () => setFilters((current) => ({ ...current, type: "" })) }] : []),
+        ...(filters.status ? [{ id: "status", label: "Status", value: TASK_STATUS_LABELS[filters.status], onRemove: () => setFilters((current) => ({ ...current, status: "" })) }] : []),
+        ...(filters.applicationId ? [{
+            id: "application",
+            label: "Application",
+            value: applications.find((application) => application.id === filters.applicationId)?.title ?? "Selected application",
+            onRemove: () => setFilters((current) => ({ ...current, applicationId: "" })),
+        }] : []),
+    ];
     const taskActionGroups = useMemo(() => {
         const groups: Array<{ label: string; tasks: Task[] }> = [
             {
@@ -255,15 +248,6 @@ export function TasksView({
 
     return (
         <section className={isMobileDetailOpen ? "applications-page tasks-page mobile-page-detail-open" : "applications-page tasks-page"}>
-            <div className="page-summary">
-                <span className="tasks-header-meta" aria-label="Task summary">
-                    <strong>{taskSummary.open} open</strong>
-                    <strong>{taskSummary.overdue} overdue</strong>
-                    <strong>{taskSummary.today} due today</strong>
-                    <strong>{taskSummary.completed} completed</strong>
-                </span>
-            </div>
-
             <div className={isMobileDetailOpen ? "applications-split-panel tasks-split-panel mobile-detail-open" : "applications-split-panel tasks-split-panel"}>
                 <aside className="application-list-panel tasks-list-panel">
                     <div
@@ -330,6 +314,7 @@ export function TasksView({
                             Reset
                         </button>
                     </div>
+                    <ActiveFilterChips chips={activeFilterChips} />
 
                     {sortedTasks.length > 0 ? (
                         <>

@@ -1,0 +1,306 @@
+/* Cohesive visual system and navigation refinements. Loaded last intentionally. */
+
+:root {
+    --radius-control: 8px;
+    --radius-card: 12px;
+    --radius-panel: 16px;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
+    --shadow-card: 0 1px 2px rgba(20, 33, 61, .04);
+    --shadow-floating: 0 16px 40px rgba(20, 33, 61, .16);
+    --surface-page: #f3f6f2;
+    --surface-raised: #ffffff;
+}
+
+html[data-theme="dark"] {
+    --surface-page: #0b1016;
+    --surface-raised: #111820;
+    --shadow-card: 0 1px 2px rgba(0, 0, 0, .18);
+    --shadow-floating: 0 18px 44px rgba(0, 0, 0, .42);
+}
+
+body {
+    margin: 0;
+    background: var(--surface-page);
+    font-family: var(--font-geist-sans), system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+}
+
+h1, h2, h3, h4, strong {
+    letter-spacing: -.012em;
+}
+
+.dashboard-shell {
+    background: var(--surface-page);
+}
+
+.panel,
+.pipeline-graph,
+.stats-panel,
+.weekly-goal-summary,
+.stat-card,
+.application-list-panel,
+.application-detail-panel,
+.interviews-control-panel,
+.task-automation-panel {
+    border-color: var(--border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+}
+
+.profile-menu,
+.job-card-menu-popover,
+.applications-date-filter-popover,
+.drawer {
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-floating);
+}
+
+.primary,
+.secondary,
+input,
+select,
+textarea,
+.mobile-filter-toggle,
+.interviews-reset-button,
+.dashboard-filter-toggle {
+    border-radius: var(--radius-control);
+}
+
+.topbar-page-title {
+    font-size: clamp(22px, 2vw, 28px);
+    font-weight: 750;
+}
+
+.panel-title h2,
+.pipeline-header h2,
+.stats-panel h2 {
+    font-size: 18px;
+    font-weight: 720;
+}
+
+.dashboard-page-content {
+    padding-bottom: var(--space-6);
+}
+
+/* The tracker is the dashboard's working surface, so it leads and gets air. */
+.view-dashboard .tracker-panel {
+    margin-top: 0;
+    margin-bottom: var(--space-5);
+    padding: var(--space-5);
+    border-radius: var(--radius-panel);
+    box-shadow: 0 6px 24px rgba(31, 60, 100, .055);
+}
+
+.view-dashboard .pipeline-stats-container {
+    opacity: .96;
+}
+
+.view-dashboard .stats-panel .stat-card {
+    min-height: 78px;
+    padding: var(--space-3);
+    box-shadow: var(--shadow-card);
+}
+
+.view-dashboard .stats-panel .stat-card p,
+.view-dashboard .stat-detail,
+.view-dashboard .job-card-company,
+.view-dashboard .applied-date {
+    font-size: 12px;
+}
+
+/* Filters read as a single tool rather than another collection of cards. */
+.applications-toolbar,
+.filter-row,
+.collection-filter-toolbar {
+    gap: var(--space-2);
+}
+
+.applications-toolbar input,
+.applications-toolbar select,
+.filter-row input,
+.filter-row select {
+    min-height: 40px;
+    background-color: var(--surface-raised);
+}
+
+.mobile-filter-toggle[aria-expanded="true"],
+.dashboard-filter-toggle[aria-expanded="true"] {
+    border-color: var(--green);
+    color: var(--green);
+    background: color-mix(in srgb, var(--green) 8%, var(--surface-raised));
+}
+
+.applications-empty,
+.contacts-empty,
+.contacts-no-results,
+.resume-empty-state,
+.resume-filter-empty,
+.pipeline-empty-state {
+    max-width: 620px;
+    margin-inline: auto;
+    padding: clamp(28px, 5vw, 56px) 24px;
+    text-align: center;
+}
+
+.empty-illustration,
+.resume-empty-illustration {
+    background: color-mix(in srgb, var(--green) 10%, var(--surface-raised));
+    color: var(--green);
+}
+
+.mobile-bottom-nav {
+    display: none;
+}
+
+/* Tablet: a persistent icon rail keeps every destination one click away. */
+@media (min-width: 701px) and (max-width: 1400px) {
+    .dashboard-shell,
+    .dashboard-shell.view-dashboard {
+        display: flex;
+    }
+
+    .sidebar,
+    .dashboard-shell.view-dashboard .sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        display: flex;
+        width: 72px;
+        min-width: 72px;
+        height: 100dvh;
+        padding: 20px 10px;
+        visibility: visible;
+        pointer-events: auto;
+        transform: none;
+        box-shadow: none;
+    }
+
+    .sidebar .brand,
+    .dashboard-shell.view-dashboard .sidebar .brand {
+        justify-content: center;
+        padding: 0 0 24px;
+    }
+
+    .sidebar .brand strong,
+    .dashboard-shell .sidebar .mobile-sidebar-close,
+    .sidebar .nav-item span,
+    .sidebar-profile-copy,
+    .sidebar-profile .profile-trigger > svg:last-child {
+        display: none;
+    }
+
+    .sidebar .brand-mark {
+        margin-inline: auto;
+    }
+
+    .sidebar .nav-item {
+        justify-content: center;
+        width: 48px;
+        min-height: 48px;
+        margin: 0 auto 6px;
+        padding: 0;
+        border-radius: var(--radius-control);
+    }
+
+    .sidebar .nav-item svg {
+        width: 21px;
+        height: 21px;
+    }
+
+    .sidebar-profile .profile-trigger {
+        justify-content: center;
+        padding: 6px;
+    }
+
+    .sidebar-profile .profile-menu {
+        left: calc(100% + 12px);
+        bottom: 0;
+        width: 180px;
+    }
+
+    .dashboard-main,
+    .dashboard-shell.view-dashboard .dashboard-main {
+        width: calc(100% - 72px);
+        margin-left: 72px;
+    }
+
+    .mobile-nav-toggle,
+    .dashboard-shell.view-dashboard .mobile-nav-toggle,
+    .sidebar-backdrop,
+    .dashboard-shell.view-dashboard .sidebar-backdrop {
+        display: none;
+    }
+}
+
+/* Phone: high-frequency destinations stay thumb-accessible. */
+@media (max-width: 700px) {
+    .dashboard-page-content {
+        padding-bottom: calc(92px + env(safe-area-inset-bottom));
+    }
+
+    .mobile-bottom-nav {
+        position: fixed;
+        z-index: 60;
+        right: 10px;
+        bottom: calc(8px + env(safe-area-inset-bottom));
+        left: 10px;
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        padding: 7px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-panel);
+        background: var(--surface-translucent);
+        box-shadow: var(--shadow-floating);
+        backdrop-filter: blur(18px);
+    }
+
+    .mobile-bottom-nav button {
+        display: grid;
+        justify-items: center;
+        gap: 3px;
+        min-width: 0;
+        min-height: 48px;
+        padding: 5px 2px;
+        border: 0;
+        border-radius: var(--radius-control);
+        background: transparent;
+        color: var(--text-soft);
+        font-size: 10px;
+        font-weight: 650;
+    }
+
+    .mobile-bottom-nav button.active {
+        background: color-mix(in srgb, var(--green) 10%, transparent);
+        color: var(--green);
+    }
+
+    .view-dashboard .tracker-panel {
+        padding: var(--space-3);
+    }
+
+    .view-dashboard .pipeline-stats-container {
+        margin-top: var(--space-5);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        scroll-behavior: auto !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .01ms !important;
+    }
+}

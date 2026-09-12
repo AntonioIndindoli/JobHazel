@@ -4,6 +4,7 @@ import {
   completeResumeUploadController,
   createResumeDownloadUrlController,
   deleteResumeController,
+  getResumeAnalyticsController,
   initiateResumeUploadController,
   listResumesController,
   updateResumeController,
@@ -42,6 +43,7 @@ router.post(
 );
 
 router.use(requireAuth);
+router.get("/analytics", getResumeAnalyticsController);
 router.get("/", validateResumeListQuery, listResumesController);
 router.post(
   "/uploads",

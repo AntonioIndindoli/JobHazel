@@ -61,7 +61,6 @@
     background: var(--green);
     color: white;
     border-color: var(--green);
-    box-shadow: 0 8px 18px rgba(11, 255, 52, 0.096);
 }
 
 .secondary {

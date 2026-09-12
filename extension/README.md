@@ -31,6 +31,9 @@ No page body, form fields, browsing history, or job-board credentials are captur
 npm run typecheck
 npm test
 npm run build
+npm run verify:local
 ```
+
+`npm run verify:local` requires the development API at `http://localhost:4000`. It verifies extension CORS, authentication and refresh, idempotent capture/draft handling, saving, duplicate confirmation, and account visibility with a disposable account that it removes after the run.
 
 Production deployment must allow the final `chrome-extension://<extension-id>` origin through the backend `EXTENSION_ORIGINS` setting.

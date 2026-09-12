@@ -175,7 +175,7 @@ model Application {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
 
-  @@unique([userId, sourceUrl])
+  @@index([userId, sourceUrl])
   @@index([userId, status])
   @@index([companyId])
 }

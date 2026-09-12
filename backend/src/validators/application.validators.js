@@ -35,7 +35,7 @@ export function validateApplicationPayload(req, res, next) {
     const title = normalizeOptional(req.body.title);
     if (!title) return res.status(400).json({ message: "title is required." });
 
-    const status = req.body.status ?? "SAVED";
+    const status = req.body.status ?? "APPLIED";
     if (!APP_STATUSES.has(status)) return res.status(400).json({ message: "status is invalid." });
 
     const salaryMin = parseOptionalInt(req.body.salaryMin, "salaryMin");

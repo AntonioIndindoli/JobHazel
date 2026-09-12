@@ -196,7 +196,7 @@ export const NAV_ITEMS: Array<{ label: string; icon: AppIconName }> = [
 export const EMPTY_APPLICATION_FORM: ApplicationFormValues = {
     title: "",
     companyName: "",
-    status: "SAVED",
+    status: "APPLIED",
     source: "",
     sourceUrl: "",
     location: "",
@@ -260,7 +260,7 @@ export const EMPTY_IMPORT_CAPTURE: ImportCaptureValues = {
 export const EMPTY_IMPORT_REVIEW: ImportReviewValues = {
     title: "",
     companyName: "",
-    status: "SAVED",
+    status: "APPLIED",
     source: "",
     sourceUrl: "",
     location: "",

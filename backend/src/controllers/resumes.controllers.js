@@ -6,10 +6,16 @@ import {
   listResumes,
   updateResume,
 } from "../services/resumes.services.js";
+import { getResumeAnalytics } from "../services/resume-analytics.services.js";
 
 export async function listResumesController(req, res) {
   const resumes = await listResumes(req.auth.sub, req.validatedResumeListQuery);
   return res.status(200).json({ resumes });
+}
+
+export async function getResumeAnalyticsController(req, res) {
+  const analytics = await getResumeAnalytics(req.auth.sub);
+  return res.status(200).json(analytics);
 }
 
 export async function initiateResumeUploadController(req, res) {

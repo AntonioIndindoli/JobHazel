@@ -1,0 +1,179 @@
+/* Dark-mode polish. Loaded last so legacy light-only declarations inherit the theme. */
+
+html[data-theme="dark"] {
+    --background: #0a0f14;
+    --surface-page: #0a0f14;
+    --surface-sidebar: #0c1413;
+    --surface: #111920;
+    --surface-raised: #151e26;
+    --surface-soft: #17212b;
+    --surface-muted: #1c2833;
+    --surface-slate: #22303d;
+    --surface-blue: #14243a;
+    --surface-blue-strong: #192c45;
+    --surface-translucent: rgba(17, 25, 32, .9);
+
+    --border: #2b3945;
+    --border-strong: #46596a;
+    --text-heading: #f4f8fb;
+    --text-primary: #e6edf3;
+    --text-secondary: #c2ced9;
+    --text-muted: #9aabba;
+    --text-soft: #8899aa;
+    --text-faint: #718294;
+
+    /* JobHazel stays green in both themes; blue remains a supporting status color. */
+    --green: #49c875;
+    --accent: #5dd486;
+    --accent-strong: #83e6a4;
+    --accent-border: #347a4c;
+    --focus-ring: rgba(93, 212, 134, .28);
+    --control-track: #344451;
+    --scrim: rgba(2, 7, 12, .7);
+
+    --shadow-card: 0 1px 0 rgba(255, 255, 255, .025), 0 8px 24px rgba(0, 0, 0, .2);
+    --shadow-floating: 0 20px 52px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .025);
+}
+
+html[data-theme="dark"] body,
+html[data-theme="dark"] .dashboard-shell {
+    background-image: radial-gradient(circle at 72% -10%, rgba(73, 200, 117, .055), transparent 34%);
+}
+
+html[data-theme="dark"] .sidebar {
+    border-color: #22332f;
+    background: var(--surface-sidebar);
+}
+
+html[data-theme="dark"] .mobile-bottom-nav {
+    border-color: color-mix(in srgb, var(--border) 82%, transparent);
+    background: var(--surface-translucent);
+    backdrop-filter: blur(18px) saturate(125%);
+}
+
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .pipeline-graph,
+html[data-theme="dark"] .stats-panel,
+html[data-theme="dark"] .weekly-goal-summary,
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .application-list-panel,
+html[data-theme="dark"] .application-detail-panel,
+html[data-theme="dark"] .interviews-control-panel,
+html[data-theme="dark"] .task-automation-panel,
+html[data-theme="dark"] .account-section-card,
+html[data-theme="dark"] .analytics-card {
+    border-color: var(--border);
+    background-color: var(--surface);
+    box-shadow: var(--shadow-card);
+}
+
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+    border-color: var(--border);
+    background-color: var(--surface-raised);
+    color: var(--text-primary);
+}
+
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+    color: var(--text-faint);
+    opacity: 1;
+}
+
+html[data-theme="dark"] input:focus,
+html[data-theme="dark"] select:focus,
+html[data-theme="dark"] textarea:focus,
+html[data-theme="dark"] button:focus-visible,
+html[data-theme="dark"] a:focus-visible {
+    outline-color: var(--focus-ring);
+}
+
+html[data-theme="dark"] .secondary,
+html[data-theme="dark"] .icon-button,
+html[data-theme="dark"] .mobile-filter-toggle,
+html[data-theme="dark"] .dashboard-filter-toggle {
+    border-color: var(--border);
+    background-color: var(--surface-raised);
+    color: var(--text-secondary);
+}
+
+html[data-theme="dark"] .secondary:hover,
+html[data-theme="dark"] .icon-button:hover,
+html[data-theme="dark"] .mobile-filter-toggle:hover,
+html[data-theme="dark"] .dashboard-filter-toggle:hover {
+    border-color: var(--border-strong);
+    background-color: var(--surface-muted);
+    color: var(--text-heading);
+}
+
+html[data-theme="dark"] .primary {
+    border-color: #56ce7e;
+    background: #45c573;
+    color: #07160d;
+    box-shadow: 0 6px 18px rgba(37, 151, 78, .18);
+}
+
+html[data-theme="dark"] .primary:hover {
+    background: #62d98b;
+}
+
+html[data-theme="dark"] .nav-item:hover,
+html[data-theme="dark"] .nav-item.active {
+    background: color-mix(in srgb, var(--green) 13%, var(--surface-sidebar));
+}
+
+html[data-theme="dark"] .drawer-backdrop,
+html[data-theme="dark"] .sidebar-backdrop,
+html[data-theme="dark"] .resume-modal-backdrop {
+    background: var(--scrim);
+}
+
+html[data-theme="dark"] .drawer,
+html[data-theme="dark"] .contact-drawer,
+html[data-theme="dark"] .profile-menu,
+html[data-theme="dark"] .job-card-menu-popover,
+html[data-theme="dark"] .applications-date-filter-popover {
+    border-color: var(--border);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-floating);
+}
+
+html[data-theme="dark"] .appearance-switch,
+html[data-theme="dark"] .automation-switch,
+html[data-theme="dark"] .tasks-automation-switch {
+    background: var(--control-track);
+}
+
+html[data-theme="dark"] .account-avatar,
+html[data-theme="dark"] .empty-illustration,
+html[data-theme="dark"] .resume-empty-illustration {
+    background: color-mix(in srgb, var(--green) 14%, var(--surface-raised));
+}
+
+html[data-theme="dark"] .contact-badge {
+    color: var(--purple);
+}
+
+html[data-theme="dark"] .status-pill.passed,
+html[data-theme="dark"] .tasks-header-meta strong:nth-child(4) {
+    color: var(--success);
+}
+
+html[data-theme="dark"] .attention,
+html[data-theme="dark"] .prep-warning,
+html[data-theme="dark"] .interview-stat-card.orange .interview-stat-icon,
+html[data-theme="dark"] .interview-prep-card.has-issues .interview-detail-section-icon {
+    color: var(--warning);
+}
+
+html[data-theme="dark"] .application-upload-button {
+    color: var(--text-muted);
+    background: var(--surface-muted);
+    box-shadow: inset 0 0 0 1px var(--border);
+}
+
+html[data-theme="dark"] ::selection {
+    background: rgba(93, 212, 134, .28);
+    color: var(--text-heading);
+}

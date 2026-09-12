@@ -41,6 +41,68 @@
   margin-bottom: 14px;
 }
 
+.resume-performance-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.resume-performance-heading h2 {
+  margin-bottom: 0;
+}
+
+.resume-performance-heading>p {
+  max-width: 400px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 700;
+  text-align: right;
+}
+
+.resume-performance-table tbody th small {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.resume-performance-name {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.resume-performance-name em {
+  padding: 3px 6px;
+  border-radius: 999px;
+  color: var(--text-muted);
+  background: var(--surface-slate);
+  font-size: 10px;
+  font-style: normal;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: .035em;
+}
+
+.resume-analytics-loader {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--surface-slate);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: resume-analytics-spin .8s linear infinite;
+}
+
+@keyframes resume-analytics-spin {
+  to { transform: rotate(360deg); }
+}
+
 .source-quality-table-wrap {
   overflow-x: auto;
   overscroll-behavior-inline: contain;
@@ -532,6 +594,13 @@
 }
 
 @media (max-width: 700px) {
+  .resume-performance-heading {
+    display: grid;
+  }
+
+  .resume-performance-heading>p {
+    text-align: left;
+  }
   .analytics-kpi-toolbar {
     align-items: flex-start;
   }

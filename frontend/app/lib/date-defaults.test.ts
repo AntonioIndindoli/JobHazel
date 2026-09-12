@@ -13,8 +13,10 @@ describe("application date defaults", () => {
         expect(getTodayDateInput(localDate)).toBe("2026-09-10");
     });
 
-    it("prefills manual and imported applications with today", () => {
+    it("prefills manual and imported applications as applied today", () => {
+        expect(createApplicationFormDefaults(localDate).status).toBe("APPLIED");
         expect(createApplicationFormDefaults(localDate).dateApplied).toBe("2026-09-10");
+        expect(createImportReviewDefaults(localDate).status).toBe("APPLIED");
         expect(createImportReviewDefaults(localDate).dateApplied).toBe("2026-09-10");
     });
 });

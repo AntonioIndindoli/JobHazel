@@ -12,6 +12,7 @@ import { INTERVIEW_OUTCOMES, INTERVIEW_TYPES } from "../lib/constants";
 import type { Application, Interview } from "../lib/types";
 import { AddInterviewButton } from "./AddInterviewButton";
 import { AppIcon } from "./AppIcon";
+import { ActiveFilterChips, type ActiveFilterChip } from "./ActiveFilterChips";
 
 type InterviewsViewProps = {
     applications: Application[];
@@ -171,32 +172,13 @@ export function InterviewsView({
         ? hasInterviewLocation(selectedInterview)
         : false;
 
-    const interviewStatusSummary = useMemo(() => {
-        const counts = Object.fromEntries(
-            INTERVIEW_OUTCOMES.map((outcome) => [outcome, 0]),
-        ) as Record<(typeof INTERVIEW_OUTCOMES)[number], number>;
-
-        interviews.forEach((interview) => {
-            if ((INTERVIEW_OUTCOMES as readonly string[]).includes(interview.outcome)) {
-                counts[interview.outcome as keyof typeof counts] += 1;
-            }
-        });
-
-        const populatedOutcomes = INTERVIEW_OUTCOMES.filter(
-            (outcome) => counts[outcome] > 0,
-        );
-        const outcomesToShow =
-            populatedOutcomes.length > 0 ? populatedOutcomes : INTERVIEW_OUTCOMES;
-
-        return outcomesToShow.map((outcome) => ({
-            outcome,
-            count: counts[outcome],
-            label: getInterviewOutcomeLabel(outcome).toLowerCase(),
-        }));
-    }, [interviews]);
 
     const hasActiveFilters = Object.values(filters).some(Boolean);
     const activeFilterCount = [filters.type, filters.outcome].filter(Boolean).length;
+    const activeFilterChips: ActiveFilterChip[] = [
+        ...(filters.type ? [{ id: "type", label: "Type", value: getInterviewTypeLabel(filters.type), onRemove: () => setFilters((current) => ({ ...current, type: "" })) }] : []),
+        ...(filters.outcome ? [{ id: "status", label: "Status", value: getInterviewOutcomeLabel(filters.outcome), onRemove: () => setFilters((current) => ({ ...current, outcome: "" })) }] : []),
+    ];
     const interviewAgendaGroups = useMemo(() => {
         const startOfToday = new Date();
         startOfToday.setHours(0, 0, 0, 0);
@@ -281,22 +263,6 @@ export function InterviewsView({
 
     return (
         <section className={isMobileDetailOpen ? "applications-page interviews-page mobile-page-detail-open" : "applications-page interviews-page"}>
-            <div className="page-summary">
-                <span
-                    className="interviews-header-meta"
-                    aria-label="Interview totals by status"
-                >
-                    {interviewStatusSummary.map(({ outcome, count, label }) => (
-                        <strong
-                            key={outcome}
-                            className={`interviews-status-count ${outcome.toLowerCase()}`}
-                        >
-                            {count} {label}
-                        </strong>
-                    ))}
-                </span>
-            </div>
-
             <div className={isMobileDetailOpen ? "applications-split-panel interviews-split-panel mobile-detail-open" : "applications-split-panel interviews-split-panel"}>
                 <aside className="application-list-panel interviews-list-panel">
                     <div
@@ -361,6 +327,7 @@ export function InterviewsView({
                             Reset
                         </button>
                     </div>
+                    <ActiveFilterChips chips={activeFilterChips} />
 
                     {sortedInterviews.length > 0 ? (
                         <>

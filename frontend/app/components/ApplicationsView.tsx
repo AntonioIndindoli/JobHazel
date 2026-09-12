@@ -3,7 +3,6 @@
 import { useMemo, useRef, useState } from "react";
 
 import {
-    countApplicationsByStatus,
     getApplicationTimestamp,
     isApplicationStatus,
 } from "../lib/application-analytics";
@@ -24,6 +23,7 @@ import type {
     Task,
 } from "../lib/types";
 import { AppIcon } from "./AppIcon";
+import { ActiveFilterChips, type ActiveFilterChip } from "./ActiveFilterChips";
 
 type ApplicationsViewProps = {
     applications: Application[];
@@ -204,18 +204,6 @@ export function ApplicationsView({
             left.name.localeCompare(right.name),
         );
     }, [applications, resumes]);
-    const applicationStatusSummary = useMemo(() => {
-        const counts = countApplicationsByStatus(applications);
-        const populatedStatuses = STATUSES.filter((status) => counts[status] > 0);
-        const statusesToShow =
-            populatedStatuses.length > 0 ? populatedStatuses : STATUSES;
-
-        return statusesToShow.map((status) => ({
-            status,
-            count: counts[status],
-            label: STATUS_LABELS[status].toLowerCase(),
-        }));
-    }, [applications]);
 
     const filteredApplications = useMemo(() => {
         const query = filters.query.trim().toLowerCase();
@@ -314,6 +302,24 @@ export function ApplicationsView({
         filters.resumeVersionId,
         filters.startDate || filters.endDate,
     ].filter(Boolean).length;
+    const activeFilterChips: ActiveFilterChip[] = [
+        ...(filters.status ? [{ id: "status", label: "Status", value: getStatusLabel(filters.status), onRemove: () => setFilters((current) => ({ ...current, status: "" })) }] : []),
+        ...(filters.source ? [{ id: "source", label: "Source", value: filters.source, onRemove: () => setFilters((current) => ({ ...current, source: "" })) }] : []),
+        ...(filters.resumeVersionId ? [{
+            id: "resume",
+            label: "Resume",
+            value: filters.resumeVersionId === NO_RESUME_FILTER
+                ? "No resume"
+                : resumeOptions.find((resume) => resume.id === filters.resumeVersionId)?.name ?? "Selected resume",
+            onRemove: () => setFilters((current) => ({ ...current, resumeVersionId: "" })),
+        }] : []),
+        ...(filters.startDate || filters.endDate ? [{
+            id: "applied-date",
+            label: "Applied",
+            value: `${filters.startDate ? formatFilterDate(filters.startDate) : "Any"} – ${filters.endDate ? formatFilterDate(filters.endDate) : "Any"}`,
+            onRemove: () => setFilters((current) => ({ ...current, startDate: "", endDate: "" })),
+        }] : []),
+    ];
     const nextActionByApplication = useMemo(() => {
         const nextActions = new Map<string, { label: string; timestamp: number }>();
         const now = Date.now();
@@ -397,22 +403,6 @@ export function ApplicationsView({
 
     return (
         <section className={isMobileDetailOpen ? "applications-page mobile-page-detail-open" : "applications-page"}>
-            <div className="page-summary">
-                <span
-                    className="applications-status-meta"
-                    aria-label="Application totals by status"
-                >
-                    {applicationStatusSummary.map(({ status, count, label }) => (
-                        <strong
-                            key={status}
-                            className={`applications-status-count ${status.toLowerCase()}`}
-                        >
-                            {count} {label}
-                        </strong>
-                    ))}
-                </span>
-            </div>
-
             <div className={isMobileDetailOpen ? "applications-split-panel mobile-detail-open" : "applications-split-panel"}>
                 <aside className="application-list-panel">
 
@@ -513,6 +503,7 @@ export function ApplicationsView({
                             Reset
                         </button>
                     </div>
+                    <ActiveFilterChips chips={activeFilterChips} />
 
                     {sortedApplications.length > 0 ? (
                         <div className="application-list" role="list">
@@ -672,7 +663,9 @@ export function ApplicationsView({
                                     </label>
                                     <span className="application-detail-status-date">
                                         <AppIcon name="calendar" size={27} />
-                                        Applied {formatDisplayDate(selectedApplication.dateApplied)}
+                                        {selectedApplication.dateApplied
+                                            ? `Applied ${formatDisplayDate(selectedApplication.dateApplied)}`
+                                            : formatDisplayDate(selectedApplication.dateApplied)}
                                     </span>
                                 </div>
                                 <div className="application-detail-summary" aria-label="Application overview">
@@ -692,12 +685,6 @@ export function ApplicationsView({
                             <div className="application-detail-layout">
                                 <div className="application-detail-main">
                                     <section className="application-detail-section application-detail-card-section application-resume-detail-section">
-                                        <div className="application-detail-section-heading">
-                                            <div>
-                                                <h3>Submitted resume</h3>
-                                                <span>The exact version recorded for this application</span>
-                                            </div>
-                                        </div>
                                         {selectedApplication.resumeVersion ? (
                                             <div className="application-resume-detail-card">
                                                 <span className="application-resume-detail-icon" aria-hidden="true">
