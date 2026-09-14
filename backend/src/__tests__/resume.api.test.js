@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import crypto from "node:crypto";
+import { accessToken, mockManagedAuth } from "./helpers/managed-auth.js";
 import test, { afterEach } from "node:test";
 
 import { createApp } from "../app.js";
@@ -11,17 +11,6 @@ import { RESUME_ERROR_CODES } from "../services/resumes.services.js";
 const USER_ONE = "user-one";
 const USER_TWO = "user-two";
 
-function accessToken(userId) {
-  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
-  const payload = Buffer.from(
-    JSON.stringify({ sub: userId, email: `${userId}@example.com`, exp: Math.floor(Date.now() / 1000) + 300 }),
-  ).toString("base64url");
-  const signature = crypto
-    .createHmac("sha256", env.JWT_ACCESS_SECRET)
-    .update(`${header}.${payload}`)
-    .digest("base64url");
-  return `${header}.${payload}.${signature}`;
-}
 
 function matchesWhere(row, where = {}) {
   for (const [field, expected] of Object.entries(where)) {
@@ -174,6 +163,7 @@ function createStorageFake() {
 }
 
 async function withApi(prisma, storage, run) {
+  const restoreAuth = mockManagedAuth(prisma);
   setPrismaForTests(prisma);
   setResumeStorageForTests(storage);
   const server = createApp().listen(0);
@@ -184,6 +174,7 @@ async function withApi(prisma, storage, run) {
     await run(baseUrl);
   } finally {
     await new Promise((resolve) => server.close(resolve));
+    restoreAuth();
   }
 }
 

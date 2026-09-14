@@ -1,10 +1,20 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "regions": ["pdx1"],
+  "regions": [
+    "pdx1"
+  ],
   "crons": [
+    {
+      "path": "/notifications/maintenance/deliver",
+      "schedule": "*/5 * * * *"
+    },
     {
       "path": "/resumes/maintenance/cleanup",
       "schedule": "17 4 * * *"
+    },
+    {
+      "path": "/auth/maintenance/cleanup",
+      "schedule": "27 4 * * *"
     }
   ],
   "rewrites": [

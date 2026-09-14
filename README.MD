@@ -32,7 +32,7 @@ The six fixed application statuses are **Saved, Applied, Interviewing, Offer, Re
 
 ### Account verification and recovery
 
-New accounts must verify their email address before signing in. JobHazel sends verification and password-reset messages through Resend, supports resending verification messages, and uses random, hashed, single-use database tokens. Verification links expire after 24 hours; password-reset links expire after one hour. A successful password reset revokes the account's active refresh tokens.
+New accounts verify their email through Neon Auth using six-digit codes. Neon manages password recovery, password hashes, sessions and revocation. Web credentials stay in an HttpOnly cookie, and transient failures preserve the session. See [Neon Auth migration and production cutover](backend/NEON_AUTH_MIGRATION.md); the migration has been tested on an isolated branch and is not yet deployed to production.
 
 Requests to resend verification or recover a password return non-enumerating responses whether or not the email identifies an eligible account. Existing accounts created before the verification migration are marked verified by the migration. Dedicated abuse rate limits for these public email endpoints and re-verification after a signed-in email-address change are not yet implemented.
 
@@ -44,7 +44,7 @@ Fetching does not guarantee extraction from every job board. Access restrictions
 
 ### Chrome extension
 
-The `extension/` package implements a Chrome Manifest V3 side panel. It captures the active HTTP(S) page's URL and title plus optional selected text, stores bounded captures temporarily, and sends them through the same import-draft and conversion APIs used by the web interface. The panel has its own login, rotating refresh-token session, editable review form, duplicate override, and post-save link to JobHazel.
+The `extension/` package implements a Chrome Manifest V3 side panel. It captures the active HTTP(S) page's URL and title plus optional selected text, stores bounded captures temporarily, and sends them through the same import-draft and conversion APIs used by the web interface. The panel has its own login, managed Neon Auth session, editable review form, duplicate override, and post-save link to JobHazel.
 
 Development builds use the checked-in extension key to keep a stable unpacked extension ID. Production release work remains: create the store ZIP and listing assets, verify current Chrome Web Store requirements, publish through the project owner's account, set the resulting production ID in the frontend/backend configuration, and smoke-test it against the deployed service.
 
@@ -107,7 +107,7 @@ JobHazel does not submit job applications on users' behalf.
 | Visualization | D3 Sankey, Leaflet, and custom chart components. The map uses external geocoding with a browser cache. |
 | Drag and drop | Native browser drag-and-drop handlers. |
 | Backend | Express 5 and JavaScript ES modules. |
-| Authentication | Custom password authentication, signed JWT access tokens, and persisted hashed refresh tokens. Not Auth.js. |
+| Authentication | Neon managed Better Auth, HttpOnly web sessions, and managed extension sessions. |
 | Persistence | PostgreSQL with Prisma 7 and the PostgreSQL adapter; Neon connection tooling is included. |
 | Files | Cloudflare R2 through the AWS S3 SDK, using signed upload/download URLs. |
 | Tests | Node test runner for the backend; Vitest and Testing Library for the frontend. |
@@ -124,7 +124,7 @@ Use Node.js **20.9 or newer**, npm, and PostgreSQL. Docker is optional for the i
 
 Copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env.local`. Do not overwrite existing local configuration.
 
-- Set both backend JWT secrets to long random values.
+- Set the backend NEON_AUTH_BASE_URL for its database branch and a stable AUTH_RATE_LIMIT_SECRET. Follow backend/NEON_AUTH_MIGRATION.md before cutting over existing accounts.
 - Set `APP_URL` to the frontend origin used in verification and password-reset links.
 - Set `RESEND_API_KEY` and a verified `EMAIL_FROM` sender to deliver account emails. Without an API key, development logs account-action links; production treats email delivery as unconfigured.
 - Set `DATABASE_URL`; use `DATABASE_URL_UNPOOLED` for a direct migration connection when using a pooled database service.

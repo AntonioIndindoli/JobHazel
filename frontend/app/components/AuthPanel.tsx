@@ -83,7 +83,7 @@ export function AuthPanel({
                 </div>
                 <div className="auth-heading">
                     <h2 id="auth-title">{{ signup: "Start your job search", login: "Welcome back", forgot: "Reset your password", reset: "Choose a new password", verify: "Check your inbox" }[mode]}</h2>
-                    <p>{{ signup: "Create your free workspace in a few seconds.", login: "Sign in to pick up where you left off.", forgot: "We’ll email you a secure recovery link.", reset: "Enter a new password for your account.", verify: "One quick step remains before you can use JobHazel." }[mode]}</p>
+                    <p>{{ signup: "Create your free workspace in a few seconds.", login: "Sign in to pick up where you left off.", forgot: "We’ll email you a recovery code.", reset: "Enter your recovery code and a new password.", verify: "Enter the code from your email to activate your account." }[mode]}</p>
                 </div>
                 {(mode === "signup" || mode === "login") && <div className="auth-tabs" role="tablist" aria-label="Account action">
                     <button
@@ -106,20 +106,22 @@ export function AuthPanel({
                     </button>
                 </div>}
                 {mode === "verify" ? (
-                    <div className="auth-verification" role="status">
+                    <form className="auth-verification" onSubmit={onSubmit}>
                         <div className="auth-verification-icon" aria-hidden="true">
                             <AppIcon name="check" size={27} />
                         </div>
                         <div>
                             <strong>Verify your email address</strong>
-                            <p>We sent a verification link to <b>{email}</b>. Open it to activate your account, then return here to sign in.</p>
+                            <p>Enter the six-digit verification code sent to <b>{email}</b>.</p>
                         </div>
+                        <label><span>Verification code</span><input name="otp" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required /></label>
+                        <button type="submit" className="auth-submit">Verify email</button>
                         {message && <p className={`auth-message ${messageTone}`} role="status">{message}</p>}
                         {onResendVerification && <button type="button" className="auth-submit" onClick={onResendVerification}>Resend verification email</button>}
                         <button type="button" className="auth-back" onClick={() => changeMode("login")}>I’ve verified my email — sign in</button>
-                    </div>
+                    </form>
                 ) : <form onSubmit={onSubmit} className="auth-form">
-                    {mode !== "reset" && <label>
+                    {<label>
                         <span>Email address</span>
                         <input
                             type="email"
@@ -131,6 +133,7 @@ export function AuthPanel({
                             required
                         />
                     </label>}
+                    {mode === "reset" && <label><span>Recovery code</span><input name="otp" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required /></label>}
                     {mode !== "forgot" && <div className="auth-field">
                         <label htmlFor="auth-password">{mode === "reset" ? "New password" : "Password"}</label>
                         <span className="auth-password-control">
@@ -157,7 +160,7 @@ export function AuthPanel({
                     </div>}
                     {mode === "login" && <button type="button" className="auth-text-action" onClick={() => changeMode("forgot")}>Forgot password?</button>}
                     <button className="auth-submit" disabled={isChecking}>
-                        {isChecking ? "Please wait…" : { signup: "Create my account", login: "Sign in", forgot: "Send reset link", reset: "Reset password" }[mode]}
+                        {isChecking ? "Please wait…" : { signup: "Create my account", login: "Sign in", forgot: "Send reset code", reset: "Reset password" }[mode]}
                         {!isChecking && <AppIcon name="arrow-right" size={18} />}
                     </button>
                     {message && <p className={`auth-message ${messageTone}`} role="status">{message}</p>}

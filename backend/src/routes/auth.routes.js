@@ -1,3 +1,6 @@
+import { rateLimitAuth } from "../middleware/auth-rate-limit.middleware.js";
+import { requireResumeMaintenanceAuth } from "../middleware/resume-maintenance-auth.middleware.js";
+import { cleanupAuthTokens } from "../services/auth-maintenance.services.js";
 import { Router } from "express";
 import {
   changePasswordController,
@@ -25,21 +28,25 @@ import {
   emailSchema,
   loginSchema,
   passwordChangeSchema,
-  passwordResetSchema,
   profileSchema,
   signupSchema,
-  tokenSchema,
+  emailOtpSchema,
+  otpPasswordResetSchema,
 } from "../validators/auth.validators.js";
 
 const router = Router();
 
-router.post("/signup", validateBody(signupSchema), signupController);
-router.post("/login", validateBody(loginSchema), loginController);
-router.post("/verify-email", validateBody(tokenSchema), verifyEmailController);
-router.post("/resend-verification", validateBody(emailSchema), resendVerificationController);
-router.post("/forgot-password", validateBody(emailSchema), forgotPasswordController);
-router.post("/reset-password", validateBody(passwordResetSchema), resetPasswordController);
-router.post("/extension/login", validateBody(loginSchema), extensionLoginController);
+router.get("/maintenance/cleanup", requireResumeMaintenanceAuth, async (_req, res) => {
+  return res.status(200).json({ cleanup: await cleanupAuthTokens() });
+});
+
+router.post("/signup", rateLimitAuth("signup"), validateBody(signupSchema), signupController);
+router.post("/login", rateLimitAuth("login"), validateBody(loginSchema), loginController);
+router.post("/verify-email", rateLimitAuth("verify-email"), validateBody(emailOtpSchema), verifyEmailController);
+router.post("/resend-verification", rateLimitAuth("resend-verification"), validateBody(emailSchema), resendVerificationController);
+router.post("/forgot-password", rateLimitAuth("forgot-password"), validateBody(emailSchema), forgotPasswordController);
+router.post("/reset-password", rateLimitAuth("reset-password"), validateBody(otpPasswordResetSchema), resetPasswordController);
+router.post("/extension/login", rateLimitAuth("login"), validateBody(loginSchema), extensionLoginController);
 router.post("/extension/refresh", validateBody(extensionRefreshSchema), extensionRefreshController);
 router.post("/extension/logout", validateBody(extensionRefreshSchema), extensionLogoutController);
 router.post("/refresh", refreshController);

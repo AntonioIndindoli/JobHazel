@@ -12,7 +12,7 @@ globalThis.chrome = {
   },
 };
 
-const { createDraft, login, readSession } = await import("../dist/development/api.js");
+const { createDraft, login, readSession, refresh, logout } = await import("../dist/development/api.js");
 
 test("extension login persists its own refreshable session", async () => {
   const session = {
@@ -61,4 +61,16 @@ test("draft requests refresh an expired access token and retain the capture id",
   assert.equal(calls[2].init.headers.authorization, "Bearer access-2");
   assert.equal(response.result.importDraft.id, "draft-1");
   assert.equal((await readSession()).refreshToken, "refresh-2");
+});
+
+test("network and provider failures preserve the saved managed session", async () => {
+  const session = await readSession();
+  globalThis.fetch = async () => { throw new TypeError("offline"); };
+  await assert.rejects(refresh(session));
+  assert.deepEqual(await readSession(), session);
+  await assert.rejects(logout(session));
+  assert.deepEqual(await readSession(), session);
+  globalThis.fetch = async () => Response.json({ message: "temporarily unavailable" }, { status: 503 });
+  await assert.rejects(refresh(session));
+  assert.deepEqual(await readSession(), session);
 });

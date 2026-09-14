@@ -89,11 +89,12 @@ export async function refresh(session: ExtensionSession): Promise<ExtensionSessi
 }
 
 export async function logout(session: ExtensionSession): Promise<void> {
-  await fetch(`${API_URL}/auth/extension/logout`, {
+  const response = await fetch(`${API_URL}/auth/extension/logout`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ refreshToken: session.refreshToken }),
-  }).catch(() => undefined);
+  });
+  if (!response.ok && response.status !== 401) await parseResponse(response);
   await storeSession(null);
 }
 

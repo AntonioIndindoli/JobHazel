@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { deleteAccount, signup } from "../services/auth.services.js";
+import { deleteAccount, signup } from "./helpers/legacy-auth.fixture.js";
 import {
   cleanupAbandonedResumeUploads,
   getResumeMaintenanceStatus,

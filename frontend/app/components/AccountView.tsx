@@ -207,7 +207,7 @@ export function AccountView({
                         <span><AppIcon name="account" size={19} /></span>
                         <div>
                             <h2>Profile</h2>
-                            <p>Update the name and email used for your account.</p>
+                            <p>Update the name used for your account.</p>
                         </div>
                     </div>
                     <div className="account-setting-summary">
@@ -351,7 +351,7 @@ export function AccountView({
                         <header className="drawer-header">
                             <div>
                                 <h2 id="account-profile-panel-title">Edit profile</h2>
-                                <p>Update the name and email used throughout JobHazel.</p>
+                                <p>Update the name used throughout JobHazel.</p>
                             </div>
                             <button
                                 type="button"
@@ -378,9 +378,11 @@ export function AccountView({
                                 <input
                                     type="email"
                                     value={profileEmail}
+                                    readOnly
+                                    aria-describedby="account-email-note"
                                     autoComplete="email"
-                                    onChange={(event) => setProfileEmail(event.target.value)}
                                 />
+                                <small id="account-email-note">Email address changes are currently unavailable.</small>
                             </label>
                         </section>
                         <footer className="account-popout-footer">

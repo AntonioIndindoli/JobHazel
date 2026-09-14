@@ -69,6 +69,27 @@ export const tokenSchema = {
   },
 };
 
+export const emailOtpSchema = {
+  safeParse(input = {}) {
+    const email = normalizeEmail(input.email);
+    const otp = String(input.otp ?? "").trim();
+    const issues = [];
+    if (!isValidEmail(email)) issues.push({ path: ["email"], message: "Email must be valid." });
+    if (!/^\d{6}$/.test(otp)) issues.push({ path: ["otp"], message: "Enter the six-digit code from your email." });
+    return issues.length ? resultError(issues) : resultSuccess({ email, otp });
+  },
+};
+
+export const otpPasswordResetSchema = {
+  safeParse(input = {}) {
+    const result = emailOtpSchema.safeParse(input);
+    if (!result.success) return result;
+    const newPassword = String(input.newPassword ?? "");
+    if (newPassword.length < 8 || newPassword.length > 128) return resultError([{ path: ["newPassword"], message: "Use a password between 8 and 128 characters." }]);
+    return resultSuccess({ ...result.data, newPassword });
+  },
+};
+
 export const passwordResetSchema = {
   safeParse(input = {}) {
     const token = String(input.token ?? "");

@@ -6,25 +6,26 @@ function escapeHtml(value) {
   })[character]);
 }
 
-export async function sendAccountEmail({ to, subject, heading, copy, actionLabel, actionUrl }) {
-  if (!env.RESEND_API_KEY) {
-    if (env.NODE_ENV === "production") throw new Error("Email delivery is not configured.");
+export async function sendAccountEmail({ to, subject, heading, copy, actionLabel, actionUrl }, { fetchImpl = fetch, config = env } = {}) {
+  if (!config.RESEND_API_KEY) {
+    if (config.NODE_ENV === "production") throw new Error("Email delivery is not configured.");
     console.info(`[auth-email] ${subject}: ${actionUrl}`);
     return;
   }
 
-  const response = await fetch("https://api.resend.com/emails", {
+  const response = await fetchImpl("https://api.resend.com/emails", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      Authorization: `Bearer ${config.RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: env.EMAIL_FROM,
+      from: config.EMAIL_FROM,
       to: [to],
       subject,
       html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#183323"><h1>${escapeHtml(heading)}</h1><p>${escapeHtml(copy)}</p><p><a href="${escapeHtml(actionUrl)}" style="display:inline-block;padding:12px 18px;border-radius:9px;background:#238b45;color:white;text-decoration:none;font-weight:700">${escapeHtml(actionLabel)}</a></p><p style="font-size:12px;color:#637369">If you did not request this, you can ignore this email.</p></div>`,
     }),
+    signal: AbortSignal.timeout(10_000),
   });
 
   if (!response.ok) {

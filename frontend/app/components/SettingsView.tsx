@@ -6,8 +6,10 @@ import type { TaskAutomationPreferences } from "../lib/types";
 import type { AccountActionResult } from "./AccountView";
 import { AppIcon } from "./AppIcon";
 import { ThemeToggle } from "./ThemeToggle";
+import { NotificationSettings } from "./NotificationSettings";
 
 type SettingsViewProps = {
+    token: string;
     preferences: TaskAutomationPreferences;
     onPreferenceChange: (
         preferences: Partial<TaskAutomationPreferences>,
@@ -97,6 +99,7 @@ function AutomationSetting({
 }
 
 export function SettingsView({
+    token,
     preferences,
     onPreferenceChange,
 }: SettingsViewProps) {
@@ -158,6 +161,7 @@ export function SettingsView({
     return (
         <section className="account-page settings-page">
             <div className="settings-content">
+                <NotificationSettings key={token} token={token} />
                 <article className="account-settings-card settings-card">
                     <div className="account-section-heading">
                         <span><AppIcon name="moon" size={19} /></span>

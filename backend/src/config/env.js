@@ -98,25 +98,33 @@ export function loadEnv(source = process.env) {
   const nodeEnv = optional(source, "NODE_ENV", "development");
   const resumeStorage = loadResumeStorageEnv(source, nodeEnv);
   const resumeMaintenance = loadResumeMaintenanceEnv(source, nodeEnv);
+  const authBaseUrl = optional(source, "NEON_AUTH_BASE_URL", null)?.replace(/\/$/, "");
+  if (authBaseUrl && new URL(authBaseUrl).protocol !== "https:") throw new Error("NEON_AUTH_BASE_URL must use HTTPS.");
+  const cookieSameSite = optional(source, "COOKIE_SAME_SITE", "lax");
+  if (!["lax", "strict", "none"].includes(cookieSameSite)) throw new Error("COOKIE_SAME_SITE must be lax, strict, or none.");
+  const cookieSecure = optional(source, "COOKIE_SECURE", nodeEnv === "production" ? "true" : "false") === "true";
+  if (cookieSameSite === "none" && !cookieSecure) throw new Error("COOKIE_SAME_SITE=none requires COOKIE_SECURE=true.");
 
   return {
     NODE_ENV: nodeEnv,
     PORT: integer(source, "PORT", 4000, { max: 65535 }),
     DATABASE_URL: required(source, "DATABASE_URL"),
-    JWT_ACCESS_SECRET: required(source, "JWT_ACCESS_SECRET"),
-    JWT_REFRESH_SECRET: required(source, "JWT_REFRESH_SECRET"),
-    ACCESS_TOKEN_TTL: optional(source, "ACCESS_TOKEN_TTL", "15m"),
-    REFRESH_TOKEN_TTL_DAYS: integer(source, "REFRESH_TOKEN_TTL_DAYS", 7),
+    NEON_AUTH_BASE_URL: authBaseUrl,
+    AUTH_RATE_LIMIT_SECRET: optional(source, "AUTH_RATE_LIMIT_SECRET", optional(source, "JWT_ACCESS_SECRET", null)),
     CORS_ORIGIN: optional(source, "CORS_ORIGIN", "http://localhost:3000"),
     EXTENSION_ORIGINS: optional(
       source,
       "EXTENSION_ORIGINS",
       "chrome-extension://nlbcijcaamjlllibnbkgmbeniaiagdkl",
     ),
-    COOKIE_SECURE: optional(source, "COOKIE_SECURE", "false") === "true",
+    COOKIE_SECURE: cookieSecure,
+    COOKIE_SAME_SITE: cookieSameSite,
     APP_URL: optional(source, "APP_URL", "http://localhost:3000").replace(/\/$/, ""),
     RESEND_API_KEY: optional(source, "RESEND_API_KEY", null),
     EMAIL_FROM: optional(source, "EMAIL_FROM", "JobHazel <onboarding@resend.dev>"),
+    CRON_SECRET: optional(source, "CRON_SECRET", null),
+    API_PUBLIC_URL: optional(source, "API_PUBLIC_URL", nodeEnv === "production" ? null : "http://localhost:4000")?.replace(/\/$/, ""),
+    NOTIFICATION_UNSUBSCRIBE_SECRET: optional(source, "NOTIFICATION_UNSUBSCRIBE_SECRET", null),
     RESUME_UPLOAD_MAX_BYTES: integer(source, "RESUME_UPLOAD_MAX_BYTES", 5 * 1024 * 1024),
     RESUME_ACTIVE_LIMIT: integer(source, "RESUME_ACTIVE_LIMIT", 10),
     RESUME_SIGNED_URL_TTL_SECONDS: integer(source, "RESUME_SIGNED_URL_TTL_SECONDS", 300, {

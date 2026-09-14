@@ -5,7 +5,7 @@ import {
   ACCOUNT_LIMIT,
   ACCOUNT_LIMIT_MESSAGE,
   signup,
-} from "../services/auth.services.js";
+} from "./helpers/legacy-auth.fixture.js";
 
 function createPrismaStub(accountCount) {
   const calls = [];

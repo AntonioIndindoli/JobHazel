@@ -1,5 +1,6 @@
 "use client";
 
+import { sessionFetch as fetch } from "./lib/session-fetch";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import {
@@ -175,6 +176,7 @@ export default function MainPage() {
     const [password, setPassword] = useState("");
     const [token, setToken] = useState("");
     const [authStatus, setAuthStatus] = useState<AuthStatus>("checking");
+    const authRevision = useRef(0);
     const [message, setMessage] = useState("");
     const [messageTone, setMessageTone] = useState<"error" | "success" | "info">("error");
     const [canResendVerification, setCanResendVerification] = useState(false);
@@ -194,7 +196,6 @@ export default function MainPage() {
     const activeConversionRequest = useRef(false);
     const restoredDraftId = useRef<string | null>(null);
     const [isAuthOpen, setIsAuthOpen] = useState(false);
-    const [resetToken, setResetToken] = useState("");
     const [applications, setApplications] = useState<Application[]>([]);
     const [interviews, setInterviews] = useState<Interview[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
@@ -305,14 +306,15 @@ export default function MainPage() {
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const verificationToken = params.get("verify");
-        const passwordResetToken = params.get("reset");
+        const passwordResetToken = params.get("token") ?? params.get("reset");
 
         if (passwordResetToken) {
-            setResetToken(passwordResetToken);
             setMode("reset");
             setIsAuthOpen(true);
             setMessage("");
             setMessageTone("error");
+        } else if (params.get("verified")) {
+            setMode("login"); setIsAuthOpen(true); setMessageTone("success"); setMessage("Email verified. You can now sign in.");
         } else if (verificationToken) {
             setMode("login");
             setIsAuthOpen(true);
@@ -330,7 +332,7 @@ export default function MainPage() {
             });
         }
 
-        if (verificationToken || passwordResetToken) {
+        if (verificationToken || passwordResetToken || params.get("verified")) {
             window.history.replaceState({}, "", window.location.pathname);
         }
     }, []);
@@ -506,79 +508,39 @@ export default function MainPage() {
     }, [extensionCapture]);
 
     useEffect(() => {
-        if (authStatus === "checking") return;
-        if (token) localStorage.setItem(ACCESS_TOKEN_KEY, token);
-        else localStorage.removeItem(ACCESS_TOKEN_KEY);
-    }, [authStatus, token]);
-
-    useEffect(() => {
-        if (authStatus === "checking") return;
-        if (userEmail) localStorage.setItem(USER_EMAIL_KEY, userEmail);
-        else localStorage.removeItem(USER_EMAIL_KEY);
-    }, [authStatus, userEmail]);
-
-    useEffect(() => {
         let ignore = false;
-
+        let retry: ReturnType<typeof setTimeout>;
+        const revision = authRevision.current;
+        try {
+            localStorage.removeItem(ACCESS_TOKEN_KEY);
+            localStorage.removeItem(USER_EMAIL_KEY);
+        } catch { /* Cookie authentication also works with browser storage disabled. */ }
         async function verifySession() {
-            const storedToken = localStorage.getItem(ACCESS_TOKEN_KEY) ?? "";
-            const storedEmail = localStorage.getItem(USER_EMAIL_KEY) ?? "";
-
-            if (storedToken) {
-                const res = await fetch(`${API_BASE_URL}/auth/me`, {
-                    headers: { Authorization: `Bearer ${storedToken}` },
-                    credentials: "include",
-                });
-                if (ignore) return;
-
-                if (res.ok) {
-                    const data = await res.json().catch(() => ({}));
-                    setToken(storedToken);
-                    setUserEmail(data.user?.email ?? storedEmail);
-                    setUserName(data.user?.name ?? "");
-                    setMemberSince(data.user?.createdAt ?? "");
-                    setAuthStatus("signedIn");
+            if (ignore || revision !== authRevision.current) return;
+            try {
+                const response = await fetch(`${API_BASE_URL}/auth/me`);
+                if (ignore || revision !== authRevision.current) return;
+                if (response.status === 401) {
+                    setAuthStatus("signedOut");
                     return;
                 }
+                if (!response.ok) throw new Error("Session check unavailable");
+                const data = await response.json();
+                if (ignore || revision !== authRevision.current) return;
+                setToken("cookie-session");
+                setUserEmail(data.user.email);
+                setUserName(data.user.name ?? "");
+                setMemberSince(data.user.createdAt ?? "");
+                setAuthStatus("signedIn");
+            } catch {
+                if (ignore || revision !== authRevision.current) return;
+                setMessage("Could not check your session. Retrying when the connection is available…");
+                retry = setTimeout(verifySession, 5000);
             }
-
-            const refreshRes = await fetch(`${API_BASE_URL}/auth/refresh`, {
-                method: "POST",
-                credentials: "include",
-            });
-            if (ignore) return;
-
-            if (refreshRes.ok) {
-                const data = await refreshRes.json().catch(() => ({}));
-                setToken(data.accessToken ?? "");
-                setUserEmail(data.user?.email ?? "");
-                setUserName(data.user?.name ?? "");
-                setMemberSince(data.user?.createdAt ?? "");
-                setAuthStatus(data.accessToken ? "signedIn" : "signedOut");
-                return;
-            }
-
-            setToken("");
-            setUserEmail("");
-            setUserName("");
-            setMemberSince("");
-            setAuthStatus("signedOut");
         }
-
-        verifySession().catch(() => {
-            if (ignore) return;
-            setToken("");
-            setUserEmail("");
-            setUserName("");
-            setMemberSince("");
-            setAuthStatus("signedOut");
-        });
-
-        return () => {
-            ignore = true;
-        };
+        void verifySession();
+        return () => { ignore = true; clearTimeout(retry); };
     }, []);
-
     useEffect(() => {
         if (authStatus === "signedIn" && token) {
             loadApplications(token);
@@ -601,9 +563,12 @@ export default function MainPage() {
 
     async function authSubmit(event: FormEvent) {
         event.preventDefault();
-        const endpoint = mode === "forgot" ? "forgot-password" : mode === "reset" ? "reset-password" : mode;
+        try {
+        const endpoint = mode === "forgot" ? "forgot-password" : mode === "reset" ? "reset-password" : mode === "verify" ? "verify-email" : mode;
+        const otp = String(new FormData(event.currentTarget as HTMLFormElement).get("otp") ?? "");
         const body = mode === "reset"
-            ? { token: resetToken, newPassword: password }
+            ? { email, otp, newPassword: password }
+            : mode === "verify" ? { email, otp }
             : mode === "forgot"
                 ? { email }
                 : { email, password };
@@ -630,17 +595,17 @@ export default function MainPage() {
         }
         if (mode === "forgot") {
             setPassword("");
-            setMode("login");
+            setMode("reset");
             setMessageTone("success");
             return setMessage(data.message);
         }
-        if (mode === "reset") {
+        if (mode === "reset" || mode === "verify") {
             setPassword("");
-            setResetToken("");
             setMode("login");
             setMessageTone("success");
             return setMessage(data.message);
         }
+        authRevision.current++;
         setToken(data.accessToken);
         setCanResendVerification(false);
         setUserEmail(data.user.email);
@@ -650,23 +615,24 @@ export default function MainPage() {
         setIsAuthOpen(false);
         setMessage(`Welcome ${data.user.email}`);
         setMessageTone("success");
-        loadApplications(data.accessToken);
-        loadInterviews(data.accessToken);
-        loadTasks(data.accessToken);
-        loadContacts(data.accessToken);
-        loadTaskAutomationPreferences(data.accessToken);
-        loadResumeLibrary(data.accessToken);
+        } catch {
+            setMessageTone("error");
+            setMessage("Could not connect. Please retry; your session has not been cleared.");
+        }
     }
 
     async function signOut() {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-            method: "POST",
-            credentials: "include",
-        }).catch(() => undefined);
-        clearSession("Signed out successfully.");
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/logout`, { method: "POST" });
+            if (!response.ok && response.status !== 401) throw new Error("Sign-out unavailable");
+            clearSession("Signed out successfully.");
+        } catch {
+            setMessage("Could not sign out. Please retry when connected.");
+        }
     }
 
     function clearSession(nextMessage: string) {
+        authRevision.current++;
         clearExtensionCaptureState();
         setToken("");
         setUserEmail("");
@@ -711,6 +677,7 @@ export default function MainPage() {
         init: RequestInit = {},
         activeToken = token,
     ) {
+        const revision = authRevision.current;
         const res = await fetch(`${API_BASE_URL}${path}`, {
             ...init,
             headers: {
@@ -720,7 +687,7 @@ export default function MainPage() {
             },
             credentials: "include",
         });
-        if (res.status === 401) {
+        if (res.status === 401 && revision === authRevision.current) {
             clearExtensionCaptureState();
             resetImportFlow();
             setIsImportDrawerOpen(false);
@@ -2292,6 +2259,7 @@ export default function MainPage() {
                 />
             ) : currentView === "settings" ? (
                 <SettingsView
+                    token={token}
                     preferences={taskPreferences}
                     onPreferenceChange={updateTaskAutomationPreferences}
                 />

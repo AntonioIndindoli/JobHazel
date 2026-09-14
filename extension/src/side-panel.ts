@@ -177,7 +177,15 @@ async function initialize(): Promise<void> {
   session = await readSession();
   if (session) {
     try { session = await refresh(session); }
-    catch { await chrome.storage.local.remove("jobhazel.extension-session.v1"); session = null; }
+    catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        await chrome.storage.local.remove("jobhazel.extension-session.v1"); session = null;
+      } else {
+        renderAccount(); show("ready");
+        setError("capture-error", "Could not check your session. Your sign-in is saved; try again when connected.");
+        return;
+      }
+    }
   }
   if (!session) { show("login"); return; }
   renderAccount(); show("ready"); await processLatestCapture();

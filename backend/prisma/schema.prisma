@@ -95,7 +95,8 @@ model User {
   id                      String          @id @default(cuid())
   name                    String?
   email                   String          @unique
-  passwordHash            String
+  passwordHash            String?
+  neonAuthId              String?         @unique @db.Uuid
   applications            Application[]
   companies               Company[]
   contacts                Contact[]
@@ -112,6 +113,8 @@ model User {
   authTokens              AuthToken[]
   emailVerifiedAt         DateTime?
   resumeEndpointRateLimits ResumeEndpointRateLimit[]
+  notificationPreference  NotificationPreference?
+  notificationDeliveries  NotificationDelivery[]
   createdAt               DateTime        @default(now())
   updatedAt               DateTime        @updatedAt
 }
@@ -126,6 +129,7 @@ model AuthToken {
   userId    String
   user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   tokenHash String           @unique
+  email     String?
   purpose   AuthTokenPurpose
   expiresAt DateTime
   usedAt    DateTime?
@@ -348,5 +352,70 @@ model ActivityLog {
   createdAt     DateTime     @default(now())
 
   @@index([applicationId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model AuthRateLimit {
+  key       String   @id
+  count     Int
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+model NotificationPreference {
+  userId                   String   @id
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailEnabled             Boolean  @default(false)
+  upcomingTasks            Boolean  @default(true)
+  overdueTasks             Boolean  @default(true)
+  interviewReminders       Boolean  @default(true)
+  taskReminderDays          Int      @default(1)
+  interviewReminderMinutes Int      @default(60)
+  timeZone                 String   @default("UTC")
+  quietHoursEnabled        Boolean  @default(false)
+  quietHoursStart           String   @default("22:00")
+  quietHoursEnd             String   @default("08:00")
+  updatedAt                DateTime @updatedAt
+}
+
+enum NotificationKind {
+  UPCOMING_TASK
+  OVERDUE_TASK
+  INTERVIEW_REMINDER
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  PROCESSING
+  SENT
+  CANCELED
+  FAILED
+  UNKNOWN
+}
+
+model NotificationDelivery {
+  id             String                     @id @default(cuid())
+  userId         String
+  user           User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind           NotificationKind
+  resourceId     String
+  eventAt        DateTime
+  dedupeKey      String                     @unique
+  status         NotificationDeliveryStatus @default(PENDING)
+  nextAttemptAt  DateTime                   @default(now())
+  leaseUntil     DateTime?
+  leaseToken     String?
+  attempts       Int                        @default(0)
+  firstAttemptAt DateTime?
+  payload        Json?
+  providerId     String?
+  lastError      String?
+  sentAt         DateTime?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([status, leaseUntil])
   @@index([userId, createdAt])
 }

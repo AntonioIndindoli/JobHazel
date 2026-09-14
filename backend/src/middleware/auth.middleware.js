@@ -1,18 +1,12 @@
-import { verifyAccessToken } from "../services/auth.services.js";
+import { readManagedSession, sessionCredential, sessionCookieOptions, SESSION_COOKIE } from "../services/neon-auth.services.js";
 
-export function requireAuth(req, res, next) {
-  const authHeader = req.headers.authorization ?? "";
-  const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
-
-  if (!token) {
-    return res.status(401).json({ message: "Missing bearer token." });
-  }
-
+export async function requireAuth(req, res, next) {
   try {
-    const payload = verifyAccessToken(token);
-    req.auth = payload;
-    return next();
-  } catch {
-    return res.status(401).json({ message: "Invalid or expired access token." });
-  }
+    const session = await readManagedSession(sessionCredential(req));
+    req.managedSession = session;
+    req.auth = { sub: session.user.id, email: session.user.email, name: session.user.name };
+    res.setHeader("Cache-Control", "no-store");
+    if (!req.headers.authorization) res.cookie(SESSION_COOKIE, session.credential, sessionCookieOptions(session.data.session.expiresAt));
+    next();
+  } catch (error) { next(error); }
 }

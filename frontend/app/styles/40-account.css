@@ -1,5 +1,18 @@
 /* Profile menu and account settings. */
 
+.notification-settings { padding: 24px; }
+.notification-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.notification-toggle { cursor: pointer; }
+.notification-toggle input { width: 20px; height: 20px; flex: 0 0 auto; accent-color: var(--green); }
+.notification-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 18px 0; }
+.notification-fields label { display: grid; gap: 8px; font-size: 13px; font-weight: 600; }
+.notification-fields input { width: 100%; min-width: 0; border: 1px solid var(--border); border-radius: 8px; padding: 10px; background: var(--surface); color: var(--text-heading); font: inherit; }
+.notification-fields small { color: var(--muted); font-weight: 400; }
+.notification-timezone { grid-column: 1 / -1; }
+.notification-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.notification-unsubscribe { max-width: 620px; margin: 10vh auto; padding: 20px; }
+@media (max-width: 520px) { .notification-fields { grid-template-columns: 1fr; } .notification-settings { padding: 18px; } }
+
 .profile {
   position: relative;
 }
