@@ -6,7 +6,7 @@
   "crons": [
     {
       "path": "/notifications/maintenance/deliver",
-      "schedule": "*/5 * * * *"
+      "schedule": "7 15 * * *"
     },
     {
       "path": "/resumes/maintenance/cleanup",
