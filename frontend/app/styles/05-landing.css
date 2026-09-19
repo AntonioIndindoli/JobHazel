@@ -1584,43 +1584,58 @@ body.auth-modal-open {
 }
 
 .auth-verification {
+    min-width: 0;
+    gap: 20px;
+}
+
+.auth-verification-recipient {
     display: grid;
-    justify-items: center;
-    gap: 17px;
-    margin-top: 25px;
-    padding: 24px 20px;
-    border: 1px solid #b9e4c6;
-    border-radius: 16px;
-    background: linear-gradient(180deg, #f1fbf4 0%, var(--landing-surface-soft) 100%);
+    gap: 4px;
+    padding: 14px 16px;
+    border: 1px solid var(--landing-border);
+    border-radius: 12px;
+    color: var(--landing-muted);
+    background: var(--landing-surface-soft);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.auth-verification-recipient strong {
+    color: var(--landing-ink);
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.auth-form .auth-code-input {
+    min-width: 0;
+    height: 60px;
+    padding-inline: 16px;
+    font-size: 26px;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .3em;
     text-align: center;
 }
 
-.auth-verification-icon {
+.auth-verification-resend {
     display: grid;
-    width: 58px;
-    height: 58px;
-    place-items: center;
-    border-radius: 50%;
-    color: white;
-    background: var(--landing-green);
-    box-shadow: 0 10px 24px #17863d2e;
+    justify-items: center;
+    gap: 8px;
+    text-align: center;
 }
 
-.auth-verification strong {
-    display: block;
-    color: var(--landing-ink);
-    font-size: 17px;
-}
-
-.auth-verification p:not(.auth-message) {
-    margin: 8px 0 0;
+.auth-verification-resend p {
+    margin: 0;
     color: var(--landing-muted);
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.55;
 }
 
+.auth-verification-resend .auth-text-action { margin: 0; min-height: 36px; }
+.auth-verification .auth-text-action:disabled { opacity: .6; cursor: wait; }
+.auth-verification button:focus-visible { outline: 2px solid var(--landing-green); outline-offset: 3px; }
 .auth-verification .auth-submit { width: 100%; }
-.auth-verification .auth-back { margin: 0; }
+.auth-verification .auth-back { margin: 0 auto; min-height: 36px; }
 
 .auth-text-action,
 .auth-back {

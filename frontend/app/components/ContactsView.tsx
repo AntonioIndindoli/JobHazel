@@ -89,7 +89,6 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
     }, [filtered.length, hasActiveFilters, onSummaryChange]);
 
     return <section className={isMobileDetailOpen ? "applications-page contacts-page mobile-page-detail-open" : "applications-page contacts-page"}>
-        {contacts.length === 0 ? <div className="panel contacts-empty"><span><AppIcon name="contacts" size={34} /></span><h2>Build your network</h2><p>Keep recruiters, referrals, hiring managers, and people you meet during your search in one place.</p><button className="primary" type="button" onClick={openCreate}><AppIcon name="plus" size={18} /> Add your first contact</button></div> :
         <div
             ref={setSplitPaneNode}
             style={splitStyle}
@@ -105,7 +104,21 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
                 <ActiveFilterChips chips={relationship ? [{ id: "relationship", label: "Relationship", value: CONTACT_RELATIONSHIP_LABELS[relationship], onRemove: () => setRelationship("") }] : []} />
                 {filtered.length ? filtered.map((contact) => <button key={contact.id} type="button" className={selected?.id === contact.id ? "contact-row active" : "contact-row"} onClick={() => openMobileDetail(contact.id)}>
                     <span className="contact-avatar">{initials(contact.name)}</span><span className="contact-row-copy"><strong>{contact.name}</strong><span>{contact.role || CONTACT_RELATIONSHIP_LABELS[contact.relationship]}</span><small>{contact.companyName || "No company linked"}</small></span><AppIcon name="arrow-right" size={17} />
-                </button>) : <div className="contacts-no-results"><AppIcon name="search" size={26} /><strong>No contacts found</strong><span>Try a different search or filter.</span></div>}
+                </button>) : (
+                    <div className="applications-empty application-list-empty">
+                        <span className="empty-illustration">
+                            <AppIcon name="contacts" size={31} />
+                        </span>
+                        <h2>{contacts.length === 0 ? "No contacts yet" : "No contacts match these filters"}</h2>
+                        <p>{contacts.length === 0
+                            ? "Add a contact to keep track of your network."
+                            : "Clear filters or adjust the search terms to expand the list."}</p>
+                        <button type="button" className="secondary" onClick={openCreate}>
+                            <AppIcon name="plus" size={18} />
+                            Add Contact
+                        </button>
+                    </div>
+                )}
             </div>
             {selected && isDetailPaneOpen && <CollectionPaneDivider onResizeStart={beginResize} onResizeBy={resizeWithKeyboard} />}
             <aside className="application-detail-panel contact-detail status-accent">
@@ -130,7 +143,7 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
                     </section>
                 </> : <div className="contacts-no-results"><AppIcon name="contacts" size={30} /><strong>Select a contact</strong></div>}
             </aside>
-        </div>}
+        </div>
 
         {isFormOpen && <div className="drawer-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setIsFormOpen(false); }}><aside className="drawer contact-drawer" role="dialog" aria-modal="true" aria-labelledby="contact-form-title">
             <header className="drawer-header"><div><span className="eyebrow">Network</span><h2 id="contact-form-title">{editingId ? "Edit contact" : "Add contact"}</h2></div><button type="button" className="drawer-close" aria-label="Close" onClick={() => setIsFormOpen(false)}><AppIcon name="x" size={21} /></button></header>

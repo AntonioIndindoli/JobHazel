@@ -574,10 +574,6 @@
     grid-template-columns: 1fr;
   }
 
-  .analytics-page {
-    padding-top: 12px;
-  }
-
   .source-quality-table {
     min-width: 760px;
   }

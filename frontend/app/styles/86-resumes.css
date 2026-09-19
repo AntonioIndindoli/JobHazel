@@ -50,7 +50,7 @@
     display: flex;
     justify-content: flex-start;
     margin-bottom: 20px;
-    padding: 4px 0 14px;
+    padding: 0px 0 14px;
     border-bottom: 1px solid var(--border);
 }
 
@@ -757,7 +757,7 @@
 
 @media (max-width: 720px) {
     .resume-page {
-        padding: 8px 0 34px;
+        padding: 0px 0 34px;
     }
 
     .resume-page-intro {

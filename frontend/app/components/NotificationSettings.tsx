@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { AppIcon } from "./AppIcon";
 import { requestNotificationPreferences, type NotificationPreferences } from "../lib/notification-api";
 
 export function NotificationSettings({ token }: { token: string }) {
@@ -47,12 +48,18 @@ export function NotificationSettings({ token }: { token: string }) {
         if (!preferences) return null;
         return <label className="automation-setting-row notification-toggle">
             <span className="automation-setting-copy"><strong>{label}</strong><small>{description}</small></span>
-            <input type="checkbox" role="switch" checked={preferences[key]} onChange={(event) => change(key, event.target.checked)} />
+            <span className="notification-switch">
+                <input type="checkbox" role="switch" checked={preferences[key]} onChange={(event) => change(key, event.target.checked)} />
+                <span className="account-switch-track" aria-hidden="true"><span /></span>
+            </span>
         </label>;
     }
 
     return <article className="account-settings-card settings-card notification-settings">
-        <div className="account-section-heading"><div><h2>Notifications &amp; reminders</h2><p>Choose which emails help you stay on track. Reminders require a verified email address.</p></div></div>
+        <div className="account-section-heading">
+            <span><AppIcon name="bell" size={19} /></span>
+            <div><h2>Notifications &amp; reminders</h2><p>Choose which emails help you stay on track. Reminders require a verified email address.</p></div>
+        </div>
         {!preferences ? <>
             {!error && <p role="status">Loading notification preferences…</p>}
             {error && <><p role="alert" className="account-feedback error">{error}</p><button type="button" className="btn secondary" onClick={() => setReload((value) => value + 1)}>Retry</button></>}

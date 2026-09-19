@@ -106,19 +106,25 @@ export function AuthPanel({
                     </button>
                 </div>}
                 {mode === "verify" ? (
-                    <form className="auth-verification" onSubmit={onSubmit}>
-                        <div className="auth-verification-icon" aria-hidden="true">
-                            <AppIcon name="check" size={27} />
+                    <form className="auth-form auth-verification" onSubmit={onSubmit}>
+                        <div className="auth-verification-recipient" id="auth-verification-help">
+                            <span>We sent a six-digit code to</span>
+                            <strong>{email}</strong>
                         </div>
-                        <div>
-                            <strong>Verify your email address</strong>
-                            <p>Enter the six-digit verification code sent to <b>{email}</b>.</p>
-                        </div>
-                        <label><span>Verification code</span><input name="otp" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required /></label>
-                        <button type="submit" className="auth-submit">Verify email</button>
+                        <label>
+                            <span>Verification code</span>
+                            <input className="auth-code-input" name="otp" type="text" inputMode="numeric" autoComplete="one-time-code" aria-describedby="auth-verification-help" placeholder="000000" pattern="[0-9]{6}" maxLength={6} autoFocus required />
+                        </label>
+                        <button type="submit" className="auth-submit" disabled={isChecking}>
+                            {isChecking ? "Verifying…" : "Verify email"}
+                            {!isChecking && <AppIcon name="arrow-right" size={18} />}
+                        </button>
                         {message && <p className={`auth-message ${messageTone}`} role="status">{message}</p>}
-                        {onResendVerification && <button type="button" className="auth-submit" onClick={onResendVerification}>Resend verification email</button>}
-                        <button type="button" className="auth-back" onClick={() => changeMode("login")}>I’ve verified my email — sign in</button>
+                        {onResendVerification && <div className="auth-verification-resend">
+                            <p>Didn’t get a code? Check your spam folder.</p>
+                            <button type="button" className="auth-text-action" disabled={isChecking} onClick={onResendVerification}>Resend verification email</button>
+                        </div>}
+                        <button type="button" className="auth-back" onClick={() => changeMode("login")}>Back to sign in</button>
                     </form>
                 ) : <form onSubmit={onSubmit} className="auth-form">
                     {<label>

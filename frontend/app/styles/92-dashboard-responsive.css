@@ -60,7 +60,6 @@
     }
 
     .stats-panel {
-        margin-top: 12px;
         display: block;
         grid-area: stats;
         overflow: visible;

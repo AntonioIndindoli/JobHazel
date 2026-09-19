@@ -9,6 +9,7 @@
 }
 
 @container collection-list (max-width: 850px) {
+
     .applications-toolbar,
     .applications-page .applications-toolbar {
         display: grid;
@@ -56,26 +57,26 @@
         outline: none;
     }
 
-    .applications-toolbar > select,
-    .applications-toolbar > .applications-date-filter,
-    .applications-toolbar > .interviews-reset-button {
+    .applications-toolbar>select,
+    .applications-toolbar>.applications-date-filter,
+    .applications-toolbar>.interviews-reset-button {
         display: none;
     }
 
-    .applications-toolbar.mobile-filters-open > select,
-    .applications-toolbar.mobile-filters-open > .applications-date-filter,
-    .applications-toolbar.mobile-filters-open > .interviews-reset-button {
+    .applications-toolbar.mobile-filters-open>select,
+    .applications-toolbar.mobile-filters-open>.applications-date-filter,
+    .applications-toolbar.mobile-filters-open>.interviews-reset-button {
         grid-column: 1 / -1;
         width: 100%;
         min-height: 44px;
     }
 
-    .applications-toolbar.mobile-filters-open > select,
-    .applications-toolbar.mobile-filters-open > .applications-date-filter {
+    .applications-toolbar.mobile-filters-open>select,
+    .applications-toolbar.mobile-filters-open>.applications-date-filter {
         display: block;
     }
 
-    .applications-toolbar.mobile-filters-open > .interviews-reset-button {
+    .applications-toolbar.mobile-filters-open>.interviews-reset-button {
         display: flex;
         margin-left: 0;
         border: 1px solid var(--border);
@@ -333,15 +334,25 @@
     }
 }
 
+@media (max-width: 1600px) {
+
+    .topbar {
+        margin-bottom: 24px;
+    }
+}
+
+@media (max-width: 1400px) {
+
+    .topbar {
+        margin-bottom: 12px;
+    }
+}
+
 @media (max-width: 1100px) {
 
-    .topbar-page-heading > .page-summary,
-    .applications-page > .page-summary {
+    .topbar-page-heading>.page-summary,
+    .applications-page>.page-summary {
         display: none;
-    }
-
-    .applications-split-panel {
-        margin-top: 12px;
     }
 
     .dashboard-hero {
@@ -601,8 +612,6 @@
         position: static;
         top: auto;
         z-index: auto;
-        background: transparent;
-        border-bottom: 0;
         backdrop-filter: none;
     }
 

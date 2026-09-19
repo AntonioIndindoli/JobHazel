@@ -287,10 +287,6 @@ textarea,
     .view-dashboard .tracker-panel {
         padding: var(--space-3);
     }
-
-    .view-dashboard .pipeline-stats-container {
-        margin-top: var(--space-5);
-    }
 }
 
 @media (prefers-reduced-motion: reduce) {
