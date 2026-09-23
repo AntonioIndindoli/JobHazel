@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 
-const DEFAULT_DETAIL_WIDTH = 38;
+const DEFAULT_DETAIL_WIDTH = 44;
 const MIN_DETAIL_WIDTH = 30;
 const MAX_DETAIL_WIDTH = 50;
 

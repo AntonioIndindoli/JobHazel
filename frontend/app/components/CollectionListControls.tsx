@@ -5,10 +5,11 @@ import { AppIcon } from "./AppIcon";
 
 export type CollectionSortOption = { value: string; label: string };
 
-export function CollectionListControls({ noun, search, filters, filtersOpen, onToggleFilters, activeFilterCount, hasActiveFilters, onReset, sortValue, sortOptions, onSortChange }: {
+export function CollectionListControls({ noun, search, filters, activeFilters, filtersOpen, onToggleFilters, activeFilterCount, hasActiveFilters, onReset, sortValue, sortOptions, onSortChange }: {
     noun: string;
     search: ReactNode;
     filters: ReactNode;
+    activeFilters?: ReactNode;
     filtersOpen: boolean;
     onToggleFilters: () => void;
     activeFilterCount: number;
@@ -34,8 +35,13 @@ export function CollectionListControls({ noun, search, filters, filtersOpen, onT
             </label>
         </div>
         {filtersOpen && <div className="collection-filters-panel" id={`collection-filters-${noun}`} aria-label={`${noun} filters`}>
+            <div className="collection-filters-heading">
+                <strong>Filter {noun}</strong>
+                {hasActiveFilters && <button type="button" className="collection-filter-reset" onClick={onReset}><AppIcon name="history" size={15} />Reset filters</button>}
+            </div>
             <div className="collection-filter-fields">{filters}</div>
-            {hasActiveFilters && <button type="button" className="collection-filter-reset" onClick={onReset}><AppIcon name="history" size={15} />Reset filters</button>}
+            {activeFilterCount > 0 && activeFilters && <div className="collection-applied-filters">{activeFilters}</div>}
         </div>}
+        {!filtersOpen && activeFilterCount > 0 && activeFilters && <div className="collection-applied-filters is-collapsed">{activeFilters}<button type="button" className="collection-filter-reset" onClick={onReset}>Reset filters</button></div>}
     </div>;
 }

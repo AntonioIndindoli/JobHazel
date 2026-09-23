@@ -26,6 +26,7 @@ import type {
     Task,
 } from "../lib/types";
 import { AppIcon } from "./AppIcon";
+import { CollectionTabs } from "./CollectionTabs";
 import { CollectionListControls } from "./CollectionListControls";
 import { ActiveFilterChips, type ActiveFilterChip } from "./ActiveFilterChips";
 import { CollectionPaneCollapse, CollectionPaneDivider } from "./CollectionPaneControls";
@@ -46,6 +47,7 @@ type ApplicationsViewProps = {
     onRemoveApplication: (id: string) => void;
     onRemoveInterview: (id: string) => void | Promise<void>;
     onStartEdit: (application: Application) => void;
+    onStartEditTask?: (task: Task) => void;
     onStartEditInterview: (interview: Interview) => void;
     onStatusChange: (id: string, status: string) => void;
     onUpdateNotes: (application: Application, notes: string) => Promise<void>;
@@ -129,7 +131,7 @@ function formatTaskRemaining(value: string | null, timeZone: string) {
     const days = taskCalendarDay(due, timeZone) - taskCalendarDay(new Date(), timeZone);
     if (days < 0) return `${Math.abs(days)} day${Math.abs(days) === 1 ? "" : "s"} overdue`;
     if (days === 0) return "Due today";
-    return `${days} day${days === 1 ? "" : "s"} remaining`;
+    return `Due in ${days} day${days === 1 ? "" : "s"}`;
 }
 
 function getSortValue(application: Application, sortKey: SortKey) {
@@ -157,6 +159,7 @@ export function ApplicationsView({
     onRemoveApplication,
     onRemoveInterview,
     onStartEdit,
+    onStartEditTask,
     onStartEditInterview,
     onStatusChange,
     onUpdateNotes,
@@ -166,8 +169,10 @@ export function ApplicationsView({
     const { timeZone } = useTaskTimeZone();
     const [filters, setFilters] =
         useState<ApplicationsTableFilters>(INITIAL_FILTERS);
+    const [needsAction, setNeedsAction] = useState(false);
     const [sortKey, setSortKey] = useState<SortKey>("dateApplied");
     const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+    const [taskMenuId, setTaskMenuId] = useState<string | null>(null);
     const [isApplicationMenuOpen, setIsApplicationMenuOpen] = useState(false);
     const [isEditingNotes, setIsEditingNotes] = useState(false);
     const [notesDraft, setNotesDraft] = useState("");
@@ -226,6 +231,7 @@ export function ApplicationsView({
                 .join(" ")
                 .toLowerCase();
 
+            if (needsAction && !tasks.some(task => task.applicationId === application.id && !task.completedAt)) return false;
             if (query && !searchableText.includes(query)) return false;
             if (filters.status && application.status !== filters.status) return false;
             if (
@@ -254,7 +260,7 @@ export function ApplicationsView({
 
             return true;
         });
-    }, [applications, filters]);
+    }, [applications, filters, needsAction, tasks]);
 
     const sortedApplications = useMemo(() => {
         return [...filteredApplications].sort((left, right) => {
@@ -270,7 +276,7 @@ export function ApplicationsView({
         });
     }, [filteredApplications, sortDirection, sortKey]);
 
-    const bulk = useBulkSelection(sortedApplications, JSON.stringify(filters));
+    const bulk = useBulkSelection(sortedApplications, JSON.stringify({ ...filters, needsAction }));
     const selectedApplication =
         sortedApplications.find(
             (application) => application.id === detailPane.selectedId,
@@ -296,12 +302,14 @@ export function ApplicationsView({
         : [];
     const nextTask = selectedTasks[0] ?? null;
     const activeFilterCount = [
+        needsAction,
         filters.status,
         filters.source,
         filters.resumeVersionId,
         filters.startDate || filters.endDate,
     ].filter(Boolean).length;
     const activeFilterChips: ActiveFilterChip[] = [
+        ...(needsAction ? [{ id: "needs-action", label: "Tasks", value: "Needs action", onRemove: () => setNeedsAction(false) }] : []),
         ...(filters.status ? [{ id: "status", label: "Status", value: getStatusLabel(filters.status), onRemove: () => setFilters((current) => ({ ...current, status: "" })) }] : []),
         ...(filters.source ? [{ id: "source", label: "Source", value: filters.source, onRemove: () => setFilters((current) => ({ ...current, source: "" })) }] : []),
         ...(filters.resumeVersionId ? [{
@@ -338,6 +346,7 @@ export function ApplicationsView({
     }
     return (
         <section className={isMobileDetailOpen ? "applications-page mobile-page-detail-open" : "applications-page"}>
+            <CollectionTabs label="applications views" value={needsAction ? "needs-action" : filters.status} options={[{ value: "", label: "All", count: applications.length }, ...["APPLIED", "INTERVIEWING"].map(value => ({ value, label: getStatusLabel(value), count: applications.filter(item => item.status === value).length })), { value: "needs-action", label: "Needs action", count: applications.filter(item => tasks.some(task => task.applicationId === item.id && !task.completedAt)).length }]} onChange={value => { setNeedsAction(value === "needs-action"); setFilters(current => ({ ...current, status: value === "needs-action" ? "" : value })); }} />
             <div
                 ref={detailPane.containerRef}
                 style={detailPane.splitStyle}
@@ -346,6 +355,7 @@ export function ApplicationsView({
                 <aside className="application-list-panel">
 
                     <CollectionListControls
+                        activeFilters={<ActiveFilterChips chips={activeFilterChips} />}
                         noun="applications"
                         search={<label className="applications-search-field">
                             <AppIcon name="search" size={18} />
@@ -355,7 +365,7 @@ export function ApplicationsView({
                                 onChange={(event) =>
                                     setFilters({ ...filters, query: event.target.value })
                                 }
-                                placeholder="Search title, company, location"
+                                placeholder="Search applications, companies, or roles…"
                             />
                         </label>}
                         filters={<><select
@@ -431,12 +441,12 @@ export function ApplicationsView({
                         onToggleFilters={() => { setIsFiltersOpen(open => !open); setIsAppliedDateOpen(false); }}
                         activeFilterCount={activeFilterCount}
                         hasActiveFilters={Boolean(filters.query.trim() || activeFilterCount)}
-                        onReset={() => { setFilters(INITIAL_FILTERS); setIsAppliedDateOpen(false); }}
+                        onReset={() => { setFilters(INITIAL_FILTERS); setNeedsAction(false); setIsAppliedDateOpen(false); }}
                         sortValue={`${sortKey}:${sortDirection}`}
                         sortOptions={[{ value: "dateApplied:desc", label: "Applied date: newest first" }, { value: "dateApplied:asc", label: "Applied date: oldest first" }, { value: "title:asc", label: "Role: A to Z" }, { value: "title:desc", label: "Role: Z to A" }, { value: "companyName:asc", label: "Company: A to Z" }, { value: "companyName:desc", label: "Company: Z to A" }, { value: "status:asc", label: "Status: A to Z" }, { value: "status:desc", label: "Status: Z to A" }]}
                         onSortChange={value => { const [key, direction] = value.split(":"); setSortKey(key as SortKey); setSortDirection(direction as SortDirection); }}
                     />
-                    <ActiveFilterChips chips={activeFilterChips} />
+
                     <BulkActions selection={bulk} count={sortedApplications.length} noun="applications" onApply={onBulkApply} fields={[{ key: "status", label: "Status", options: STATUSES.map(status => ({ value: status, label: STATUS_LABELS[status] })) }]} deleteNote="Linked interviews and application history are also deleted; linked tasks and contacts are unlinked." />
 
                     {sortedApplications.length > 0 ? (
@@ -456,33 +466,16 @@ export function ApplicationsView({
                                         aria-current={isSelected ? "true" : undefined}
                                         onClick={() => openMobileDetail(application.id)}
                                     >
-                                        <span className="application-primary-cell desktop-record-cell">
+                                        <span className="collection-record-copy">
                                             <strong>{application.title}</strong>
+                                            <span>{application.companyName || "Unknown company"}{application.location ? " · " + application.location : ""}</span>
+                                            <small>{(() => {
+                                                const next = sortTasksByDueDate(tasks.filter(task => task.applicationId === application.id && !task.completedAt))[0];
+                                                return next ? next.title + (next.dueDate ? " · " + formatTaskDueDate(next.dueDate, timeZone) : "") : "Applied " + formatDisplayDate(application.dateApplied);
+                                            })()}</small>
                                         </span>
-                                        <span className="application-table-cell desktop-record-cell" data-label="Company">
-                                            {application.companyName || "Unknown company"}
-                                        </span>
-                                        <span className="application-table-cell desktop-record-cell" data-label="Applied date">
-                                            {formatDisplayDate(application.dateApplied)}
-                                        </span>
-                                        <span
-                                            className={`status-pill desktop-record-cell ${application.status.toLowerCase()}`}
-                                        >
-                                            {getStatusLabel(application.status)}
-                                        </span>
-                                        <span className="mobile-record-card application-mobile-card">
-                                            <span className="mobile-record-card-copy">
-                                                <strong>{application.title}</strong>
-                                                <span>{application.companyName || "Unknown company"}</span>
-                                                <small>
-                                                    Applied {formatDisplayDate(application.dateApplied).replace(/, \d{4}$/, "")}
-                                                </small>
-                                            </span>
-                                            <span className={`status-pill ${application.status.toLowerCase()}`}>
-                                                {getStatusLabel(application.status)}
-                                            </span>
-                                            <AppIcon name="arrow-right" size={18} className="mobile-record-chevron" />
-                                        </span>
+                                        <span className={"status-pill " + application.status.toLowerCase()}>{getStatusLabel(application.status)}</span>
+                                        <AppIcon name="arrow-right" size={18} className="collection-record-chevron" />
                                     </button></BulkRow>
                                 );
                             })}
@@ -515,7 +508,7 @@ export function ApplicationsView({
                 </aside>
 
                 {selectedApplication && detailPane.isOpen && <CollectionPaneDivider onResizeStart={detailPane.beginResize} onResizeBy={detailPane.resizeWithKeyboard} />}
-                <aside className={`application-detail-panel status-accent ${selectedApplication?.status.toLowerCase() ?? ""}`}>
+                <aside className={`application-detail-panel application-reference-detail status-accent ${selectedApplication?.status.toLowerCase() ?? ""}`}>
                     {selectedApplication ? (
                         <>
                             <button type="button" className="mobile-detail-back" onClick={closeMobileDetail}>
@@ -561,12 +554,10 @@ export function ApplicationsView({
                                 </div>
                                 <p className="application-detail-company-location">
                                     <span className="application-detail-context-item application-detail-company">
-                                        <AppIcon name="company" size={31} />
                                         {selectedApplication.companyName || "Unknown company"}
                                     </span>
-                                    <span className="application-detail-context-separator" aria-hidden="true" />
+                                    <span className="application-detail-context-separator" aria-hidden="true">·</span>
                                     <span className="application-detail-context-item">
-                                        <AppIcon name="location" size={31} />
                                         {selectedApplication.location || "Location not set"}
                                     </span>
                                 </p>
@@ -597,23 +588,15 @@ export function ApplicationsView({
                                             : formatDisplayDate(selectedApplication.dateApplied)}
                                     </span>
                                 </div>
-                                <div className="application-detail-summary" aria-label="Application overview">
-                                    <span><AppIcon name="source" size={27} /> {selectedApplication.source || "No source"}</span>
-                                    <span><AppIcon name="salary" size={27} /> {selectedApplication.salaryMin !== null || selectedApplication.salaryMax !== null ? `Salary: ${formatSalaryRange(selectedApplication)}` : formatSalaryRange(selectedApplication)}</span>
-                                    {selectedApplication.sourceUrl && (
-                                        <span><AppIcon name="external-link" size={27} className="application-detail-external-link-icon" />
-                                            <a className="application-detail-posting-link" href={selectedApplication.sourceUrl} target="_blank" rel="noreferrer">
-                                                Original posting
-                                            </a>
-                                        </span>
-                                    )}
-                                </div>
+                                {selectedApplication.sourceUrl && <div className="application-detail-summary">
+                                    <a className="application-detail-posting-link" href={selectedApplication.sourceUrl} target="_blank" rel="noreferrer"><AppIcon name="external-link" size={16} />Original posting</a>
+                                </div>}
 
                             </header>
 
                             <div className="application-detail-layout">
                                 <div className="application-detail-main">
-                                    <section className="application-detail-section application-detail-card-section application-resume-detail-section">
+                                    <section className={`application-detail-section application-detail-card-section application-resume-detail-section${selectedApplication.resumeVersion ? "" : " resume-not-recorded"}`}>
                                         {selectedApplication.resumeVersion ? (
                                             <div className="application-resume-detail-card">
                                                 <span className="application-resume-detail-icon" aria-hidden="true">
@@ -645,45 +628,41 @@ export function ApplicationsView({
                                             </div>
                                         ) : (
                                             <div className="application-resume-detail-empty">
-                                                <AppIcon name="document" size={21} />
+                                                <AppIcon name="warning" size={22} />
                                                 <span>
-                                                    <strong>No resume attached</strong>
-                                                    <small>Edit this application to record the version used.</small>
+                                                    <strong>No resume recorded</strong>
                                                 </span>
+                                                <button type="button" className="alternative application-section-action" onClick={() => onStartEdit(selectedApplication)}>Attach resume</button>
                                             </div>
                                         )}
                                     </section>
                                     <section className="application-detail-section application-detail-card-section application-next-action-section">
-                                        <div className="application-detail-section-heading">
-                                            <div>
-                                                <h3>Tasks</h3>
-                                                <span>Next upcoming action</span>
-                                            </div>
-                                            <button type="button" className="alternative application-section-action" onClick={() => onCreateTask(selectedApplication.id)}>
-                                                <AppIcon name="plus" size={15} /> Add task
-                                            </button>
+                                        <div className="next-action-heading">
+                                            <h3>{nextTask ? "Next action" : "No next action"}</h3>
+                                            {nextTask ? <span className={"next-action-due-badge " + getTaskDueState(nextTask, timeZone)}>{formatTaskRemaining(nextTask.dueDate, timeZone) || "No due date"}</span> :
+                                                <button type="button" className="alternative application-section-action" onClick={() => onCreateTask(selectedApplication.id)}><AppIcon name="plus" size={15} />Add task</button>}
                                         </div>
-                                        {nextTask ? (
-                                            <div className="application-next-action-card">
-                                                <button type="button" className={`application-task-checkbox ${getTaskDueState(nextTask, timeZone)}`} aria-label={`Mark ${nextTask.title} complete`} onClick={() => onCompleteTask(nextTask.id)}>
-                                                    <AppIcon name="check" size={15} />
-                                                </button>
-                                                <div>
-                                                    <strong>{nextTask.title}</strong>
-                                                    <p>
-                                                        {nextTask.dueDate ? (
-                                                            <>
-                                                                <span>Due {formatTaskDueDate(nextTask.dueDate, timeZone)}</span>
-                                                                <span aria-hidden="true">·</span>
-                                                                <span className={`application-task-due-copy ${getTaskDueState(nextTask, timeZone)}`}>
-                                                                    {formatTaskRemaining(nextTask.dueDate, timeZone)}
-                                                                </span>
-                                                            </>
-                                                        ) : "No due date"}
-                                                    </p>
+                                        {nextTask ? <>
+                                            <div className="next-action-content">
+                                                <strong>{nextTask.title}</strong>
+                                                <p><AppIcon name="calendar" size={18} />{nextTask.dueDate ? formatTaskDueDate(nextTask.dueDate, timeZone) : "No due date"}</p>
+                                            </div>
+                                            <div className="collection-next-actions">
+                                                <button type="button" className="primary" onClick={() => onCompleteTask(nextTask.id)}>Mark done</button>
+                                                {onStartEditTask && <button type="button" className="alternative" onClick={() => onStartEditTask(nextTask)}>Reschedule</button>}
+                                                <div className="next-action-menu application-detail-menu" onBlur={event => {
+                                                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setTaskMenuId(null);
+                                                }} onKeyDown={event => {
+                                                    if (event.key === "Escape") { setTaskMenuId(null); event.currentTarget.querySelector<HTMLButtonElement>("button")?.focus(); }
+                                                }}>
+                                                    <button type="button" className="next-action-more" aria-label="More task actions" aria-haspopup="menu" aria-expanded={taskMenuId === nextTask.id} onClick={() => setTaskMenuId(current => current === nextTask.id ? null : nextTask.id)}><AppIcon name="dots-vertical" size={20} /></button>
+                                                    {taskMenuId === nextTask.id && <div className="application-detail-menu-popover" role="menu">
+                                                        {onStartEditTask && <button type="button" role="menuitem" onClick={() => { setTaskMenuId(null); onStartEditTask(nextTask); }}><AppIcon name="edit" size={16} />Edit task</button>}
+                                                        <button type="button" role="menuitem" onClick={() => { setTaskMenuId(null); onCreateTask(selectedApplication.id); }}><AppIcon name="plus" size={16} />Add task</button>
+                                                    </div>}
                                                 </div>
                                             </div>
-                                        ) : <p className="application-detail-empty-copy">No next action set.</p>}
+                                        </> : null}
                                     </section>
 
                                     <section className="application-detail-section application-detail-card-section application-detail-interviews-section">
@@ -738,9 +717,7 @@ export function ApplicationsView({
                                                             )}
                                                         </span>
                                                         <div className="application-interview-actions">
-                                                            <button type="button" className="application-interview-icon-button" aria-label={`Edit ${getInterviewTypeLabel(interview.type)} interview`} onClick={() => onStartEditInterview(interview)}>
-                                                                <AppIcon name="edit" size={18} />
-                                                            </button>
+
                                                             <div className="application-detail-menu" onBlur={(event) => {
                                                                 if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpenInterviewMenuId(null);
                                                             }}>
@@ -749,6 +726,7 @@ export function ApplicationsView({
                                                                 </button>
                                                                 {openInterviewMenuId === interview.id && (
                                                                     <div className="application-detail-menu-popover application-interview-menu-popover" role="menu">
+                                                                        <button type="button" role="menuitem" onClick={() => { setOpenInterviewMenuId(null); onStartEditInterview(interview); }}><AppIcon name="edit" size={18} />Edit interview</button>
                                                                         <button type="button" role="menuitem" onClick={() => { setOpenInterviewMenuId(null); onViewInterview(interview.id); }}>
                                                                             <AppIcon name="view" size={18} /> View interview
                                                                         </button>
@@ -777,7 +755,7 @@ export function ApplicationsView({
                                             </div>
                                             {!isEditingNotes && (
                                                 <button type="button" className="alternative application-section-action" onClick={() => { setNotesDraft(selectedNotes); setIsEditingNotes(true); }}>
-                                                    Edit notes
+                                                    {!selectedNotes && <AppIcon name="plus" size={18} />}{selectedNotes ? "Edit notes" : "Add note"}
                                                 </button>
                                             )}
                                         </div>
@@ -794,9 +772,18 @@ export function ApplicationsView({
                                         ) : (
                                             <p className={selectedNotes ? "" : "is-empty"}>
                                                 {!selectedNotes && <AppIcon name="document" size={37} />}
-                                                {selectedNotes || "No notes added"}
+                                                {selectedNotes || "No notes yet"}
                                             </p>
                                         )}
+                                    </section>
+                                    <section className="application-detail-section application-facts-section">
+                                        <h3>Application details</h3>
+                                        <dl className="collection-facts">
+                                            <div><dt>Applied on</dt><dd>{formatDisplayDate(selectedApplication.dateApplied)}</dd></div>
+                                            <div><dt>Source</dt><dd>{selectedApplication.source || "Not specified"}</dd></div>
+                                            <div><dt>Location</dt><dd>{selectedApplication.location || "Not specified"}</dd></div>
+                                            <div><dt>Salary range</dt><dd>{formatSalaryRange(selectedApplication)}</dd></div>
+                                        </dl>
                                     </section>
                                 </div>
                             </div>

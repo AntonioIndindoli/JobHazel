@@ -14,6 +14,7 @@ import { INTERVIEW_OUTCOMES, INTERVIEW_TYPES } from "../lib/constants";
 import type { Application, Interview } from "../lib/types";
 import { AddInterviewButton } from "./AddInterviewButton";
 import { AppIcon } from "./AppIcon";
+import { CollectionTabs } from "./CollectionTabs";
 import { CollectionListControls } from "./CollectionListControls";
 import { ActiveFilterChips, type ActiveFilterChip } from "./ActiveFilterChips";
 import { CollectionPaneCollapse, CollectionPaneDivider } from "./CollectionPaneControls";
@@ -203,6 +204,7 @@ export function InterviewsView({
 
     return (
         <section className={isMobileDetailOpen ? "applications-page interviews-page mobile-page-detail-open" : "applications-page interviews-page"}>
+            <CollectionTabs label="interviews views" value={filters.outcome} options={[{ value: "", label: "All", count: interviews.length }, ...["SCHEDULED", "COMPLETED"].map(value => ({ value, label: getInterviewOutcomeLabel(value), count: interviews.filter(item => item.outcome === value).length }))]} onChange={value => setFilters(current => ({ ...current, outcome: value }))} />
             <div
                 ref={detailPane.containerRef}
                 style={detailPane.splitStyle}
@@ -210,6 +212,7 @@ export function InterviewsView({
             >
                 <aside className="application-list-panel interviews-list-panel">
                     <CollectionListControls
+                        activeFilters={<ActiveFilterChips chips={activeFilterChips} />}
                         noun="interviews"
                         search={<label className="applications-search-field">
                             <AppIcon name="search" size={18} />
@@ -259,7 +262,7 @@ export function InterviewsView({
                         sortOptions={[{ value: "scheduledAt:asc", label: "Date: soonest first" }, { value: "scheduledAt:desc", label: "Date: latest first" }, { value: "applicationTitle:asc", label: "Role: A to Z" }, { value: "applicationTitle:desc", label: "Role: Z to A" }, { value: "companyName:asc", label: "Company: A to Z" }, { value: "companyName:desc", label: "Company: Z to A" }, { value: "type:asc", label: "Stage: A to Z" }, { value: "type:desc", label: "Stage: Z to A" }, { value: "outcome:asc", label: "Status: A to Z" }, { value: "outcome:desc", label: "Status: Z to A" }]}
                         onSortChange={value => { const [key, direction] = value.split(":"); setSortKey(key as SortKey); setSortDirection(direction as SortDirection); }}
                     />
-                    <ActiveFilterChips chips={activeFilterChips} />
+
                     <BulkActions selection={bulk} count={sortedInterviews.length} noun="interviews" onApply={onBulkApply} fields={[{ key: "outcome", label: "Outcome", options: INTERVIEW_OUTCOMES.map(outcome => ({ value: outcome, label: getInterviewOutcomeLabel(outcome) })) }, { key: "type", label: "Type", options: INTERVIEW_TYPES.map(type => ({ value: type, label: getInterviewTypeLabel(type) })) }]} />
 
                     {sortedInterviews.length > 0 ? (
@@ -298,6 +301,7 @@ export function InterviewsView({
                                             >
                                                 {getInterviewOutcomeLabel(interview.outcome)}
                                             </span>
+                                        <AppIcon name="arrow-right" size={18} className="collection-record-chevron" />
                                         </button></BulkRow>
                                     );
                                 })}

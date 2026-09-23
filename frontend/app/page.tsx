@@ -33,12 +33,11 @@ import { DashboardHome } from "./components/dashboard/DashboardHome";
 import {
     ANALYTICS_TIMEFRAME_OPTIONS,
     countActiveApplications,
-    countApplicationsByStatus,
     DEFAULT_ANALYTICS_TIMEFRAME,
     type AnalyticsTimeframeDays,
 } from "./lib/application-analytics";
-import { getInterviewOutcomeLabel, toLocalDateTimeInputs } from "./lib/interview-utils";
-import { getTaskDueState, toTaskDueDateInput, toTaskDueDatePayload } from "./lib/task-utils";
+import { toLocalDateTimeInputs } from "./lib/interview-utils";
+import { toTaskDueDateInput, toTaskDueDatePayload } from "./lib/task-utils";
 import { getJobHazelExtensionId } from "./lib/extension-config";
 import {
     CAPTURE_MAX_AGE_MS,
@@ -85,7 +84,6 @@ import {
     INTERVIEW_OUTCOMES,
     INTERVIEW_TYPES,
     STATUSES,
-    STATUS_LABELS,
     TASK_TYPES,
     USER_EMAIL_KEY,
 } from "./lib/constants";
@@ -207,10 +205,6 @@ export default function MainPage() {
     const [interviews, setInterviews] = useState<Interview[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
     const [contacts, setContacts] = useState<Contact[]>([]);
-    const [contactSummary, setContactSummary] = useState({
-        hasActiveFilters: false,
-        shown: 0,
-    });
     const [resumes, setResumes] = useState<ResumeVersion[]>([]);
     const [resumeAnalytics, setResumeAnalytics] = useState<ResumeAnalytics>({
         minimumSampleSize: 5,
@@ -2073,51 +2067,6 @@ export default function MainPage() {
             </>
         );
 
-    const applicationCounts = countApplicationsByStatus(applications);
-    const applicationStatusesToShow = STATUSES.some((status) => applicationCounts[status] > 0)
-        ? STATUSES.filter((status) => applicationCounts[status] > 0)
-        : STATUSES;
-    const interviewCounts = Object.fromEntries(
-        INTERVIEW_OUTCOMES.map((outcome) => [outcome, 0]),
-    ) as Record<(typeof INTERVIEW_OUTCOMES)[number], number>;
-    interviews.forEach((interview) => {
-        if ((INTERVIEW_OUTCOMES as readonly string[]).includes(interview.outcome)) {
-            interviewCounts[interview.outcome as keyof typeof interviewCounts] += 1;
-        }
-    });
-    const interviewOutcomesToShow = INTERVIEW_OUTCOMES.some(
-        (outcome) => interviewCounts[outcome] > 0,
-    )
-        ? INTERVIEW_OUTCOMES.filter((outcome) => interviewCounts[outcome] > 0)
-        : INTERVIEW_OUTCOMES;
-    const taskSummary = tasks.reduce(
-        (summary, task) => {
-            const state = getTaskDueState(task, timeZone);
-            if (state === "completed") summary.completed += 1;
-            else summary.open += 1;
-            if (state === "overdue") summary.overdue += 1;
-            if (state === "today") summary.today += 1;
-            return summary;
-        },
-        { open: 0, overdue: 0, today: 0, completed: 0 },
-    );
-    const taskSummaryItems = [
-        { key: "open", count: taskSummary.open, label: "open" },
-        { key: "overdue", count: taskSummary.overdue, label: "overdue" },
-        { key: "today", count: taskSummary.today, label: "due today" },
-        { key: "completed", count: taskSummary.completed, label: "completed" },
-    ];
-    const taskSummaryItemsToShow = taskSummaryItems.some((item) => item.count > 0)
-        ? taskSummaryItems.filter((item) => item.count > 0)
-        : taskSummaryItems;
-    const handleContactSummaryChange = (summary: { hasActiveFilters: boolean; shown: number }) => {
-        setContactSummary((current) =>
-            current.hasActiveFilters === summary.hasActiveFilters && current.shown === summary.shown
-                ? current
-                : summary,
-        );
-    };
-
     return (
         <TaskTimeZoneContext.Provider value={taskClock}>
         <DashboardShell
@@ -2181,11 +2130,7 @@ export default function MainPage() {
                     <>
                         <div className="topbar-page-heading">
                             <h1 className="topbar-page-title">Applications</h1>
-                            <div className="page-summary">
-                                <span className="applications-status-meta" aria-label="Application totals by status">
-                                    {applicationStatusesToShow.map((status) => <strong key={status} className={`applications-status-count ${status.toLowerCase()}`}>{applicationCounts[status]} {STATUS_LABELS[status].toLowerCase()}</strong>)}
-                                </span>
-                            </div>
+
                         </div>
                         <div className="topbar-page-actions">
                             <button
@@ -2227,11 +2172,7 @@ export default function MainPage() {
                     <>
                         <div className="topbar-page-heading">
                             <h1 className="topbar-page-title">Interviews</h1>
-                            <div className="page-summary">
-                                <span className="interviews-header-meta" aria-label="Interview totals by status">
-                                    {interviewOutcomesToShow.map((outcome) => <strong key={outcome} className={`interviews-status-count ${outcome.toLowerCase()}`}>{interviewCounts[outcome]} {getInterviewOutcomeLabel(outcome).toLowerCase()}</strong>)}
-                                </span>
-                            </div>
+
                         </div>
                         <div className="topbar-page-actions">
                             <AddInterviewButton
@@ -2246,7 +2187,7 @@ export default function MainPage() {
                     <>
                         <div className="topbar-page-heading">
                             <h1 className="topbar-page-title">Tasks &amp; Follow-Ups</h1>
-                            <div className="page-summary"><span className="tasks-header-meta" aria-label="Task summary">{taskSummaryItemsToShow.map((item) => <strong key={item.key} data-summary-key={item.key}>{item.count} {item.label}</strong>)}</span></div>
+
                         </div>
                         <div className="topbar-page-actions">
                             <button
@@ -2264,7 +2205,7 @@ export default function MainPage() {
                     <>
                         <div className="topbar-page-heading">
                             <h1 className="topbar-page-title">Contacts</h1>
-                            <div className="page-summary"><span className="applications-status-meta" aria-label="Contact total"><strong className="applications-status-count">{contacts.length} total {contacts.length === 1 ? "contact" : "contacts"}</strong>{contactSummary.hasActiveFilters && contactSummary.shown > 0 && <strong className="applications-status-count applied">{contactSummary.shown} shown</strong>}</span></div>
+
                         </div>
                         <div className="topbar-page-actions">
                             <button type="button" className="primary" aria-label="Add contact" onClick={() => setContactCreateRequest((request) => request + 1)}>
@@ -2329,6 +2270,7 @@ export default function MainPage() {
                     onRemoveInterview={removeInterview}
                     onStartEdit={startEdit}
                     onStartEditInterview={startEditInterview}
+                    onStartEditTask={startEditTask}
                     onStatusChange={transitionStatus}
                     onUpdateNotes={updateApplicationNotes}
                     onViewInterview={viewInterview}
@@ -2395,7 +2337,6 @@ export default function MainPage() {
                     createRequest={contactCreateRequest}
                     onSave={saveContact}
                     onRemove={removeContact}
-                    onSummaryChange={handleContactSummaryChange}
                 />
             ) : (
                 <DashboardHome

@@ -1,0 +1,1047 @@
+/* Shared entry workspace: quiet surfaces, stacked records, and a blue selection rail. */
+.applications-page {
+    --collection-blue: light-dark(#0866ff, #75aaff);
+    --collection-selected: light-dark(#eaf3ff, #182c46);
+    --border: light-dark(#e1e6ee, #2b3747);
+    --text-heading: light-dark(#080e2b, #edf3ff);
+    --text-secondary: light-dark(#526184, #b1bed5);
+    --text-muted: light-dark(#687797, #a4b1c8);
+    gap: 0;
+}
+
+.collection-tabs {
+    display: flex;
+    gap: 22px;
+    overflow-x: auto;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-raised);
+}
+
+.collection-tabs button {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    min-height: 52px;
+    padding: 0 10px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.collection-tabs button[aria-pressed="true"] {
+    color: var(--collection-blue);
+    border-bottom-color: var(--collection-blue);
+}
+
+.collection-tabs button span {
+    padding: 0 5px;
+    border-radius: 12px;
+    background: color-mix(in srgb, currentColor 8%, transparent);
+    font-size: 12px;
+}
+
+.collection-tabs button:focus-visible {
+    outline: 2px solid var(--collection-blue);
+    outline-offset: -5px;
+}
+
+.applications-page .application-list-panel {
+    padding: 24px;
+    border: 0;
+    border-radius: 0;
+    background: var(--surface-soft);
+}
+
+.applications-page .collection-controls {
+    margin-bottom: 20px;
+    border: 0;
+    background: transparent;
+}
+
+.applications-page .collection-controls-row {
+    padding: 0;
+    gap: 10px;
+}
+
+.applications-page .collection-controls-row .applications-search-field {
+    grid-column: auto;
+    border-radius: 8px;
+    background: var(--surface-raised);
+}
+
+.applications-page .collection-filter-count {
+    background: var(--collection-blue);
+}
+
+.applications-page .bulk-toolbar {
+    padding: 10px 20px;
+    border: 1px solid var(--border);
+    border-radius: 6px 6px 0 0;
+    background: var(--surface-raised);
+}
+
+.applications-page .bulk-select-all {
+    gap: 20px;
+    font-size: 14px;
+}
+
+.applications-page .bulk-row {
+    position: relative;
+    border: 1px solid var(--border);
+    border-top: 0;
+    background: var(--surface-raised);
+}
+
+.applications-page .bulk-checkbox-target {
+    flex-basis: 60px;
+    border: 0;
+    background: transparent;
+}
+
+.applications-page .bulk-checkbox-target input,
+.applications-page .bulk-select-all input {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--collection-blue);
+}
+
+.applications-page .bulk-row:has(.active),
+.applications-page .bulk-row-selected {
+    background: var(--collection-selected);
+}
+
+.applications-page .bulk-row:has(.active)::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    background: var(--collection-blue);
+    border-radius: 3px;
+}
+
+.applications-page .application-list-item,
+.applications-page .contact-row {
+    position: relative;
+    min-height: 112px;
+    margin: 0;
+    padding: 18px 18px 18px 8px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.applications-page .application-list-item.active,
+.applications-page .contact-row.active {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.applications-page .application-list-item::before,
+.applications-page .contact-row::before {
+    display: none;
+}
+
+.applications-page .application-list-item:hover,
+.applications-page .contact-row:hover {
+    background: color-mix(in srgb, var(--collection-blue) 4%, transparent);
+}
+
+.applications-page .application-list-item.applications-table-columns {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 18px;
+    gap: 18px;
+    align-items: center;
+}
+
+.collection-record-copy {
+    display: grid;
+    min-width: 0;
+    gap: 4px;
+    text-align: left;
+}
+
+.collection-record-copy strong,
+.applications-page .application-primary-cell strong,
+.applications-page .application-primary-cell-task strong,
+.applications-page .contact-row-copy strong {
+    color: var(--text-heading);
+    font-size: 16px;
+    line-height: 1.4;
+    font-weight: 700;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+.collection-record-copy>span,
+.collection-record-copy small {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.collection-record-copy small {
+    color: var(--text-muted);
+}
+
+.collection-record-chevron {
+    color: var(--text-muted);
+}
+
+.applications-page .application-list-item .status-pill {
+    width: auto;
+    min-width: 0;
+    justify-self: end;
+    padding: 6px 13px;
+    border-radius: 20px;
+    font-size: 12px;
+}
+
+.applications-page .application-list-item:is(.interviews-table-columns, .tasks-table-columns) {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 18px;
+    grid-template-rows: auto auto auto;
+    gap: 4px 16px;
+    text-align: left;
+}
+
+.applications-page :is(.interviews-table-columns, .tasks-table-columns)> :is(.application-primary-cell, .application-primary-cell-task) {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.applications-page :is(.interviews-table-columns, .tasks-table-columns)>.application-table-cell {
+    grid-column: 1;
+    font-size: 14px;
+}
+
+.applications-page .interviews-table-columns>[data-label="Company"],
+.applications-page .tasks-table-columns>[data-label="Application"] {
+    grid-row: 2;
+}
+
+.applications-page .interviews-table-columns>[data-label="When"],
+.applications-page .tasks-table-columns>[data-label="Due"] {
+    grid-row: 3;
+    color: var(--text-muted);
+}
+
+.applications-page :is(.interviews-table-columns, .tasks-table-columns)> :is([data-label="Stage"], [data-label="Type"]) {
+    grid-column: 2;
+    grid-row: 3;
+    font-size: 12px;
+    text-align: right;
+}
+
+.applications-page :is(.interviews-table-columns, .tasks-table-columns)>.status-pill {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+}
+
+.applications-page :is(.interviews-table-columns, .tasks-table-columns)>.collection-record-chevron {
+    grid-column: 3;
+    grid-row: 1 / span 3;
+    align-self: center;
+}
+
+.applications-page .application-detail-panel {
+    padding: 30px;
+    border: 0;
+    border-radius: 0;
+    background: var(--surface-soft);
+}
+
+.applications-page .application-detail-heading h2 {
+    font-size: 26px;
+}
+
+.applications-page .application-detail-summary {
+    border: 0;
+    padding-top: 0;
+}
+
+.applications-page .application-detail-main {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.applications-page .application-detail-main>.application-next-action-section {
+    order: -2;
+    margin: 14px 0 24px;
+    padding: 20px;
+    border: 1px solid color-mix(in srgb, var(--collection-blue) 18%, var(--border));
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--collection-blue) 5%, var(--surface-soft));
+}
+
+.applications-page .application-detail-main>.application-resume-detail-section {
+    order: -1;
+    padding: 16px;
+    margin-bottom: 22px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+}
+
+.applications-page .application-resume-detail-empty {
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    text-align: left;
+    gap: 14px;
+    padding: 0;
+    background: transparent;
+}
+
+.applications-page .application-resume-detail-empty>span {
+    flex: 1;
+}
+
+.applications-page .application-resume-detail-empty small {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+}
+
+.applications-page .application-next-action-card {
+    background: transparent;
+    border: 0;
+    padding: 16px 0 0;
+}
+
+.applications-page .application-detail-section h3 {
+    font-size: 17px;
+}
+
+.applications-page .application-interviews-empty,
+.applications-page .application-notes-card>p.is-empty {
+    display: block;
+    min-height: 0;
+    padding: 10px 0 0;
+    text-align: left;
+    background: transparent;
+    font-size: 14px;
+}
+
+.applications-page .application-interviews-empty>svg,
+.applications-page .application-notes-card>p.is-empty>svg {
+    display: none;
+}
+
+.collection-facts {
+    display: grid;
+    gap: 10px;
+    margin: 16px 0 0;
+    font-size: 14px;
+}
+
+.collection-facts>div {
+    display: grid;
+    grid-template-columns: minmax(100px, .5fr) minmax(0, 1fr);
+    gap: 16px;
+}
+
+.collection-facts dt {
+    color: var(--text-muted);
+}
+
+.collection-facts dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+@container collection-list (max-width: 620px) {
+    .applications-page .collection-controls-row {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .applications-page .collection-controls-row .applications-search-field {
+        grid-column: 1 / -1;
+    }
+
+    .applications-page .application-list-item.applications-table-columns {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+    }
+
+    .applications-table-columns .collection-record-chevron {
+        display: none;
+    }
+}
+
+@media (max-width: 900px) {
+    .collection-tabs {
+        padding: 0 12px;
+        gap: 10px;
+    }
+
+    .applications-page .application-list-panel {
+        padding: 16px 12px;
+    }
+
+    .applications-page .bulk-checkbox-target {
+        flex-basis: 42px;
+    }
+
+    .applications-page .application-list-item {
+        padding: 14px 12px 14px 4px;
+    }
+
+    .applications-page .application-resume-detail-empty {
+        flex-wrap: wrap;
+    }
+
+    .mobile-page-detail-open>.collection-tabs {
+        display: none;
+    }
+}
+
+.applications-page .application-detail-layout .application-detail-main>.application-next-action-section {
+    padding: 20px;
+}
+
+.applications-page .application-detail-layout .application-detail-main>.application-resume-detail-section {
+    padding: 16px;
+}
+
+.collection-next-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.collection-next-actions>button {
+    flex: 1;
+    justify-content: center;
+    min-height: 42px;
+}
+
+.applications-page .application-next-action-card>.application-task-checkbox {
+    display: none;
+}
+
+.applications-page .application-list-item:focus-visible,
+.applications-page .contact-row:focus-visible {
+    outline: 2px solid var(--collection-blue);
+    outline-offset: -3px;
+}
+
+/* Collection pages meet the header and viewport edges; pane padding stays internal. */
+.collection-workspace .dashboard-page-content {
+    padding: 0;
+}
+
+.collection-workspace .applications-page {
+    margin: 0;
+    gap: 0;
+}
+
+.collection-workspace .topbar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    height: auto;
+    min-height: 106px;
+    margin: 0;
+    padding-top: 24px;
+    padding-bottom: 0;
+    align-items: center;
+    column-gap: 12px;
+    row-gap: 0;
+}
+
+.collection-workspace .topbar-page-controls {
+    grid-column: 2;
+    grid-row: 1;
+    align-items: center;
+    margin: 0;
+}
+
+.collection-workspace .topbar-page-heading {
+    display: block;
+}
+
+.collection-workspace .mobile-nav-toggle {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.collection-header-tabs {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-width: 0;
+    align-self: end;
+}
+
+.collection-header-tabs .collection-tabs {
+    --collection-blue: light-dark(#0866ff, #75aaff);
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.collection-header-tabs .collection-tabs button {
+    min-height: 48px;
+}
+
+.applications-page .application-detail-panel .application-detail-top-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+}
+
+.applications-page .application-detail-panel .application-detail-heading {
+    min-width: 0;
+}
+
+.applications-page .application-detail-panel .application-detail-header-actions {
+    flex-wrap: nowrap;
+    align-self: start;
+    grid-row: 1;
+    grid-column: 2;
+    width: auto;
+    margin-top: 0;
+}
+
+.applications-page .application-detail-panel .contact-detail-header {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.applications-page .application-detail-panel .contact-detail-header .application-detail-header-actions {
+    grid-column: 3;
+    grid-row: 1;
+}
+
+@media (min-width: 1101px) {
+    .collection-workspace .topbar-page-controls {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 700px) {
+    .collection-workspace .topbar-page-title {
+        font-size: 20px;
+    }
+
+    .collection-workspace .topbar-page-controls {
+        gap: 8px;
+    }
+
+    .collection-header-tabs .collection-tabs {
+        gap: 10px;
+    }
+}
+
+/* Application follow-up and resume cards share the compact reference layout. */
+.applications-page .application-detail-layout .application-detail-main>.application-next-action-section {
+    padding: 18px 22px 20px;
+    margin-bottom: 26px;
+    border-color: color-mix(in srgb, var(--collection-blue) 16%, var(--surface));
+    background: color-mix(in srgb, var(--collection-blue) 5%, var(--surface-soft));
+}
+
+.next-action-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.applications-page .next-action-heading h3 {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 17px;
+    font-weight: 650;
+}
+
+.next-action-due-badge {
+    flex-shrink: 0;
+    padding: 5px 10px;
+    border: 1px solid color-mix(in srgb, var(--collection-blue) 18%, transparent);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--collection-blue) 5%, var(--surface));
+    color: var(--collection-blue);
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.next-action-due-badge.overdue {
+    color: var(--danger);
+    border-color: var(--danger-border);
+    background: var(--danger-surface);
+}
+
+.next-action-content {
+    margin-top: 10px;
+    min-width: 0;
+}
+
+.next-action-content>strong {
+    display: block;
+    color: var(--text-heading);
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.next-action-content>p {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.next-action-content svg {
+    flex-shrink: 0;
+}
+
+.collection-next-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 18px;
+    align-items: stretch;
+}
+
+.collection-next-actions>button,
+.next-action-more {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 42px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-raised);
+    color: var(--text-secondary);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.collection-next-actions>button.primary {
+    background: #009b39;
+    border-color: #009b39;
+    color: white;
+}
+
+.collection-next-actions>button.primary:hover {
+    background: #008530;
+}
+
+.collection-next-actions>button.alternative:hover,
+.next-action-more:hover {
+    background: var(--surface-blue);
+}
+
+.next-action-menu {
+    flex: 0 0 50px;
+}
+
+.next-action-more {
+    width: 100%;
+    height: 100%;
+}
+
+.next-action-more>svg {
+    transform: rotate(90deg);
+}
+
+.collection-next-actions button:focus-visible {
+    outline: 2px solid var(--collection-blue);
+    outline-offset: 2px;
+}
+
+.applications-page .application-detail-layout .application-detail-main>.application-resume-detail-section {
+    padding: 16px 18px;
+}
+
+.applications-page :is(.application-resume-detail-empty, .application-resume-detail-card) {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 12px;
+    min-height: 40px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.applications-page .application-resume-detail-empty>svg,
+.applications-page .application-resume-detail-icon {
+    width: 24px;
+    height: 28px;
+    flex: 0 0 24px;
+    color: var(--text-heading);
+    border-radius: 0;
+}
+
+.applications-page .application-resume-detail-empty>span,
+.applications-page .application-resume-detail-copy {
+    flex: 1;
+    min-width: 0;
+    gap: 4px;
+}
+
+.applications-page .application-resume-detail-empty strong {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    white-space: normal;
+}
+
+.applications-page .application-resume-detail-empty strong svg {
+    flex-shrink: 0;
+    color: #efa900;
+    fill: #fff1bd;
+}
+
+.applications-page :is(.application-resume-detail-empty, .application-resume-detail-copy) small {
+    margin: 0;
+    white-space: normal;
+    overflow: visible;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.applications-page .application-resume-detail-empty>.application-section-action,
+.applications-page .application-resume-download {
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 36px;
+    padding: 7px 12px;
+    border: 1px solid color-mix(in srgb, var(--collection-blue) 20%, var(--border));
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--collection-blue) 4%, var(--surface));
+    color: var(--collection-blue);
+    font-size: 12px;
+    font-weight: 650;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+@container collection-detail (max-width: 380px) {
+    .applications-page .application-detail-layout .application-detail-main>.application-next-action-section {
+        padding: 16px;
+    }
+
+    .collection-next-actions {
+        gap: 8px;
+    }
+
+    .collection-next-actions>button {
+        padding-inline: 8px;
+        font-size: 12px;
+    }
+
+    .next-action-menu {
+        flex-basis: 42px;
+    }
+
+    .applications-page :is(.application-resume-detail-empty, .application-resume-detail-card) {
+        flex-wrap: wrap;
+    }
+
+    .applications-page .application-resume-detail-empty>span,
+    .applications-page .application-resume-detail-copy {
+        flex-basis: calc(100% - 36px);
+    }
+
+    .applications-page .application-resume-detail-empty>.application-section-action,
+    .applications-page .application-resume-download {
+        margin-left: 36px;
+    }
+}
+
+/* Full application detail layout. */
+.applications-page .application-reference-detail {
+    padding: 30px 24px;
+}
+
+.application-reference-detail .application-detail-company-location {
+    margin-top: 8px;
+    font-size: 16px;
+    font-weight: 400;
+}
+
+.application-reference-detail .application-detail-company {
+    font-weight: 400;
+    color: var(--text-secondary);
+}
+
+.application-reference-detail .application-detail-context-separator {
+    display: inline;
+    width: auto;
+    height: auto;
+    background: transparent;
+}
+
+.application-reference-detail .application-detail-status-row {
+    margin-top: 18px;
+    padding-bottom: 0;
+    gap: 12px;
+}
+
+.application-reference-detail .application-detail-status-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 38px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface-soft);
+    color: var(--text-secondary);
+}
+
+.application-reference-detail .application-detail-status-date svg {
+    width: 18px;
+    height: 18px;
+}
+
+.application-reference-detail .application-detail-header .status-select {
+    min-height: 38px;
+}
+
+.application-reference-detail .application-detail-summary {
+    padding-top: 14px;
+    padding-bottom: 0;
+}
+
+.application-reference-detail .application-detail-posting-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.applications-page .application-reference-detail .application-detail-main>.application-next-action-section {
+    margin-top: 28px;
+    margin-bottom: 22px;
+    padding: 16px 26px 16px;
+    background: light-dark(#f6f5ff, #201e32);
+    border-color: light-dark(#dddfff, #3b365e);
+}
+
+.application-reference-detail .next-action-heading h3 {
+    text-transform: uppercase;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.application-reference-detail .next-action-due-badge:not(.overdue) {
+    padding: 6px 14px;
+    border: 0;
+    border-radius: 999px;
+    background: light-dark(#ece4ff, #382663);
+    color: light-dark(#7728ff, #c3a0ff);
+}
+
+.application-reference-detail .next-action-content>strong {
+    font-size: 20px;
+}
+
+.application-reference-detail .next-action-content>p {
+    font-size: 16px;
+}
+
+.application-reference-detail .collection-next-actions>button {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.applications-page .application-reference-detail .application-detail-main>.resume-not-recorded {
+    padding: 14px 18px;
+    margin-bottom: 26px;
+    background: light-dark(#fffbf1, #302819);
+    border: 1px solid light-dark(#ffe4ac, #63502b);
+    border-radius: 9px;
+}
+
+.application-reference-detail .resume-not-recorded .application-resume-detail-empty {
+    min-height: 28px;
+    flex-wrap: nowrap;
+    gap: 18px;
+}
+
+.application-reference-detail .resume-not-recorded .application-resume-detail-empty>svg {
+    color: #ed9800;
+    width: 22px;
+    height: 22px;
+}
+
+.application-reference-detail .resume-not-recorded .application-resume-detail-empty>span {
+    flex: 1;
+}
+
+.application-reference-detail .resume-not-recorded .application-resume-detail-empty strong {
+    font-size: 14px;
+}
+
+.applications-page .application-reference-detail .resume-not-recorded .application-section-action {
+    padding: 0;
+    margin: 0;
+    min-height: 28px;
+    background: transparent;
+    border: 0;
+    color: var(--collection-blue);
+}
+
+.applications-page .application-reference-detail .application-detail-main> :is(.application-detail-interviews-section, .application-notes-card, .application-facts-section) {
+    padding: 20px 0 24px;
+    border-top: 1px solid var(--border);
+}
+
+.applications-page .application-reference-detail .application-detail-section h3 {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.applications-page .application-reference-detail .next-action-heading h3 {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.application-reference-detail :is(.application-detail-interviews-section, .application-notes-card) .application-section-action {
+    border: 0;
+    padding: 4px 0 4px 8px;
+    background: transparent;
+    color: var(--accent-strong);
+    font-size: 13px;
+}
+
+.application-reference-detail .application-interview-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 14px;
+    padding: 12px 16px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: var(--surface-raised);
+}
+
+.application-reference-detail .application-interview-copy {
+    min-width: 0;
+}
+
+.application-reference-detail .application-interview-copy strong {
+    font-size: 16px;
+    font-weight: 650;
+}
+
+.application-reference-detail .application-interview-copy span {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.application-reference-detail .application-interview-copy span svg {
+    display: none;
+}
+
+.application-reference-detail .application-interview-item .status-pill.scheduled {
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: light-dark(#f4efff, #302347);
+    color: light-dark(#7728ff, #c3a0ff);
+}
+
+.application-reference-detail .collection-facts {
+    gap: 0;
+    margin-top: 12px;
+}
+
+.application-reference-detail .collection-facts>div {
+    padding: 8px 2px;
+    border-bottom: 1px solid var(--border);
+    grid-template-columns: minmax(100px, 1fr) minmax(0, 2fr);
+}
+
+.application-reference-detail .collection-facts>div:last-child {
+    border-bottom: 0;
+}
+
+@container collection-detail (max-width: 380px) {
+    .applications-page .application-reference-detail .application-detail-main>.application-next-action-section {
+        padding: 16px;
+    }
+
+    .application-reference-detail .resume-not-recorded .application-resume-detail-empty {
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .application-reference-detail .resume-not-recorded .application-resume-detail-empty>span {
+        flex-basis: calc(100% - 34px);
+    }
+
+    .application-reference-detail .resume-not-recorded .application-section-action {
+        margin-left: 34px;
+    }
+
+    .application-reference-detail .application-interview-item {
+        gap: 8px;
+        padding: 12px;
+    }
+}
+
+.applications-page .application-reference-detail .application-detail-company-location,
+.applications-page .application-reference-detail .application-detail-company {
+    font-weight: 400;
+    color: var(--text-secondary);
+}
+
+.applications-page .application-reference-detail .application-notes-card>p.is-empty,
+.applications-page .application-reference-detail .application-interviews-empty {
+    color: var(--text-muted);
+    font-weight: 400;
+}
+/* Keep expanded controls and applied filters together in one compact surface. */
+.applications-page .collection-controls { margin-bottom: 16px; }
+.applications-page .collection-filters-panel {
+    gap: 12px;
+    margin-top: 12px;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-raised);
+}
+.collection-filters-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; }
+.collection-filters-heading > strong { color: var(--text-secondary); font-size: 13px; font-weight: 650; }
+.applications-page .collection-filter-reset { min-height: 28px; padding: 4px 0; color: var(--text-muted); font-size: 12px; white-space: nowrap; }
+.applications-page .collection-filter-reset:hover { color: var(--collection-blue); }
+.applications-page .collection-filter-fields { grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 280px)); gap: 10px; }
+.applications-page .collection-filter-fields > select,
+.applications-page .collection-filter-fields .applications-date-filter-trigger { min-height: 40px; background-color: var(--surface-soft); border-color: var(--border); font-size: 13px; color: var(--text-secondary); }
+.applications-page .collection-filters-button:is(:hover, [aria-expanded="true"]) { color: var(--collection-blue); border-color: color-mix(in srgb, var(--collection-blue) 30%, var(--border)); background: color-mix(in srgb, var(--collection-blue) 5%, var(--surface-raised)); }
+.collection-applied-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-top: 12px; border-top: 1px solid var(--border); }
+.collection-applied-filters.is-collapsed { padding-top: 10px; border: 0; }
+.collection-applied-filters .active-filter-chips { flex: 1; display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; padding: 0; border: 0; background: transparent; }
+.collection-applied-filters .active-filter-chip { min-height: 30px; padding: 5px 9px; border: 1px solid color-mix(in srgb, var(--collection-blue) 18%, var(--border)); border-radius: 6px; background: color-mix(in srgb, var(--collection-blue) 5%, var(--surface-raised)); color: var(--text-secondary); }
+.collection-applied-filters .active-filter-chip > span { overflow-wrap: anywhere; text-align: left; }
+.collection-applied-filters .active-filter-chip strong { font-weight: 600; }
+.collection-applied-filters .active-filter-chip:hover { border-color: var(--collection-blue); background: var(--collection-selected); }
+.collection-applied-filters .active-filter-chip:focus-visible,
+.applications-page .collection-filter-fields > select:focus-visible,
+.applications-page .collection-filter-reset:focus-visible { outline: 2px solid var(--collection-blue); outline-offset: 2px; }
+@container collection-list (max-width: 620px) {
+    .applications-page .collection-filter-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container collection-list (max-width: 400px) {
+    .applications-page .collection-filters-panel { padding: 12px; }
+    .applications-page .collection-filter-fields { grid-template-columns: minmax(0, 1fr); }
+}

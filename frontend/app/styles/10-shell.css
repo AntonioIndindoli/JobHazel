@@ -147,7 +147,6 @@
     margin-left: min(14%, 340px);
 }
 
-.dashboard-page-content,
 .topbar {
     padding:
         0 calc(var(--page-gutter) + env(safe-area-inset-right)) 0 calc(var(--page-gutter) + env(safe-area-inset-left));

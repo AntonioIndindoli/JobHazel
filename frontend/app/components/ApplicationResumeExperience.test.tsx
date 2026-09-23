@@ -103,6 +103,17 @@ function renderApplicationsView() {
 }
 
 describe("application resume experience", () => {
+    it("filters from the quick views and clears the needs-action filter", async () => {
+        renderApplicationsView();
+        const views = screen.getByRole("navigation", { name: "applications views" });
+        await userEvent.click(within(views).getByRole("button", { name: /Applied/ }));
+        expect(within(screen.getByRole("list")).queryByText("Platform Engineer")).toBeNull();
+        await userEvent.click(within(views).getByRole("button", { name: /Needs action/ }));
+        expect(screen.getByText("No applications match these filters")).toBeTruthy();
+        await userEvent.click(screen.getByRole("button", { name: "Remove Tasks filter: Needs action" }));
+        expect(within(screen.getByRole("list")).getByText("Platform Engineer")).toBeTruthy();
+    });
+
     it("shows and downloads the selected resume, then filters to applications with no resume", async () => {
         const { onDownloadResume } = renderApplicationsView();
 
@@ -125,6 +136,6 @@ describe("application resume experience", () => {
         ).toBeGreaterThan(0);
         expect(within(applicationList).queryByText("Product Engineer")).toBeNull();
         await userEvent.click(screen.getByRole("button", { name: /Platform EngineerNorthstar/ }));
-        expect(screen.getByText("No resume attached")).toBeTruthy();
+        expect(screen.getByText("No resume recorded")).toBeTruthy();
     });
 });

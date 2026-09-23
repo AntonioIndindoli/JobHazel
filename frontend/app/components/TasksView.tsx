@@ -20,6 +20,7 @@ import type {
     Task,
 } from "../lib/types";
 import { AppIcon } from "./AppIcon";
+import { CollectionTabs } from "./CollectionTabs";
 import { CollectionListControls } from "./CollectionListControls";
 import { ActiveFilterChips, type ActiveFilterChip } from "./ActiveFilterChips";
 import { CollectionPaneCollapse, CollectionPaneDivider } from "./CollectionPaneControls";
@@ -201,6 +202,7 @@ export function TasksView({
 
     return (
         <section className={isMobileDetailOpen ? "applications-page tasks-page mobile-page-detail-open" : "applications-page tasks-page"}>
+            <CollectionTabs label="tasks views" value={filters.status} options={[{ value: "", label: "All", count: tasks.length }, ...(["today", "overdue", "completed"] as const).map(value => ({ value, label: TASK_STATUS_LABELS[value], count: tasks.filter(item => getTaskDueState(item, timeZone) === value).length }))]} onChange={value => setFilters(current => ({ ...current, status: value as TaskFilters["status"] }))} />
             <div
                 ref={detailPane.containerRef}
                 style={detailPane.splitStyle}
@@ -208,6 +210,7 @@ export function TasksView({
             >
                 <aside className="application-list-panel tasks-list-panel">
                     <CollectionListControls
+                        activeFilters={<ActiveFilterChips chips={activeFilterChips} />}
                         noun="tasks"
                         search={<label className="applications-search-field">
                             <AppIcon name="search" size={18} />
@@ -259,7 +262,7 @@ export function TasksView({
                         sortOptions={[{ value: "dueDate:asc", label: "Due date: soonest first" }, { value: "dueDate:desc", label: "Due date: latest first" }, { value: "title:asc", label: "Task: A to Z" }, { value: "title:desc", label: "Task: Z to A" }, { value: "applicationTitle:asc", label: "Application: A to Z" }, { value: "applicationTitle:desc", label: "Application: Z to A" }, { value: "type:asc", label: "Type: A to Z" }, { value: "type:desc", label: "Type: Z to A" }, { value: "status:asc", label: "Status: A to Z" }, { value: "status:desc", label: "Status: Z to A" }]}
                         onSortChange={value => { const [key, direction] = value.split(":"); setSortKey(key as SortKey); setSortDirection(direction as SortDirection); }}
                     />
-                    <ActiveFilterChips chips={activeFilterChips} />
+
                     <BulkActions selection={bulk} count={sortedTasks.length} noun="tasks" onApply={onBulkApply} fields={[{ key: "type", label: "Type", options: TASK_TYPES.map(type => ({ value: type, label: getTaskTypeLabel(type) })) }]} />
 
                     {sortedTasks.length > 0 ? (
@@ -313,6 +316,7 @@ export function TasksView({
                                         >
                                             {TASK_STATUS_LABELS[state]}
                                         </span>
+                                        <AppIcon name="arrow-right" size={18} className="collection-record-chevron" />
                                     </div></BulkRow>
                                 );
                             })}

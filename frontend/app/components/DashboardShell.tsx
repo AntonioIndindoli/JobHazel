@@ -6,6 +6,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { NAV_ITEMS } from "../lib/constants";
 import type { DashboardView } from "../lib/types";
 import { AppIcon } from "./AppIcon";
+import { CollectionTabsTarget } from "./CollectionTabs";
 
 type DashboardShellProps = {
     children: ReactNode;
@@ -31,6 +32,8 @@ export function DashboardShell({
     topbarPageControls,
 }: DashboardShellProps) {
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+    const [collectionTabsTarget, setCollectionTabsTarget] = useState<HTMLDivElement | null>(null);
+    const isCollectionView = ["applications", "interviews", "tasks", "contacts"].includes(currentView);
     const mobileNavToggleRef = useRef<HTMLButtonElement>(null);
     const mobileNavCloseRef = useRef<HTMLButtonElement>(null);
 
@@ -90,7 +93,8 @@ export function DashboardShell({
     }
 
     return (
-        <div className={`dashboard-shell view-${currentView}`}>
+        <CollectionTabsTarget.Provider value={collectionTabsTarget}>
+        <div className={`dashboard-shell view-${currentView}${isCollectionView ? " collection-workspace" : ""}`}>
             <button
                 type="button"
                 className={isMobileNavOpen ? "sidebar-backdrop open" : "sidebar-backdrop"}
@@ -222,9 +226,11 @@ export function DashboardShell({
                             {topbarPageControls}
                         </div>
                     )}
+                    {isCollectionView && <div className="collection-header-tabs" ref={setCollectionTabsTarget} />}
                 </header>
                 <div className="dashboard-page-content">{children}</div>
             </main>
         </div>
+        </CollectionTabsTarget.Provider>
     );
 }

@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { CONTACT_RELATIONSHIPS, CONTACT_RELATIONSHIP_LABELS, EMPTY_CONTACT_FORM } from "../lib/constants";
 import type { Application, Contact, ContactFormValues } from "../lib/types";
 import { AppIcon } from "./AppIcon";
+import { CollectionTabs } from "./CollectionTabs";
 import { CollectionListControls } from "./CollectionListControls";
 import { ActiveFilterChips } from "./ActiveFilterChips";
 import { CollectionPaneCollapse, CollectionPaneDivider } from "./CollectionPaneControls";
@@ -101,6 +102,7 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
     }, [filtered.length, hasActiveFilters, onSummaryChange]);
 
     return <section className={isMobileDetailOpen ? "applications-page contacts-page mobile-page-detail-open" : "applications-page contacts-page"}>
+            <CollectionTabs label="contacts views" value={relationship} options={[{ value: "", label: "All", count: contacts.length }, ...CONTACT_RELATIONSHIPS.map(value => ({ value, label: CONTACT_RELATIONSHIP_LABELS[value], count: contacts.filter(item => item.relationship === value).length }))]} onChange={setRelationship} />
         <div
             ref={setSplitPaneNode}
             style={splitStyle}
@@ -108,6 +110,7 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
         >
             <div className="application-list-panel contacts-list" aria-label="Contacts list">
                 <CollectionListControls
+                        activeFilters={<ActiveFilterChips chips={relationship ? [{ id: "relationship", label: "Relationship", value: CONTACT_RELATIONSHIP_LABELS[relationship], onRemove: () => setRelationship("") }] : []} />}
                     noun="contacts"
                     search={<label className="applications-search-field contacts-search"><AppIcon name="search" size={18} /><input aria-label="Search contacts" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name, company, role, or email" /></label>}
                     filters={<select aria-label="Filter contacts by relationship" value={relationship} onChange={(e) => setRelationship(e.target.value)}><option value="">All relationships</option>{CONTACT_RELATIONSHIPS.map((item) => <option key={item} value={item}>{CONTACT_RELATIONSHIP_LABELS[item]}</option>)}</select>}
@@ -120,7 +123,7 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
                     sortOptions={[{ value: "name:asc", label: "Name: A to Z" }, { value: "name:desc", label: "Name: Z to A" }, { value: "companyName:asc", label: "Company: A to Z" }, { value: "companyName:desc", label: "Company: Z to A" }, { value: "relationship:asc", label: "Relationship: A to Z" }, { value: "relationship:desc", label: "Relationship: Z to A" }, { value: "updatedAt:desc", label: "Recently updated" }, { value: "updatedAt:asc", label: "Least recently updated" }]}
                     onSortChange={value => { const [key, direction] = value.split(":"); setSortKey(key as typeof sortKey); setSortDirection(direction as typeof sortDirection); }}
                 />
-                <ActiveFilterChips chips={relationship ? [{ id: "relationship", label: "Relationship", value: CONTACT_RELATIONSHIP_LABELS[relationship], onRemove: () => setRelationship("") }] : []} />
+
                     <BulkActions selection={bulk} count={sortedContacts.length} noun="contacts" onApply={onBulkApply} fields={[{ key: "relationship", label: "Relationship", options: CONTACT_RELATIONSHIPS.map(relationship => ({ value: relationship, label: CONTACT_RELATIONSHIP_LABELS[relationship] })) }]} />
                 {sortedContacts.length ? sortedContacts.map((contact) => <BulkRow key={contact.id} selection={bulk} id={contact.id} label={contact.name}><button type="button" className={selected?.id === contact.id ? "contact-row active" : "contact-row"} onClick={() => openMobileDetail(contact.id)}>
                     <span className="contact-avatar">{initials(contact.name)}</span><span className="contact-row-copy"><strong>{contact.name}</strong><span>{contact.role || CONTACT_RELATIONSHIP_LABELS[contact.relationship]}</span><small>{contact.companyName || "No company linked"}</small></span><AppIcon name="arrow-right" size={17} />

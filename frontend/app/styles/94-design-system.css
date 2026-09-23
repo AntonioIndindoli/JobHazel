@@ -90,6 +90,8 @@ textarea,
 }
 
 .dashboard-page-content {
+padding-left: calc(var(--page-gutter) + env(safe-area-inset-left));
+padding-right: calc(var(--page-gutter) + env(safe-area-inset-right));
     padding-bottom: var(--space-6);
 }
 
