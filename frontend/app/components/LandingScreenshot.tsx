@@ -3,8 +3,14 @@
 import Image from "next/image";
 import { useState } from "react";
 import { AppIcon } from "./AppIcon";
+import applications from "../../public/landing/applications.png";
+import jobImport from "../../public/landing/import.png";
+import analytics from "../../public/landing/analytics.png";
+import interviews from "../../public/landing/interviews.png";
 
-export function LandingScreenshot({ name, alt }: { name: string; alt: string }) {
+const screenshots = { applications, import: jobImport, analytics, interviews };
+
+export function LandingScreenshot({ name, alt }: { name: keyof typeof screenshots; alt: string }) {
     const [missing, setMissing] = useState(false);
 
     return (
@@ -16,10 +22,8 @@ export function LandingScreenshot({ name, alt }: { name: string; alt: string }) 
                 </div>
             ) : (
                 <Image
-                    src={`/landing/${name}.png`}
+                    src={screenshots[name]}
                     alt={alt}
-                    width={1600}
-                    height={1000}
                     sizes="(max-width: 850px) 100vw, 600px"
                     onError={() => setMissing(true)}
                 />

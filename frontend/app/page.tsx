@@ -1,5 +1,10 @@
 "use client";
 
+import { applyBulkChange, type BulkResource } from "./lib/bulk-actions";
+import type { BulkChange } from "./components/BulkActions";
+
+import { TaskTimeZoneContext, useTaskClock } from "./lib/task-timezone";
+
 import { sessionFetch as fetch } from "./lib/session-fetch";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
@@ -175,6 +180,8 @@ export default function MainPage() {
     const [memberSince, setMemberSince] = useState("");
     const [password, setPassword] = useState("");
     const [token, setToken] = useState("");
+    const taskClock = useTaskClock(token);
+    const { timeZone } = taskClock;
     const [authStatus, setAuthStatus] = useState<AuthStatus>("checking");
     const authRevision = useRef(0);
     const [message, setMessage] = useState("");
@@ -1524,7 +1531,7 @@ export default function MainPage() {
             title: taskForm.title,
             description: taskForm.description,
             applicationId: taskForm.applicationId || null,
-            dueDate: toTaskDueDatePayload(taskForm.dueDate),
+            dueDate: toTaskDueDatePayload(taskForm.dueDate, timeZone),
             type: taskForm.type,
         };
     }
@@ -1758,7 +1765,7 @@ export default function MainPage() {
         if (!res.ok) return setMessage(data.message ?? "Interview save failed");
 
         closeInterviewForm();
-        setMessage(wasEditing ? "Interview updated." : "Interview saved.");
+        setMessage(data.notification?.needsAttention ? "Interview saved; reminder scheduling needs attention. Retry in Settings → Notifications & reminders." : wasEditing ? "Interview updated." : "Interview saved.");
         loadInterviews();
         loadApplications();
         loadTasks();
@@ -1771,7 +1778,7 @@ export default function MainPage() {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) return setMessage(data.message ?? "Interview status update failed");
-        setMessage("Interview status updated.");
+        setMessage(data.notification?.needsAttention ? "Interview status updated; reminder scheduling or cancellation needs attention. Retry in Settings → Notifications & reminders." : "Interview status updated.");
         loadInterviews();
         loadApplications();
         loadTasks();
@@ -1887,6 +1894,46 @@ export default function MainPage() {
         loadTasks();
     }
 
+    async function bulkUpdate(resource: BulkResource, ids: string[], change: BulkChange) {
+        const entries = ids.map(id => {
+            const record = resource === "applications" ? applications.find(item => item.id === id)
+                : resource === "interviews" ? interviews.find(item => item.id === id)
+                : resource === "tasks" ? tasks.find(item => item.id === id)
+                : contacts.find(item => item.id === id);
+            const label = record && ("name" in record ? record.name : "title" in record ? record.title : record.applicationTitle);
+            return { id, label: label || id };
+        });
+        const result = await applyBulkChange(authedFetch, resource, entries, change);
+        // Reload related collections once, including server-generated tasks and history.
+        const refreshed = await Promise.allSettled([
+            (async () => {
+                const response = await authedFetch("/applications", {});
+                if (!response.ok) throw new Error();
+                setApplications((await response.json()).applications);
+            })(),
+            (async () => {
+                const response = await authedFetch("/interviews", {});
+                if (!response.ok) throw new Error();
+                setInterviews((await response.json()).interviews);
+            })(),
+            (async () => {
+                const response = await authedFetch("/tasks", {});
+                if (!response.ok) throw new Error();
+                setTasks((await response.json()).tasks);
+            })(),
+            (async () => {
+                const response = await authedFetch("/contacts", {});
+                if (!response.ok) throw new Error();
+                setContacts((await response.json()).contacts);
+            })(),
+            loadApplicationHistories(),
+        ]);
+        if (refreshed.some(item => item.status === "rejected")) {
+            result.warning = [result.warning, "Some lists could not refresh. Reload the page before making further changes."].filter(Boolean).join(" ");
+        }
+        return result;
+    }
+
     async function removeApplication(id: string) {
         const res = await authedFetch(`/applications/${id}`, { method: "DELETE" });
         if (!res.ok) return setMessage("Delete failed");
@@ -1902,6 +1949,7 @@ export default function MainPage() {
         if (interviewEditingId === id) closeInterviewForm();
         setInterviews((prev) => prev.filter((interview) => interview.id !== id));
         setMessage("Interview deleted.");
+        loadTasks();
     }
 
     async function removeTask(id: string) {
@@ -1969,7 +2017,7 @@ export default function MainPage() {
             title: task.title,
             description: task.description ?? "",
             applicationId: task.applicationId ?? "",
-            dueDate: toTaskDueDateInput(task.dueDate),
+            dueDate: toTaskDueDateInput(task.dueDate, timeZone),
             type: task.type,
         });
         setIsApplicationFormOpen(false);
@@ -2044,7 +2092,7 @@ export default function MainPage() {
         : INTERVIEW_OUTCOMES;
     const taskSummary = tasks.reduce(
         (summary, task) => {
-            const state = getTaskDueState(task);
+            const state = getTaskDueState(task, timeZone);
             if (state === "completed") summary.completed += 1;
             else summary.open += 1;
             if (state === "overdue") summary.overdue += 1;
@@ -2071,6 +2119,7 @@ export default function MainPage() {
     };
 
     return (
+        <TaskTimeZoneContext.Provider value={taskClock}>
         <DashboardShell
             currentView={currentView}
             firstName={firstName}
@@ -2265,6 +2314,7 @@ export default function MainPage() {
                 />
             ) : currentView === "applications" ? (
                 <ApplicationsView
+                    onBulkApply={(ids, change) => bulkUpdate("applications", ids, change)}
                     applications={applications}
                     focusedApplicationId={focusedApplicationId}
                     interviews={interviews}
@@ -2312,6 +2362,7 @@ export default function MainPage() {
                 />
             ) : currentView === "interviews" ? (
                 <InterviewsView
+                    onBulkApply={(ids, change) => bulkUpdate("interviews", ids, change)}
                     key={focusedInterviewId ?? "all-interviews"}
                     applications={applications}
                     focusedInterviewId={focusedInterviewId}
@@ -2325,6 +2376,7 @@ export default function MainPage() {
                 />
             ) : currentView === "tasks" ? (
                 <TasksView
+                    onBulkApply={(ids, change) => bulkUpdate("tasks", ids, change)}
                     applications={applications}
                     tasks={tasks}
                     onCompleteTask={completeTask}
@@ -2336,6 +2388,7 @@ export default function MainPage() {
                 />
             ) : currentView === "contacts" ? (
                 <ContactsView
+                    onBulkApply={(ids, change) => bulkUpdate("contacts", ids, change)}
                     key={contactCreateRequest}
                     applications={applications}
                     contacts={contacts}
@@ -2439,5 +2492,6 @@ export default function MainPage() {
                 onSuccess={addCompletedResume}
             />
         </DashboardShell>
+        </TaskTimeZoneContext.Provider>
     );
 }

@@ -23,28 +23,97 @@
 
 .application-detail-panel .application-detail-header-actions {
     display: flex;
+    align-items: center;
     flex-shrink: 0;
-    gap: 6px;
+    gap: 8px;
 }
 
-.application-detail-panel .application-detail-header-actions > button,
-.application-detail-panel .application-detail-menu-trigger {
+.application-detail-panel .application-detail-header-actions > button.alternative,
+.application-detail-panel .application-detail-header-actions .application-detail-menu-trigger {
     display: grid;
     place-items: center;
-    width: 36px;
-    min-width: 36px;
-    height: 36px;
+    width: 38px;
+    min-width: 38px;
+    height: 38px;
+    min-height: 38px;
     padding: 0;
     border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--surface);
+    border-radius: 10px;
+    background: var(--surface-raised);
     color: var(--text-secondary);
-    box-shadow: none;
+    box-shadow: var(--shadow-card);
+    cursor: pointer;
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.application-detail-panel .application-detail-header-actions > button.alternative:hover,
+.application-detail-panel .application-detail-header-actions .application-detail-menu-trigger:is(:hover, [aria-expanded="true"]) {
+    border-color: var(--border-strong);
+    background: var(--surface-muted);
+    color: var(--text-heading);
+}
+
+.application-detail-panel .application-detail-header-actions button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
 }
 
 .application-detail-panel .application-detail-header-actions svg {
     width: 18px;
     height: 18px;
+}
+
+.application-detail-panel .application-detail-menu-popover {
+    top: calc(100% + 8px);
+    min-width: 196px;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-floating);
+}
+
+.application-detail-panel .application-detail-menu-popover button {
+    min-height: 40px;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.application-detail-panel .application-detail-menu-popover button.danger-text {
+    color: var(--danger);
+}
+
+.application-detail-panel .application-detail-menu-popover button.danger-text:is(:hover, :focus-visible) {
+    background: var(--danger-surface);
+}
+
+.application-detail-panel .application-detail-menu-popover svg {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+}
+
+@media (pointer: coarse) {
+    .application-detail-panel .application-detail-header-actions > button.alternative,
+    .application-detail-panel .application-detail-header-actions .application-detail-menu-trigger {
+        width: 44px;
+        min-width: 44px;
+        height: 44px;
+        min-height: 44px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .application-detail-panel .application-detail-header-actions button {
+        transition: none;
+    }
 }
 
 .application-detail-panel .application-detail-company-location {
@@ -219,7 +288,6 @@
     display: block;
     min-height: 0;
     padding: 16px;
-    border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--surface-soft);
     color: var(--text-secondary);

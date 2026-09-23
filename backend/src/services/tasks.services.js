@@ -1,5 +1,20 @@
 import { getPrismaAsync } from "../db/prisma.js";
 
+import { localDay, publicPreferences } from "./notification-policy.js";
+
+// Locate midnight using calendar days, including DST transitions.
+export function taskDayStart(now, timeZone) {
+  const day = localDay(now, timeZone);
+  let low = now.getTime() - 48 * 3600000;
+  let high = now.getTime();
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (localDay(new Date(middle), timeZone) < day) low = middle + 1;
+    else high = middle;
+  }
+  return new Date(low);
+}
+
 const TASK_INCLUDE = {
   application: {
     select: {
@@ -24,7 +39,7 @@ function withApplication(task) {
   };
 }
 
-function buildTaskWhere(userId, query = {}) {
+export function buildTaskWhere(userId, query = {}, timeZone = "UTC", now = new Date()) {
   const where = { userId };
   if (query.applicationId) where.applicationId = String(query.applicationId);
   if (query.type) where.type = String(query.type);
@@ -33,10 +48,10 @@ function buildTaskWhere(userId, query = {}) {
 
   if (query.overdue === "true") {
     where.completedAt = null;
-    where.dueDate = { lt: new Date() };
+    where.dueDate = { lt: taskDayStart(now, timeZone) };
   } else if (query.upcoming === "true") {
     where.completedAt = null;
-    where.dueDate = { gte: new Date() };
+    where.dueDate = { gte: taskDayStart(now, timeZone) };
   } else if (query.startDate || query.endDate) {
     where.dueDate = {};
     if (query.startDate) where.dueDate.gte = new Date(String(query.startDate));
@@ -53,8 +68,9 @@ async function logTaskActivity(tx, userId, applicationId, type, message, metadat
 
 export async function listTasks(userId, query = {}) {
   const prisma = await getPrismaAsync();
+  const preferences = publicPreferences(await prisma.notificationPreference.findUnique({ where: { userId } }));
   const tasks = await prisma.task.findMany({
-    where: buildTaskWhere(userId, query),
+    where: buildTaskWhere(userId, query, preferences.timeZone),
     include: TASK_INCLUDE,
     orderBy: [{ completedAt: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }],
   });
@@ -145,6 +161,43 @@ export async function updateTaskAutomationPreferences(userId, payload) {
   });
 }
 
+// skipDuplicates keeps concurrent source events from inserting duplicate tasks
+// without raising a unique violation that would abort the source transaction.
+async function createAutomatedTask(tx, { data }) {
+  const result = await tx.task.createMany({ data: [data], skipDuplicates: true });
+  if (!result.count) return null;
+  const where = data.sourceInterviewId
+    ? { sourceInterviewId: data.sourceInterviewId }
+    : { sourceApplicationId: data.sourceApplicationId };
+  return tx.task.findUnique({ where, include: TASK_INCLUDE });
+}
+
+export async function removePendingInterviewTasks(tx, userId, interviewId) {
+  await tx.task.deleteMany({ where: { userId, sourceInterviewId: interviewId, completedAt: null } });
+}
+
+export async function syncInterviewThankYouTask(tx, userId, previous, interview) {
+  if (interview.outcome === "CANCELED") {
+    await removePendingInterviewTasks(tx, userId, interview.id);
+    return;
+  }
+  const task = await tx.task.findFirst({ where: { userId, sourceInterviewId: interview.id } });
+  if (!task) {
+    if (previous.outcome === "CANCELED") await maybeCreateInterviewThankYouTask(tx, userId, interview);
+    return;
+  }
+  if (task.completedAt) return;
+  const data = { applicationId: interview.applicationId };
+  if (previous.interviewerName !== interview.interviewerName) {
+    data.title = `Send thank-you note${interview.interviewerName ? ` to ${interview.interviewerName}` : ""}`;
+  }
+  if (task.dueDate && +new Date(previous.scheduledAt) !== +new Date(interview.scheduledAt)) {
+    // Preserve the existing delay, including user adjustments.
+    data.dueDate = new Date(+new Date(task.dueDate) + +new Date(interview.scheduledAt) - +new Date(previous.scheduledAt));
+  }
+  await tx.task.updateMany({ where: { id: task.id, userId, completedAt: null }, data });
+}
+
 export async function maybeCreateAppliedFollowUpTask(tx, userId, application) {
   const user = await tx.user.findUnique({
     where: { id: userId },
@@ -153,10 +206,11 @@ export async function maybeCreateAppliedFollowUpTask(tx, userId, application) {
   if (!user?.autoCreateFollowUpTasks) return null;
 
   const dueDate = addDays(application.dateApplied ?? new Date(), user.followUpTaskDelayDays);
-  const task = await tx.task.create({
+  const task = await createAutomatedTask(tx, {
     data: {
       userId,
       applicationId: application.id,
+      sourceApplicationId: application.id,
       title: `Follow up on ${application.title}`,
       description: "Check in on the application if you have not received a response.",
       dueDate,
@@ -164,11 +218,13 @@ export async function maybeCreateAppliedFollowUpTask(tx, userId, application) {
     },
     include: TASK_INCLUDE,
   });
+  if (!task) return null;
   await logTaskActivity(tx, userId, application.id, "TASK_ADDED", `Follow-up task added for ${application.title}`, { taskId: task.id });
   return withApplication(task);
 }
 
 export async function maybeCreateInterviewThankYouTask(tx, userId, interview) {
+  if (interview.outcome === "CANCELED") return null;
   const user = await tx.user.findUnique({
     where: { id: userId },
     select: { autoCreateThankYouTasks: true, thankYouTaskDelayDays: true },
@@ -177,10 +233,11 @@ export async function maybeCreateInterviewThankYouTask(tx, userId, interview) {
 
   const dueDate = addDays(interview.scheduledAt, user.thankYouTaskDelayDays);
   const titleSuffix = interview.interviewerName ? ` to ${interview.interviewerName}` : "";
-  const task = await tx.task.create({
+  const task = await createAutomatedTask(tx, {
     data: {
       userId,
       applicationId: interview.applicationId,
+      sourceInterviewId: interview.id,
       title: `Send thank-you note${titleSuffix}`,
       description: "Send a concise thank-you note after the interview.",
       dueDate,
@@ -188,6 +245,7 @@ export async function maybeCreateInterviewThankYouTask(tx, userId, interview) {
     },
     include: TASK_INCLUDE,
   });
+  if (!task) return null;
   await logTaskActivity(tx, userId, interview.applicationId, "TASK_ADDED", "Thank-you task added after interview", {
     taskId: task.id,
     interviewId: interview.id,

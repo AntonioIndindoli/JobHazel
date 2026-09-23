@@ -22,10 +22,11 @@ function getValidDate(value: string | null) {
     return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function startOfDay(date: Date) {
-    const copy = new Date(date);
-    copy.setHours(0, 0, 0, 0);
-    return copy;
+export function taskCalendarDay(date: Date, timeZone = "UTC") {
+    const parts = Object.fromEntries(new Intl.DateTimeFormat("en", {
+        timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(date).map(({ type, value }) => [type, value]));
+    return Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day)) / 86400000;
 }
 
 export function getTaskTimestamp(task: Task) {
@@ -33,14 +34,14 @@ export function getTaskTimestamp(task: Task) {
     return date?.getTime() ?? 0;
 }
 
-export function getTaskDueState(task: Task): TaskDueState {
+export function getTaskDueState(task: Task, timeZone = "UTC", now = new Date()): TaskDueState {
     if (task.completedAt) return "completed";
 
     const dueDate = getValidDate(task.dueDate);
     if (!dueDate) return "unscheduled";
 
-    const dueDay = startOfDay(dueDate).getTime();
-    const today = startOfDay(new Date()).getTime();
+    const dueDay = taskCalendarDay(dueDate, timeZone);
+    const today = taskCalendarDay(now, timeZone);
 
     if (dueDay < today) return "overdue";
     if (dueDay === today) return "today";
@@ -51,36 +52,45 @@ export function isOpenTask(task: Task) {
     return !task.completedAt;
 }
 
-export function isTaskNeedingAttention(task: Task) {
-    const state = getTaskDueState(task);
+export function isTaskNeedingAttention(task: Task, timeZone = "UTC") {
+    const state = getTaskDueState(task, timeZone);
     return state === "overdue" || state === "today";
 }
 
-export function formatTaskDueDate(value: string | null) {
+export function formatTaskDueDate(value: string | null, timeZone = "UTC") {
     const date = getValidDate(value);
     if (!date) return "No due date";
 
     return new Intl.DateTimeFormat(undefined, {
+        timeZone,
         month: "short",
         day: "numeric",
         year: "numeric",
     }).format(date);
 }
 
-export function toTaskDueDateInput(value: string | null) {
+export function toTaskDueDateInput(value: string | null, timeZone = "UTC") {
     const date = getValidDate(value);
     if (!date) return "";
-
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
+    return new Date(taskCalendarDay(date, timeZone) * 86400000).toISOString().slice(0, 10);
 }
 
-export function toTaskDueDatePayload(value: string) {
-    if (!value) return null;
-    const date = new Date(`${value}T12:00:00`);
-    return Number.isNaN(date.getTime()) ? null : date.toISOString();
+export function toTaskDueDatePayload(value: string, timeZone = "UTC") {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+    const target = new Date(`${value}T12:00:00Z`);
+    if (Number.isNaN(+target) || target.toISOString().slice(0, 10) !== value) return null;
+    // Resolve noon in the configured zone, independent of the device timezone.
+    let instant = +target;
+    for (let i = 0; i < 4; i++) {
+        const parts = Object.fromEntries(new Intl.DateTimeFormat("en", {
+            timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+            hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23",
+        }).formatToParts(new Date(instant)).map(({ type, value }) => [type, value]));
+        const local = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute, +parts.second);
+        if (local === +target) return new Date(instant).toISOString();
+        instant += +target - local;
+    }
+    return null;
 }
 
 export function sortTasksByDueDate(tasks: Task[]) {

@@ -96,6 +96,8 @@ function loadResumeMaintenanceEnv(source, nodeEnv) {
 
 export function loadEnv(source = process.env) {
   const nodeEnv = optional(source, "NODE_ENV", "development");
+  const notificationMode = optional(source, "NOTIFICATION_MODE", "legacy");
+  if (!["legacy", "daily-digest-scheduled-interviews", "drain"].includes(notificationMode)) throw new Error("Invalid NOTIFICATION_MODE.");
   const resumeStorage = loadResumeStorageEnv(source, nodeEnv);
   const resumeMaintenance = loadResumeMaintenanceEnv(source, nodeEnv);
   const authBaseUrl = optional(source, "NEON_AUTH_BASE_URL", null)?.replace(/\/$/, "");
@@ -125,6 +127,11 @@ export function loadEnv(source = process.env) {
     CRON_SECRET: optional(source, "CRON_SECRET", null),
     API_PUBLIC_URL: optional(source, "API_PUBLIC_URL", nodeEnv === "production" ? null : "http://localhost:4000")?.replace(/\/$/, ""),
     NOTIFICATION_UNSUBSCRIBE_SECRET: optional(source, "NOTIFICATION_UNSUBSCRIBE_SECRET", null),
+    NOTIFICATION_MODE: notificationMode,
+    RESEND_WEBHOOK_SECRET: optional(source, "RESEND_WEBHOOK_SECRET", null),
+    NOTIFICATION_RUN_BUDGET_MS: integer(source, "NOTIFICATION_RUN_BUDGET_MS", 45000, { min: 1000, max: 240000 }),
+    NOTIFICATION_COHORT_LIMIT: integer(source, "NOTIFICATION_COHORT_LIMIT", 5, { max: 1000 }),
+    NOTIFICATION_PROVIDER_INTERVAL_MS: integer(source, "NOTIFICATION_PROVIDER_INTERVAL_MS", 200, { min: 100, max: 5000 }),
     RESUME_UPLOAD_MAX_BYTES: integer(source, "RESUME_UPLOAD_MAX_BYTES", 5 * 1024 * 1024),
     RESUME_ACTIVE_LIMIT: integer(source, "RESUME_ACTIVE_LIMIT", 10),
     RESUME_SIGNED_URL_TTL_SECONDS: integer(source, "RESUME_SIGNED_URL_TTL_SECONDS", 300, {

@@ -4,7 +4,7 @@ JobHazel is a full-stack job application tracker for organizing applications, in
 
 **App:** [jobhazel.com](https://jobhazel.com/)
 
-This README describes the implementation in this repository as of **September 12, 2026**, including current workspace changes. It does not confirm that every change has been deployed or verified in production. External account integrations and Chrome Web Store distribution are not implemented.
+This README describes the implementation in this repository as of **September 19, 2026**, including current workspace changes. It does not confirm that every change has been deployed or verified in production. External account integrations and Chrome Web Store distribution are not implemented.
 
 ## Implemented features
 
@@ -19,6 +19,7 @@ This README describes the implementation in this repository as of **September 12
 | Interviews | Create, edit, and delete interviews linked to applications; record type, schedule, duration, location, meeting URL, interviewer, notes, and outcome. View upcoming interviews. |
 | Tasks | Create, edit, delete, complete, and reopen tasks. Support follow-ups, preparation, thank-you notes, reminders, due dates, and overdue/upcoming views. |
 | Task automation | Optional automatic follow-up and thank-you task creation, with separately configurable delays of 0–365 days and per-user preferences. |
+| Email reminders | Opt-in upcoming-task, overdue-task, and interview emails for verified addresses, with lead times, time zones, quiet hours, and unsubscribe controls. Supports a once-daily task digest plus provider-scheduled interview reminders behind a rollout setting; legacy delivery remains the default. See [notification operations](backend/NOTIFICATIONS.md). |
 | Contacts | Manage recruiters, referrals, hiring managers, employees, and other contacts, with company/application associations, email, LinkedIn URL, role, and notes. |
 | Resume library | Upload immutable PDF versions; list, rename, annotate, download, archive/unarchive, and permanently delete unreferenced resumes. |
 | Application resumes | Select one resume per application, change/remove it, download it from application details, and filter by resume or “No resume.” Association changes create history events. |
@@ -34,7 +35,7 @@ The six fixed application statuses are **Saved, Applied, Interviewing, Offer, Re
 
 New accounts verify their email through Neon Auth using six-digit codes. Neon manages password recovery, password hashes, sessions and revocation. Web credentials stay in an HttpOnly cookie, and transient failures preserve the session. See [Neon Auth migration and production cutover](backend/NEON_AUTH_MIGRATION.md); the migration has been tested on an isolated branch and is not yet deployed to production.
 
-Requests to resend verification or recover a password return non-enumerating responses whether or not the email identifies an eligible account. Existing accounts created before the verification migration are marked verified by the migration. Dedicated abuse rate limits for these public email endpoints and re-verification after a signed-in email-address change are not yet implemented.
+Requests to resend verification or recover a password return non-enumerating responses whether or not the email identifies an eligible account. Existing accounts created before the verification migration are marked verified by the migration. Both endpoints have persistent, per-endpoint rate limits of 20 requests per IP and 3 per normalized email in a 15-minute window. Limited requests return HTTP 429 with `AUTH_RATE_LIMITED` and `Retry-After`. Signed-in email-address changes are unavailable in the current managed-auth configuration.
 
 ### Job importing
 
@@ -72,10 +73,10 @@ The [resume feature document](RESUME-FEATURE.md) describes the broader phased sc
 
 | Area | What is still missing or limited |
 | --- | --- |
-| Task automation | Creates in-app tasks, not email/push notifications. Thank-you tasks are created when an interview is added, with a due date based on its schedule; there is no background detection of interview completion. |
+| Task automation | Creates in-app tasks; optional email reminders are handled separately by the notification scheduler. Push notifications are not implemented. Thank-you tasks are created when an interview is added, with a due date based on its schedule; there is no background detection of interview completion. |
 | Analytics | Most dashboard metrics are calculated in the frontend from applications, interviews, and activity history. Resume-version performance is aggregated by `GET /resumes/analytics`; there is no general-purpose backend analytics API. |
 | Resume intelligence | The schema has an optional extracted-text field, but no PDF text-extraction pipeline, scoring, matching, or tailoring workflow. |
-| Account access | Email verification, verification resend, signed-in password changes, and forgot-password recovery are implemented. Dedicated recovery/resend rate limits, re-verification after changing an account email, social sign-in, and MFA are not. |
+| Account access | Email verification, verification resend, signed-in password changes, and forgot-password recovery are implemented. Persistent recovery/resend rate limits are also implemented. Changing an account email, social sign-in, and MFA are unavailable. |
 | Companies | Company records support applications and contacts, but there is no dedicated company-management screen/API. |
 | Mobile | Responsive web UI exists; installable PWA and offline support do not. |
 | Imports | URL/text review and Chrome-extension capture work, but CSV import is absent. |
@@ -93,7 +94,7 @@ These are potential extensions, not available features or release commitments:
 - Resume text extraction, job matching, scoring, rewriting, and tailoring. Resume-version outcome comparisons are implemented.
 - Cover-letter, portfolio, writing-sample, and take-home document management; DOC/DOCX uploads.
 - Custom pipeline stages.
-- Email/push follow-up reminders.
+- Push follow-up reminders (opt-in email reminders are implemented).
 - Public shareable job-search activity reports.
 - Installable/offline PWA support.
 
@@ -185,7 +186,7 @@ Run `npm run build` from `frontend/` to generate the static site in `frontend/ou
 
 The backend can run with `npm start` or its included Vercel entry point. Apply migrations before relying on new schema-dependent features. Production configuration requires complete R2 settings and a maintenance secret, plus appropriate `CORS_ORIGIN` and secure cookie settings.
 
-For Vercel Cron, set `CRON_SECRET`. The backend falls back to it when `RESUME_CLEANUP_SECRET` is unset; if both are set, ensure the cron-supplied bearer token matches the effective cleanup secret. The included cron configuration requests cleanup daily at 04:17 UTC. Other hosts need an equivalent authenticated scheduled request.
+For Vercel Cron, set `CRON_SECRET`. The backend falls back to it when `RESUME_CLEANUP_SECRET` is unset; if both are set, ensure the cron-supplied bearer token matches the effective cleanup secret. The included cron configuration requests cleanup daily at 04:17 UTC. Notification maintenance stays daily at 15:07 UTC (`7 15 * * *`). The new `daily-digest-scheduled-interviews` mode schedules interviews ahead of time through Resend and prepares daily task summaries. The default `legacy` mode can still miss short reminder windows; see [notification rollout and delivery limits](backend/NOTIFICATIONS.md). Other hosts need equivalent authenticated scheduled requests.
 
 ## Implemented API routes
 
@@ -206,6 +207,8 @@ Paths are relative to the backend origin, with **no `/api` prefix** in Express. 
 | Imports | `POST /imports/create-draft`, `GET /imports/:id`, `POST /imports/:id/convert` |
 | Parser | `POST /parser/job-description` |
 | Resumes | `GET /resumes`, `GET /resumes/analytics`, `POST /resumes/uploads`, `POST /resumes/:id/complete`, `GET /resumes/:id/download-url`, `PATCH /resumes/:id`, `DELETE /resumes/:id` |
+| Notifications | `GET /notifications/preferences`, `PATCH /notifications/preferences`, `GET /notifications/unsubscribe`, `POST /notifications/unsubscribe` |
+| Notification maintenance | `GET /notifications/maintenance/deliver` (requires `CRON_SECRET` bearer authentication) |
 | Resume maintenance | `GET /resumes/maintenance/status`, `GET /resumes/maintenance/cleanup`, `POST /resumes/maintenance/cleanup` |
 
 Most analytics are computed in [the frontend analytics module](frontend/app/lib/application-analytics.ts). Resume performance is the exception and uses the authenticated `GET /resumes/analytics` aggregation endpoint.

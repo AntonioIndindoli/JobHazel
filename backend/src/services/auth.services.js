@@ -1,3 +1,5 @@
+import { cancelNotificationOperations, drainOperations } from "./notification-operations.services.js";
+import { env } from "../config/env.js";
 import { getPrismaAsync } from "../db/prisma.js";
 import { getResumeStorage } from "./resume-storage.services.js";
 
@@ -24,7 +26,7 @@ export async function deleteAccount(userId, password, overrides = {}) {
     return { status: 400, body: { message: "Password is incorrect." } };
   }
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     if (typeof tx.$queryRaw === "function") {
       await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
     }
@@ -75,10 +77,15 @@ export async function deleteAccount(userId, password, overrides = {}) {
       };
     }
 
+    await cancelNotificationOperations(tx, userId, {}, { erase: true });
     if (overrides.deleteIdentity) await overrides.deleteIdentity(tx);
     await tx.user.delete({ where: { id: userId } });
     return { status: 204, body: null };
   });
+  if (result.status === 204 && env.NOTIFICATION_MODE !== "legacy") {
+    try { await drainOperations(prisma, { allowCreate: false }); } catch { /* durable daily repair */ }
+  }
+  return result;
 }
 
 export async function buildAccountExport(userId) {

@@ -1774,4 +1774,17 @@ html[data-theme="dark"] .landing-story {
 
 .story-feature-tile>.story-screenshot {
     margin-top: 28px;
+    aspect-ratio: 5 / 4;
+    flex-shrink: 0;
+}
+
+.story-feature-tile>.story-screenshot img {
+    height: 100%;
+    object-fit: contain;
+    object-position: top center;
+}
+
+.story-feature-tile>.story-screenshot .story-screenshot-placeholder {
+    height: 100%;
+    aspect-ratio: auto;
 }

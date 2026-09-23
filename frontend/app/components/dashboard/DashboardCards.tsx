@@ -1,5 +1,7 @@
 "use client";
 
+import { useTaskTimeZone } from "../../lib/task-timezone";
+
 import {
     formatInterviewDateTime,
     getInterviewTypeLabel,
@@ -50,6 +52,7 @@ export function DashboardCards({
     onViewInterviews,
     onViewTasks,
 }: DashboardCardsProps) {
+    const { timeZone } = useTaskTimeZone();
     const visibleInterviews = upcomingInterviews.slice(0, 3);
     const visibleTasks = sortTasksByDueDate(tasks.filter(isOpenTask)).slice(0, 3);
     const today = new Date();
@@ -178,9 +181,9 @@ export function DashboardCards({
                                 <div className="interview-card-item-container">
                                     <small>
                                         <AppIcon name="clock" size={13} />
-                                        {formatTaskDueDate(task.dueDate)}
+                                        {formatTaskDueDate(task.dueDate, timeZone)}
                                     </small>
-                                    <em className={getTaskDueState(task)}>
+                                    <em className={getTaskDueState(task, timeZone)}>
                                         {getTaskTypeLabel(task.type)}
                                     </em>
                                 </div>

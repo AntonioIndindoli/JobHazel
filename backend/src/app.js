@@ -1,4 +1,5 @@
 import express from "express";
+import { handleNotificationWebhook } from "./services/notification-webhook.services.js";
 import cors from "cors";
 import { protectSessionOrigin } from "./middleware/session-origin.middleware.js";
 import healthRoutes from "./routes/health.routes.js";
@@ -25,6 +26,11 @@ export function createApp() {
     .filter(Boolean);
 
   app.use(cors({ origin: corsOrigins, credentials: true }));
+  app.post("/notifications/webhook", express.raw({ type: "application/json", limit: "128kb" }), async (req, res) => {
+    if (!Buffer.isBuffer(req.body)) return res.status(400).json({ message: "Expected a JSON webhook body." });
+    await handleNotificationWebhook(req.body.toString("utf8"), req.headers);
+    res.status(200).json({ received: true });
+  });
   app.use(express.json());
   app.use(protectSessionOrigin);
 

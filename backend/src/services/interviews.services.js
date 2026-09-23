@@ -1,5 +1,6 @@
+import { markNotificationDirty, cancelNotificationOperations, flushUserNotifications } from "./notification-operations.services.js";
 import { getPrismaAsync } from "../db/prisma.js";
-import { maybeCreateInterviewThankYouTask } from "./tasks.services.js";
+import { maybeCreateInterviewThankYouTask, syncInterviewThankYouTask, removePendingInterviewTasks } from "./tasks.services.js";
 
 const INTERVIEW_INCLUDE = {
   application: {
@@ -74,10 +75,10 @@ export async function listInterviews(userId, query = {}) {
   return interviews.map(withApplication);
 }
 
-export async function createInterview(userId, payload) {
+export async function createInterview(userId, payload, notificationOptions = {}) {
   const prisma = await getPrismaAsync();
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const application = await tx.application.findFirst({
       where: { id: payload.applicationId, userId },
       include: { company: { select: { name: true } } },
@@ -128,6 +129,7 @@ export async function createInterview(userId, payload) {
     const createdTasks = [];
     const thankYouTask = await maybeCreateInterviewThankYouTask(tx, userId, interview);
     if (thankYouTask) createdTasks.push(thankYouTask);
+    await markNotificationDirty(tx, userId);
 
     return {
       interview: withApplication(interview),
@@ -135,12 +137,15 @@ export async function createInterview(userId, payload) {
       createdTasks,
     };
   });
+  if (result?.interview) result.notification = await flushUserNotifications(userId, { prisma, ...notificationOptions });
+  return result;
 }
 
-export async function updateInterview(userId, id, payload) {
+export async function updateInterview(userId, id, payload, notificationOptions = {}) {
   const prisma = await getPrismaAsync();
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "Interview" WHERE "id" = ${id} AND "userId" = ${userId} FOR UPDATE`;
     const existing = await tx.interview.findFirst({
       where: { id, userId },
       include: INTERVIEW_INCLUDE,
@@ -167,18 +172,30 @@ export async function updateInterview(userId, id, payload) {
       next: pickInterviewSnapshot(updated),
     });
 
+    await syncInterviewThankYouTask(tx, userId, existing, updated);
+    await markNotificationDirty(tx, userId);
     return { interview: withApplication(updated) };
   });
+  if (result?.interview) result.notification = await flushUserNotifications(userId, { prisma, ...notificationOptions });
+  return result;
 }
 
-export async function deleteInterview(userId, id) {
+export async function deleteInterview(userId, id, notificationOptions = {}) {
   const prisma = await getPrismaAsync();
-  const existing = await prisma.interview.findFirst({
-    where: { id, userId },
-    select: { id: true },
-  });
-  if (!existing) return false;
+  const result = await prisma.$transaction(async (tx) => {
+    await tx.$queryRaw`SELECT "id" FROM "Interview" WHERE "id" = ${id} AND "userId" = ${userId} FOR UPDATE`;
+    const existing = await tx.interview.findFirst({
+      where: { id, userId },
+      select: { id: true },
+    });
+    if (!existing) return false;
 
-  await prisma.interview.delete({ where: { id } });
-  return true;
+    await removePendingInterviewTasks(tx, userId, id);
+    await cancelNotificationOperations(tx, userId, { kind: "INTERVIEW_REMINDER", resourceId: id });
+    await markNotificationDirty(tx, userId);
+    await tx.interview.delete({ where: { id } });
+    return true;
+  });
+  if (result) await flushUserNotifications(userId, { prisma, ...notificationOptions });
+  return result;
 }

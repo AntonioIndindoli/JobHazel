@@ -362,7 +362,6 @@
     min-height: 48px;
     padding: 13px 14px;
     border: 0;
-    background: var(--surface-muted);
 }
 
 .application-next-action-section>.application-detail-empty-copy {
@@ -370,7 +369,6 @@
     margin: 0;
     padding: 13px 14px;
     border-radius: 8px;
-    background: var(--surface-muted);
     color: var(--text-soft);
     font-size: 13px;
     font-weight: 650;
@@ -930,9 +928,7 @@
     min-height: 58px;
     margin: 0;
     padding: 12px 18px;
-    border: 1px solid var(--border-strong);
     border-radius: 11px;
-    background: var(--surface-muted);
     color: var(--text-primary);
     font-size: 14px;
     font-weight: 500;

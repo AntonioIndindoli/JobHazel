@@ -1,3 +1,4 @@
+import { markNotificationDirty, cancelNotificationOperations, runDailyNotifications } from "./notification-operations.services.js";
 import crypto from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { env } from "../config/env.js";
@@ -27,7 +28,10 @@ export async function updateNotificationPreferences(userId, body, { prisma } = {
       throw Object.assign(new Error("Quiet hours must have different start and end times."), { status: 400 });
     }
     const saved = await tx.notificationPreference.upsert({ where: { userId }, create: { userId, ...merged }, update: data });
+    await markNotificationDirty(tx, userId);
+    if (Object.keys(data).some((key) => publicPreferences(current)[key] !== data[key])) await cancelNotificationOperations(tx, userId, { kind: "TASK_DIGEST" });
     if (data.emailEnabled === false) {
+      await cancelNotificationOperations(tx, userId);
       await tx.notificationDelivery.updateMany({ where: { userId, status: { in: ["PENDING", "PROCESSING"] } },
         data: { status: "CANCELED", leaseUntil: null, leaseToken: null, payload: Prisma.DbNull } });
     } else {
@@ -45,11 +49,14 @@ export async function unsubscribeNotifications(token, { prisma, config = env } =
     const users = await tx.$queryRaw`SELECT "id", "email" FROM "User" WHERE "id" = ${data.userId} FOR UPDATE`;
     if (!users.length || users[0].email !== data.email) throw Object.assign(new Error("This unsubscribe link is no longer valid."), { status: 400 });
     await tx.notificationPreference.upsert({ where: { userId: data.userId }, create: { userId: data.userId, emailEnabled: false }, update: { emailEnabled: false } });
+    await cancelNotificationOperations(tx, data.userId, {}, { config });
+    await markNotificationDirty(tx, data.userId, config);
     await tx.notificationDelivery.updateMany({
       where: { userId: data.userId, status: { in: ["PENDING", "PROCESSING"] } },
       data: { status: "CANCELED", leaseUntil: null, leaseToken: null, payload: Prisma.DbNull },
     });
   });
+  return data.userId;
 }
 
 async function* pages(model, args) {
@@ -142,6 +149,7 @@ export async function deliverNotification(id, { prisma, config = env, clock = ()
 }
 
 export async function runNotificationDelivery({ prisma, config = env, clock = () => new Date(), send = sendNotificationEmail } = {}) {
+  if (config.NOTIFICATION_MODE && config.NOTIFICATION_MODE !== "legacy") return runDailyNotifications({ prisma, config, clock });
   function validOrigin(value) {
     try {
       const url = new URL(value);
@@ -153,6 +161,9 @@ export async function runNotificationDelivery({ prisma, config = env, clock = ()
     throw Object.assign(new Error("Configure Resend, public APP_URL/API_PUBLIC_URL and a long NOTIFICATION_UNSUBSCRIBE_SECRET for reminder delivery (HTTPS required in production)."), { status: 503 });
   }
   prisma ??= await getPrismaAsync();
+  if (prisma.notificationOperation && await prisma.notificationOperation.count({ where: { firstAttemptAt: { not: null }, status: { notIn: ["SENT", "CANCELED", "FAILED", "SKIPPED"] } } })) {
+    throw Object.assign(new Error("Resolve scheduled notification operations in drain mode before enabling legacy delivery."), { status: 503 });
+  }
   const started = Date.now();
   const queued = await enqueueNotifications(prisma, clock());
   const now = clock();

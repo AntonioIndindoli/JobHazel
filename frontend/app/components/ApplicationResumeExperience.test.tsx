@@ -2,17 +2,12 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { EMPTY_APPLICATION_FORM } from "../lib/constants";
 import type { Application, ResumeVersion } from "../lib/types";
-import { ApplicationDrawer } from "./ApplicationDrawer";
 import { ApplicationsView, NO_RESUME_FILTER } from "./ApplicationsView";
 
 const activeResume = createResume("resume-active", "Product resume");
 const archivedResume = createResume("resume-archived", "2025 resume", {
     archivedAt: "2026-08-01T12:00:00.000Z",
-});
-const otherArchivedResume = createResume("resume-other-archived", "Old resume", {
-    archivedAt: "2026-07-01T12:00:00.000Z",
 });
 
 const applications: Application[] = [
@@ -119,6 +114,7 @@ describe("application resume experience", () => {
             applications[0].resumeVersion,
         );
 
+        await userEvent.click(screen.getByRole("button", { name: "Filters" }));
         await userEvent.selectOptions(
             screen.getByLabelText("Filter by resume"),
             NO_RESUME_FILTER,

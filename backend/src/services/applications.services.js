@@ -1,3 +1,4 @@
+import { markNotificationDirty, cancelNotificationOperations, flushUserNotifications } from "./notification-operations.services.js";
 import { getPrismaAsync } from "../db/prisma.js";
 import { normalizeUrl } from "../utils/url.js";
 import { maybeCreateAppliedFollowUpTask } from "./tasks.services.js";
@@ -199,7 +200,7 @@ export async function updateApplication(userId, id, payload) {
   const duplicates = await detectDuplicates(prisma, userId, payload, id);
   if (duplicates.length) return { duplicateCandidates: duplicates.map(withApplicationRelations) };
 
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     const company = payload.companyName
       ? await tx.company.upsert({
           where: { userId_name: { userId, name: payload.companyName } },
@@ -242,8 +243,11 @@ export async function updateApplication(userId, id, payload) {
       }
     }
 
+    await markNotificationDirty(tx, userId);
     return { application: withApplicationRelations(updated), createdTasks };
   });
+  result.notification = await flushUserNotifications(userId, { prisma });
+  return result;
 }
 
 export async function transitionApplicationStatus(userId, id, status) {
@@ -352,6 +356,12 @@ export async function deleteApplication(userId, id) {
   const prisma = await getPrismaAsync();
   const existing = await prisma.application.findFirst({ where: { id, userId } });
   if (!existing) return false;
-  await prisma.application.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    const interviews = await tx.interview.findMany({ where: { userId, applicationId: id }, select: { id: true } });
+    await cancelNotificationOperations(tx, userId, { kind: "INTERVIEW_REMINDER", resourceId: { in: interviews.map((item) => item.id) } });
+    await markNotificationDirty(tx, userId);
+    await tx.application.delete({ where: { id } });
+  });
+  await flushUserNotifications(userId, { prisma });
   return true;
 }

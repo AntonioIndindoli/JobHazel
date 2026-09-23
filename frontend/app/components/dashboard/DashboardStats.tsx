@@ -1,5 +1,7 @@
 "use client";
 
+import { useTaskTimeZone } from "../../lib/task-timezone";
+
 import { useEffect, useState } from "react";
 
 import {
@@ -178,6 +180,7 @@ export function DashboardStats({
     onApplicationGoalChange,
     tasks,
 }: DashboardStatsProps) {
+    const { timeZone } = useTaskTimeZone();
     const [isGoalEditorOpen, setIsGoalEditorOpen] = useState(false);
     const [statsTimeframe, setStatsTimeframe] =
         useState<DashboardTimeframe>("");
@@ -232,7 +235,7 @@ export function DashboardStats({
     const upcomingInterviewCount = statsInterviews.filter(
         isUpcomingInterview,
     ).length;
-    const dueTaskCount = statsTasks.filter(isTaskNeedingAttention).length;
+    const dueTaskCount = statsTasks.filter((task) => isTaskNeedingAttention(task, timeZone)).length;
     const responseCount = statsApplications.filter(
         (application) => RESPONSE_STATUSES.has(application.status),
     ).length;

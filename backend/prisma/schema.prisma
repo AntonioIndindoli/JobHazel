@@ -115,6 +115,8 @@ model User {
   resumeEndpointRateLimits ResumeEndpointRateLimit[]
   notificationPreference  NotificationPreference?
   notificationDeliveries  NotificationDelivery[]
+  notificationOperations NotificationOperation[]
+  notificationSync       NotificationSync?
   createdAt               DateTime        @default(now())
   updatedAt               DateTime        @updatedAt
 }
@@ -196,6 +198,7 @@ model Application {
   contacts        Contact[]
   interviews      Interview[]
   tasks           Task[]
+  automatedFollowUp Task? @relation("FollowUpSource")
   activityLogs    ActivityLog[]
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
@@ -241,6 +244,7 @@ model Interview {
   interviewerName String?
   notes           String?
   outcome         InterviewOutcome @default(SCHEDULED)
+  thankYouTask     Task? @relation("ThankYouSource")
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 
@@ -254,6 +258,10 @@ model Task {
   user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   applicationId String?
   application   Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  sourceApplicationId String? @unique
+  sourceApplication Application? @relation("FollowUpSource", fields: [sourceApplicationId], references: [id], onDelete: SetNull)
+  sourceInterviewId String? @unique
+  sourceInterview Interview? @relation("ThankYouSource", fields: [sourceInterviewId], references: [id], onDelete: SetNull)
   title         String
   description   String?
   dueDate       DateTime?
@@ -380,9 +388,72 @@ model NotificationPreference {
 }
 
 enum NotificationKind {
+  TASK_DIGEST
   UPCOMING_TASK
   OVERDUE_TASK
   INTERVIEW_REMINDER
+}
+
+// This ledger is independent of the legacy delivery worker. Rows survive deletion
+// as cancellation tombstones; recipient/payload data is cleared before deletion.
+model NotificationOperation {
+  id              String   @id @default(cuid())
+  userId          String?
+  user            User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  kind            NotificationKind
+  resourceId      String?
+  familyKey       String
+  revision        String
+  digestKey       String?  @unique
+  desired         Boolean  @default(true)
+  status          String   @default("PENDING")
+  sendAt          DateTime
+  expiresAt       DateTime
+  eventAt         DateTime
+  payload         Json?
+  providerId      String?  @unique
+  firstAttemptAt  DateTime?
+  attempts        Int      @default(0)
+  nextAttemptAt   DateTime @default(now())
+  leaseToken      String?
+  leaseUntil      DateTime?
+  providerEvent   String?
+  providerEventAt DateTime?
+  sentAt          DateTime?
+  deliveredAt     DateTime?
+  lastError       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, kind, resourceId])
+  @@index([desired, status, nextAttemptAt])
+  @@index([familyKey, createdAt])
+}
+
+model NotificationSync {
+  userId    String @id
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  revision  Int    @default(1)
+  cursor    String?
+  updatedAt DateTime @updatedAt
+}
+
+model NotificationRun {
+  id          String @id
+  cursor      String?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Store only event identity and delivery outcome, never the raw recipient payload.
+model NotificationProviderEvent {
+  id         String @id
+  providerId String
+  type       String
+  eventAt    DateTime
+  createdAt  DateTime @default(now())
+  @@index([providerId, eventAt])
 }
 
 enum NotificationDeliveryStatus {

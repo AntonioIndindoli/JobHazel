@@ -4,7 +4,6 @@ import {
     type KeyboardEvent as ReactKeyboardEvent,
     useCallback,
     useEffect,
-    useMemo,
     useRef,
     useState,
 } from "react";
@@ -16,10 +15,6 @@ import {
     STATUSES,
     STATUS_LABELS,
 } from "../../lib/constants";
-import {
-    getInterviewTimestamp,
-    getInterviewTypeLabel,
-} from "../../lib/interview-utils";
 import type {
     ActivityLog,
     Application,
@@ -66,38 +61,12 @@ function formatAppliedDate(dateApplied: string | null) {
     }).format(date);
 }
 
-function getDisplayInterview(interviews: Interview[]) {
-    const now = Date.now();
-    const validInterviews = interviews.filter(
-        (interview) => getInterviewTimestamp(interview) > 0,
-    );
-    const sourceInterviews = validInterviews.length ? validInterviews : interviews;
-    const upcomingInterview = sourceInterviews
-        .filter(
-            (interview) =>
-                interview.outcome === "SCHEDULED" &&
-                getInterviewTimestamp(interview) >= now,
-        )
-        .sort(
-            (left, right) =>
-                getInterviewTimestamp(left) - getInterviewTimestamp(right),
-        )[0];
-
-    if (upcomingInterview) return upcomingInterview;
-
-    return [...sourceInterviews].sort(
-        (left, right) =>
-            getInterviewTimestamp(right) - getInterviewTimestamp(left),
-    )[0];
-}
-
 export function ApplicationTracker({
     applications,
     filters,
     groupedApplications,
     mobileGroupedApplications,
     historyByApp,
-    interviews,
     openTimelineId,
     trackerApplications,
     onFiltersChange,
@@ -295,22 +264,6 @@ export function ApplicationTracker({
         updateMobileStageOverflow,
     ]);
 
-    const interviewByApplicationId = useMemo(() => {
-        const groupedInterviews = new Map<string, Interview[]>();
-
-        interviews.forEach((interview) => {
-            const existing = groupedInterviews.get(interview.applicationId) ?? [];
-            groupedInterviews.set(interview.applicationId, [...existing, interview]);
-        });
-
-        const selectedInterviews = new Map<string, Interview>();
-        groupedInterviews.forEach((applicationInterviews, applicationId) => {
-            const interview = getDisplayInterview(applicationInterviews);
-            if (interview) selectedInterviews.set(applicationId, interview);
-        });
-
-        return selectedInterviews;
-    }, [interviews]);
 
     return (
         <section className="panel tracker-panel">
@@ -542,9 +495,6 @@ export function ApplicationTracker({
                                 )}
                             {groupedApplications[status].map((application) => (
                                 (() => {
-                                    const interview = interviewByApplicationId.get(
-                                        application.id,
-                                    );
                                     const history = historyByApp[application.id] ?? [];
 
                                     return (

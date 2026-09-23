@@ -1,5 +1,9 @@
 "use client";
 
+import { BulkActions, BulkRow, useBulkSelection, type BulkHandler } from "./BulkActions";
+
+import { useTaskTimeZone } from "../lib/task-timezone";
+
 import { useMemo, useRef, useState } from "react";
 
 import {
@@ -8,12 +12,11 @@ import {
 } from "../lib/application-analytics";
 import {
     formatInterviewDateTime,
-    formatInterviewDuration,
     getInterviewOutcomeLabel,
     getInterviewTypeLabel,
     sortInterviewsBySchedule,
 } from "../lib/interview-utils";
-import { formatTaskDueDate, getTaskDueState, sortTasksByDueDate } from "../lib/task-utils";
+import { taskCalendarDay, formatTaskDueDate, getTaskDueState, sortTasksByDueDate } from "../lib/task-utils";
 import { SOURCES, STATUSES, STATUS_LABELS } from "../lib/constants";
 import type {
     Application,
@@ -23,11 +26,13 @@ import type {
     Task,
 } from "../lib/types";
 import { AppIcon } from "./AppIcon";
+import { CollectionListControls } from "./CollectionListControls";
 import { ActiveFilterChips, type ActiveFilterChip } from "./ActiveFilterChips";
 import { CollectionPaneCollapse, CollectionPaneDivider } from "./CollectionPaneControls";
 import { useCollectionDetailPane } from "./useCollectionDetailPane";
 
 type ApplicationsViewProps = {
+    onBulkApply?: BulkHandler;
     applications: Application[];
     focusedApplicationId?: string | null;
     interviews: Interview[];
@@ -117,11 +122,11 @@ function formatSalaryRange(application: Application) {
     return "Salary not specified";
 }
 
-function formatTaskRemaining(value: string | null) {
+function formatTaskRemaining(value: string | null, timeZone: string) {
     if (!value) return "";
-    const due = new Date(`${value.slice(0, 10)}T23:59:59`);
+    const due = new Date(value);
     if (Number.isNaN(due.getTime())) return "";
-    const days = Math.ceil((due.getTime() - Date.now()) / 86_400_000);
+    const days = taskCalendarDay(due, timeZone) - taskCalendarDay(new Date(), timeZone);
     if (days < 0) return `${Math.abs(days)} day${Math.abs(days) === 1 ? "" : "s"} overdue`;
     if (days === 0) return "Due today";
     return `${days} day${days === 1 ? "" : "s"} remaining`;
@@ -136,13 +141,6 @@ function getSortValue(application: Application, sortKey: SortKey) {
 
 function getStatusLabel(status: string) {
     return isApplicationStatus(status) ? STATUS_LABELS[status] : status;
-}
-
-function getInterviewLocationLabel(interview: Interview) {
-    const location = interview.location?.trim();
-    if (location) return location;
-    if (interview.meetingUrl?.trim()) return "Meeting link saved";
-    return "Location not set";
 }
 
 export function ApplicationsView({
@@ -163,7 +161,9 @@ export function ApplicationsView({
     onStatusChange,
     onUpdateNotes,
     onViewInterview,
+    onBulkApply,
 }: ApplicationsViewProps) {
+    const { timeZone } = useTaskTimeZone();
     const [filters, setFilters] =
         useState<ApplicationsTableFilters>(INITIAL_FILTERS);
     const [sortKey, setSortKey] = useState<SortKey>("dateApplied");
@@ -270,6 +270,7 @@ export function ApplicationsView({
         });
     }, [filteredApplications, sortDirection, sortKey]);
 
+    const bulk = useBulkSelection(sortedApplications, JSON.stringify(filters));
     const selectedApplication =
         sortedApplications.find(
             (application) => application.id === detailPane.selectedId,
@@ -318,37 +319,6 @@ export function ApplicationsView({
             onRemove: () => setFilters((current) => ({ ...current, startDate: "", endDate: "" })),
         }] : []),
     ];
-    const nextActionByApplication = useMemo(() => {
-        const nextActions = new Map<string, { label: string; timestamp: number }>();
-        const now = Date.now();
-
-        interviews.forEach((interview) => {
-            const timestamp = new Date(interview.scheduledAt).getTime();
-            if (!Number.isFinite(timestamp) || timestamp < now) return;
-            const current = nextActions.get(interview.applicationId);
-            if (!current || timestamp < current.timestamp) {
-                nextActions.set(interview.applicationId, {
-                    label: `Interview ${formatDisplayDate(interview.scheduledAt).replace(/, \d{4}$/, "")}`,
-                    timestamp,
-                });
-            }
-        });
-
-        tasks.filter((task) => !task.completedAt).forEach((task) => {
-            if (!task.applicationId || !task.dueDate) return;
-            const timestamp = new Date(`${task.dueDate.slice(0, 10)}T23:59:59`).getTime();
-            if (!Number.isFinite(timestamp) || timestamp < now) return;
-            const current = nextActions.get(task.applicationId);
-            if (!current || timestamp < current.timestamp) {
-                nextActions.set(task.applicationId, {
-                    label: `${task.title} ${formatDisplayDate(task.dueDate).replace(/, \d{4}$/, "")}`,
-                    timestamp,
-                });
-            }
-        });
-
-        return nextActions;
-    }, [interviews, tasks]);
 
     function openMobileDetail(applicationId: string) {
         listScrollPosition.current = window.scrollY;
@@ -366,41 +336,6 @@ export function ApplicationsView({
             window.scrollTo({ top: listScrollPosition.current, behavior: "auto" }),
         );
     }
-    function updateSort(nextSortKey: SortKey) {
-        if (nextSortKey === sortKey) {
-            setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
-            return;
-        }
-
-        setSortKey(nextSortKey);
-        setSortDirection(nextSortKey === "dateApplied" ? "desc" : "asc");
-    }
-
-    function renderSortButton(label: string, nextSortKey: SortKey) {
-        const isActive = sortKey === nextSortKey;
-
-        return (
-            <button
-                type="button"
-                className={isActive ? "table-sort-button active" : "table-sort-button"}
-                onClick={() => updateSort(nextSortKey)}
-                aria-label={`Sort by ${label}${isActive ? `, currently ${sortDirection === "asc" ? "ascending" : "descending"}` : ""}`}
-                aria-pressed={isActive}
-            >
-                <span>{label}</span>
-                <AppIcon
-                    name="chevron-down"
-                    size={14}
-                    className={
-                        isActive && sortDirection === "asc"
-                            ? "sort-icon ascending"
-                            : "sort-icon"
-                    }
-                />
-            </button>
-        );
-    }
-
     return (
         <section className={isMobileDetailOpen ? "applications-page mobile-page-detail-open" : "applications-page"}>
             <div
@@ -410,8 +345,9 @@ export function ApplicationsView({
             >
                 <aside className="application-list-panel">
 
-                    <div className={isFiltersOpen ? "applications-toolbar mobile-filters-open" : "applications-toolbar"} aria-label="Application table filters">
-                        <label className="applications-search-field">
+                    <CollectionListControls
+                        noun="applications"
+                        search={<label className="applications-search-field">
                             <AppIcon name="search" size={18} />
                             <input
                                 aria-label="Search applications"
@@ -421,17 +357,9 @@ export function ApplicationsView({
                                 }
                                 placeholder="Search title, company, location"
                             />
-                        </label>
-                        <button
-                            type="button"
-                            className="mobile-filter-toggle"
-                            aria-expanded={isFiltersOpen}
-                            onClick={() => setIsFiltersOpen((open) => !open)}
-                        >
-                            <AppIcon name="filter" size={18} />
-                            Filters{activeFilterCount ? ` (${activeFilterCount})` : ""}
-                        </button>
-                        <select
+                        </label>}
+                        filters={<><select
+                            aria-label="Filter applications by status"
                             value={filters.status}
                             onChange={(event) =>
                                 setFilters({ ...filters, status: event.target.value })
@@ -445,6 +373,7 @@ export function ApplicationsView({
                             ))}
                         </select>
                         <select
+                            aria-label="Filter applications by source"
                             value={filters.source}
                             onChange={(event) =>
                                 setFilters({ ...filters, source: event.target.value })
@@ -497,33 +426,27 @@ export function ApplicationsView({
                                     </div>
                                 </div>
                             )}
-                        </div>
-                        <button
-                            type="button"
-                            className="interviews-reset-button"
-                            onClick={() => setFilters(INITIAL_FILTERS)}
-                        >
-                            <AppIcon name="history" size={15} />
-                            Reset
-                        </button>
-                    </div>
+                        </div></>}
+                        filtersOpen={isFiltersOpen}
+                        onToggleFilters={() => { setIsFiltersOpen(open => !open); setIsAppliedDateOpen(false); }}
+                        activeFilterCount={activeFilterCount}
+                        hasActiveFilters={Boolean(filters.query.trim() || activeFilterCount)}
+                        onReset={() => { setFilters(INITIAL_FILTERS); setIsAppliedDateOpen(false); }}
+                        sortValue={`${sortKey}:${sortDirection}`}
+                        sortOptions={[{ value: "dateApplied:desc", label: "Applied date: newest first" }, { value: "dateApplied:asc", label: "Applied date: oldest first" }, { value: "title:asc", label: "Role: A to Z" }, { value: "title:desc", label: "Role: Z to A" }, { value: "companyName:asc", label: "Company: A to Z" }, { value: "companyName:desc", label: "Company: Z to A" }, { value: "status:asc", label: "Status: A to Z" }, { value: "status:desc", label: "Status: Z to A" }]}
+                        onSortChange={value => { const [key, direction] = value.split(":"); setSortKey(key as SortKey); setSortDirection(direction as SortDirection); }}
+                    />
                     <ActiveFilterChips chips={activeFilterChips} />
+                    <BulkActions selection={bulk} count={sortedApplications.length} noun="applications" onApply={onBulkApply} fields={[{ key: "status", label: "Status", options: STATUSES.map(status => ({ value: status, label: STATUS_LABELS[status] })) }]} deleteNote="Linked interviews and application history are also deleted; linked tasks and contacts are unlinked." />
 
                     {sortedApplications.length > 0 ? (
                         <div className="application-list" role="list">
-                            <div className="application-table-header applications-table-columns" role="row" aria-label="Application columns and sorting">
-                                {renderSortButton("Role", "title")}
-                                {renderSortButton("Company", "companyName")}
-                                {renderSortButton("Applied date", "dateApplied")}
-                                {renderSortButton("Status", "status")}
-                            </div>
                             {sortedApplications.map((application) => {
                                 const isSelected =
                                     selectedApplication?.id === application.id;
 
                                 return (
-                                    <button
-                                        key={application.id}
+                                    <BulkRow key={application.id} selection={bulk} id={application.id} label={application.title}><button
                                         type="button"
                                         className={
                                             isSelected
@@ -560,7 +483,7 @@ export function ApplicationsView({
                                             </span>
                                             <AppIcon name="arrow-right" size={18} className="mobile-record-chevron" />
                                         </span>
-                                    </button>
+                                    </button></BulkRow>
                                 );
                             })}
                         </div>
@@ -626,8 +549,8 @@ export function ApplicationsView({
                                                 <AppIcon name="dots-vertical" size={25} />
                                             </button>
                                             {isApplicationMenuOpen && (
-                                                <div className="alternative application-detail-menu-popover" role="menu">
-                                                    <button type="button" role="menuitem" onClick={() => { setIsApplicationMenuOpen(false); onRemoveApplication(selectedApplication.id); }}>
+                                                <div className="application-detail-menu-popover" role="menu">
+                                                    <button type="button" role="menuitem" className="danger-text" onClick={() => { setIsApplicationMenuOpen(false); onRemoveApplication(selectedApplication.id); }}>
                                                         <AppIcon name="trash" size={25} /> Delete application
                                                     </button>
                                                 </div>
@@ -742,7 +665,7 @@ export function ApplicationsView({
                                         </div>
                                         {nextTask ? (
                                             <div className="application-next-action-card">
-                                                <button type="button" className={`application-task-checkbox ${getTaskDueState(nextTask)}`} aria-label={`Mark ${nextTask.title} complete`} onClick={() => onCompleteTask(nextTask.id)}>
+                                                <button type="button" className={`application-task-checkbox ${getTaskDueState(nextTask, timeZone)}`} aria-label={`Mark ${nextTask.title} complete`} onClick={() => onCompleteTask(nextTask.id)}>
                                                     <AppIcon name="check" size={15} />
                                                 </button>
                                                 <div>
@@ -750,10 +673,10 @@ export function ApplicationsView({
                                                     <p>
                                                         {nextTask.dueDate ? (
                                                             <>
-                                                                <span>Due {formatTaskDueDate(nextTask.dueDate)}</span>
+                                                                <span>Due {formatTaskDueDate(nextTask.dueDate, timeZone)}</span>
                                                                 <span aria-hidden="true">·</span>
-                                                                <span className={`application-task-due-copy ${getTaskDueState(nextTask)}`}>
-                                                                    {formatTaskRemaining(nextTask.dueDate)}
+                                                                <span className={`application-task-due-copy ${getTaskDueState(nextTask, timeZone)}`}>
+                                                                    {formatTaskRemaining(nextTask.dueDate, timeZone)}
                                                                 </span>
                                                             </>
                                                         ) : "No due date"}

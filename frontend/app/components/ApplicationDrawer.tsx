@@ -28,7 +28,6 @@ export function ApplicationDrawer({
     resumes,
     onClose,
     onFormChange,
-    onRemoveApplication,
     onSubmit,
 }: ApplicationDrawerProps) {
     const isEditing = Boolean(editingId);

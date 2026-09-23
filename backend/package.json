@@ -13,7 +13,8 @@
     "test:notifications:integration": "node scripts/verify-notifications.mjs",
     "db:seed": "node prisma/seed.js",
     "db:dev:reset": "npx prisma migrate reset --force && npm run db:seed",
-    "vercel-build": "prisma generate && prisma migrate deploy"
+    "vercel-build": "prisma generate && prisma migrate deploy",
+    "test:notifications:redesign": "node scripts/verify-notification-redesign.mjs"
   },
   "keywords": [],
   "author": "",
@@ -35,7 +36,8 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "leaflet": "^1.9.4",
-    "pg": "^8.16.3"
+    "pg": "^8.16.3",
+    "svix": "^1.99.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.11",

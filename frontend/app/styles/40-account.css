@@ -88,7 +88,12 @@
   display: grid;
   gap: 18px;
   margin-bottom: 32px;
-  
+}
+
+.account-page > * {
+  width: 100%;
+  max-width: 1000px;
+  min-width: 0;
 }
 
 .account-hero,
@@ -110,9 +115,6 @@
 .settings-content {
   display: grid;
   gap: 18px;
-  max-width: 1000px;
-  width: 100%;
-  min-width: 0;
 }
 
 .settings-card {
@@ -187,17 +189,14 @@
 
 .account-settings-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 18px;
-}
-
-.account-settings-grid > .account-settings-card:last-child {
-  grid-column: 1 / -1;
 }
 
 .account-settings-card,
 .account-danger-zone {
   display: grid;
+  min-width: 0;
   align-content: start;
   gap: 20px;
   padding: 22px;
@@ -620,7 +619,7 @@
 
 .account-export-options {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 
@@ -687,14 +686,6 @@
 }
 
 @media (max-width: 900px) {
-  .account-settings-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .account-settings-grid > .account-settings-card:last-child {
-    grid-column: auto;
-  }
-
   .account-hero-stats {
     display: none;
   }

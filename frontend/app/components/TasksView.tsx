@@ -1,6 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { BulkActions, BulkRow, useBulkSelection, type BulkHandler } from "./BulkActions";
+
+import { useTaskTimeZone } from "../lib/task-timezone";
+
+import { useRef, useState } from "react";
 
 import { TASK_TYPES } from "../lib/constants";
 import {
@@ -16,11 +20,13 @@ import type {
     Task,
 } from "../lib/types";
 import { AppIcon } from "./AppIcon";
+import { CollectionListControls } from "./CollectionListControls";
 import { ActiveFilterChips, type ActiveFilterChip } from "./ActiveFilterChips";
 import { CollectionPaneCollapse, CollectionPaneDivider } from "./CollectionPaneControls";
 import { useCollectionDetailPane } from "./useCollectionDetailPane";
 
 type TasksViewProps = {
+    onBulkApply?: BulkHandler;
     applications: Application[];
     tasks: Task[];
     onCompleteTask: (id: string) => void | Promise<void>;
@@ -65,24 +71,24 @@ const TASK_STATUS_FILTERS: Array<{ value: TaskFilters["status"]; label: string }
     { value: "completed", label: "Completed" },
 ];
 
-function getSearchableTaskText(task: Task) {
+function getSearchableTaskText(task: Task, timeZone: string) {
     return [
         task.title,
         task.description,
         task.applicationTitle,
         task.companyName,
         getTaskTypeLabel(task.type),
-        TASK_STATUS_LABELS[getTaskDueState(task)],
+        TASK_STATUS_LABELS[getTaskDueState(task, timeZone)],
     ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
 }
 
-function getSortValue(task: Task, sortKey: SortKey) {
+function getSortValue(task: Task, sortKey: SortKey, timeZone: string) {
     if (sortKey === "dueDate") return sortTasksByDueDate([task])[0]?.dueDate ?? "";
     if (sortKey === "type") return getTaskTypeLabel(task.type).toLowerCase();
-    if (sortKey === "status") return TASK_STATUS_LABELS[getTaskDueState(task)];
+    if (sortKey === "status") return TASK_STATUS_LABELS[getTaskDueState(task, timeZone)];
 
     return (task[sortKey] ?? "").toString().toLowerCase();
 }
@@ -92,8 +98,8 @@ function getTaskApplicationLabel(task: Task) {
     return `${task.applicationTitle} at ${task.companyName ?? "Unknown company"}`;
 }
 
-function getTaskStatusClass(task: Task) {
-    return getTaskDueState(task).replace("unscheduled", "no-due-date");
+function getTaskStatusClass(task: Task, timeZone: string) {
+    return getTaskDueState(task, timeZone).replace("unscheduled", "no-due-date");
 }
 
 export function TasksView({
@@ -105,7 +111,9 @@ export function TasksView({
     onStartEdit,
     onUpdateDescription,
     onViewApplication,
+    onBulkApply,
 }: TasksViewProps) {
+    const { timeZone } = useTaskTimeZone();
     const [filters, setFilters] = useState<TaskFilters>(INITIAL_FILTERS);
     const [sortKey, setSortKey] = useState<SortKey>("dueDate");
     const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
@@ -119,22 +127,22 @@ export function TasksView({
     const listScrollPosition = useRef(0);
 
 
-    const filteredTasks = useMemo(() => {
+    const filteredTasks = (() => {
         const query = filters.query.trim().toLowerCase();
 
         return tasks.filter((task) => {
-            if (query && !getSearchableTaskText(task).includes(query)) return false;
+            if (query && !getSearchableTaskText(task, timeZone).includes(query)) return false;
             if (filters.type && task.type !== filters.type) return false;
-            if (filters.status && getTaskDueState(task) !== filters.status)
+            if (filters.status && getTaskDueState(task, timeZone) !== filters.status)
                 return false;
             if (filters.applicationId && task.applicationId !== filters.applicationId)
                 return false;
 
             return true;
         });
-    }, [filters, tasks]);
+    })();
 
-    const sortedTasks = useMemo(() => {
+    const sortedTasks = (() => {
         const baseTasks =
             sortKey === "dueDate" ? sortTasksByDueDate(filteredTasks) : [...filteredTasks];
 
@@ -143,20 +151,20 @@ export function TasksView({
         }
 
         return baseTasks.sort((left, right) => {
-            const leftValue = getSortValue(left, sortKey);
-            const rightValue = getSortValue(right, sortKey);
+            const leftValue = getSortValue(left, sortKey, timeZone);
+            const rightValue = getSortValue(right, sortKey, timeZone);
             const directionMultiplier = sortDirection === "asc" ? 1 : -1;
             return String(leftValue).localeCompare(String(rightValue)) * directionMultiplier;
         });
-    }, [filteredTasks, sortDirection, sortKey]);
+    })();
 
+    const bulk = useBulkSelection(sortedTasks, JSON.stringify(filters));
     const selectedTask =
         sortedTasks.find((task) => task.id === detailPane.selectedId) ?? null;
     const selectedTaskApplication = selectedTask?.applicationId
         ? applications.find((application) => application.id === selectedTask.applicationId) ?? null
         : null;
     const selectedDescription = selectedTask?.description?.trim() ?? "";
-    const hasActiveFilters = Object.values(filters).some(Boolean);
     const activeFilterCount = [
         filters.type,
         filters.status,
@@ -172,31 +180,7 @@ export function TasksView({
             onRemove: () => setFilters((current) => ({ ...current, applicationId: "" })),
         }] : []),
     ];
-    const taskActionGroups = useMemo(() => {
-        const groups: Array<{ label: string; tasks: Task[] }> = [
-            {
-                label: "Overdue",
-                tasks: sortedTasks.filter((task) => getTaskDueState(task) === "overdue"),
-            },
-            {
-                label: "Today",
-                tasks: sortedTasks.filter((task) => getTaskDueState(task) === "today"),
-            },
-            {
-                label: "Upcoming",
-                tasks: sortedTasks.filter((task) => {
-                    const state = getTaskDueState(task);
-                    return state === "upcoming" || state === "unscheduled";
-                }),
-            },
-            {
-                label: "Completed",
-                tasks: sortedTasks.filter((task) => getTaskDueState(task) === "completed"),
-            },
-        ];
-
-        return groups.filter((group) => group.tasks.length > 0);
-    }, [sortedTasks]);
+    const taskActionGroups = [{ label: "", tasks: sortedTasks }];
 
     function openMobileDetail(taskId: string) {
         listScrollPosition.current = window.scrollY;
@@ -215,41 +199,6 @@ export function TasksView({
         );
     }
 
-    function updateSort(nextSortKey: SortKey) {
-        if (nextSortKey === sortKey) {
-            setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
-            return;
-        }
-
-        setSortKey(nextSortKey);
-        setSortDirection("asc");
-    }
-
-    function renderSortButton(label: string, nextSortKey: SortKey) {
-        const isActive = sortKey === nextSortKey;
-
-        return (
-            <button
-                type="button"
-                className={isActive ? "table-sort-button active" : "table-sort-button"}
-                onClick={() => updateSort(nextSortKey)}
-                aria-label={`Sort by ${label}${isActive ? `, currently ${sortDirection === "asc" ? "ascending" : "descending"}` : ""}`}
-                aria-pressed={isActive}
-            >
-                <span>{label}</span>
-                <AppIcon
-                    name="chevron-down"
-                    size={14}
-                    className={
-                        isActive && sortDirection === "asc"
-                            ? "sort-icon ascending"
-                            : "sort-icon"
-                    }
-                />
-            </button>
-        );
-    }
-
     return (
         <section className={isMobileDetailOpen ? "applications-page tasks-page mobile-page-detail-open" : "applications-page tasks-page"}>
             <div
@@ -258,11 +207,9 @@ export function TasksView({
                 className={`applications-split-panel tasks-split-panel${selectedTask && detailPane.isOpen ? " detail-pane-open" : ""}${isMobileDetailOpen ? " mobile-detail-open" : ""}${detailPane.isDragging ? " is-resizing" : ""}`}
             >
                 <aside className="application-list-panel tasks-list-panel">
-                    <div
-                        className={isFiltersOpen ? "applications-toolbar collection-filter-toolbar mobile-filters-open" : "applications-toolbar collection-filter-toolbar"}
-                        aria-label="Task table filters"
-                    >
-                        <label className="applications-search-field">
+                    <CollectionListControls
+                        noun="tasks"
+                        search={<label className="applications-search-field">
                             <AppIcon name="search" size={18} />
                             <input
                                 aria-label="Search tasks"
@@ -272,17 +219,8 @@ export function TasksView({
                                 }
                                 placeholder="Search tasks"
                             />
-                        </label>
-                        <button
-                            type="button"
-                            className="mobile-filter-toggle"
-                            aria-expanded={isFiltersOpen}
-                            onClick={() => setIsFiltersOpen((open) => !open)}
-                        >
-                            <AppIcon name="filter" size={18} />
-                            Filters{activeFilterCount ? ` (${activeFilterCount})` : ""}
-                        </button>
-                        <select
+                        </label>}
+                        filters={<><select
                             aria-label="Filter tasks by type"
                             value={filters.type}
                             onChange={(event) =>
@@ -311,42 +249,34 @@ export function TasksView({
                                     {status.label}
                                 </option>
                             ))}
-                        </select>
-                        <button
-                            type="button"
-                            className="interviews-reset-button"
-                            disabled={!hasActiveFilters}
-                            onClick={() => setFilters(INITIAL_FILTERS)}
-                        >
-                            <AppIcon name="history" size={15} />
-                            Reset
-                        </button>
-                    </div>
+                        </select></>}
+                        filtersOpen={isFiltersOpen}
+                        onToggleFilters={() => setIsFiltersOpen(open => !open)}
+                        activeFilterCount={activeFilterCount}
+                        hasActiveFilters={Boolean(filters.query.trim() || activeFilterCount)}
+                        onReset={() => setFilters(INITIAL_FILTERS)}
+                        sortValue={`${sortKey}:${sortDirection}`}
+                        sortOptions={[{ value: "dueDate:asc", label: "Due date: soonest first" }, { value: "dueDate:desc", label: "Due date: latest first" }, { value: "title:asc", label: "Task: A to Z" }, { value: "title:desc", label: "Task: Z to A" }, { value: "applicationTitle:asc", label: "Application: A to Z" }, { value: "applicationTitle:desc", label: "Application: Z to A" }, { value: "type:asc", label: "Type: A to Z" }, { value: "type:desc", label: "Type: Z to A" }, { value: "status:asc", label: "Status: A to Z" }, { value: "status:desc", label: "Status: Z to A" }]}
+                        onSortChange={value => { const [key, direction] = value.split(":"); setSortKey(key as SortKey); setSortDirection(direction as SortDirection); }}
+                    />
                     <ActiveFilterChips chips={activeFilterChips} />
+                    <BulkActions selection={bulk} count={sortedTasks.length} noun="tasks" onApply={onBulkApply} fields={[{ key: "type", label: "Type", options: TASK_TYPES.map(type => ({ value: type, label: getTaskTypeLabel(type) })) }]} />
 
                     {sortedTasks.length > 0 ? (
                         <>
                         <div className="application-list desktop-record-list" role="list">
-                            <div className="application-table-header tasks-table-columns" role="row" aria-label="Task columns and sorting">
-                                {renderSortButton("Task", "title")}
-                                {renderSortButton("Application", "applicationTitle")}
-                                {renderSortButton("Due", "dueDate")}
-                                {renderSortButton("Type", "type")}
-                                {renderSortButton("Status", "status")}
-                            </div>
                             {sortedTasks.map((task) => {
-                                const state = getTaskDueState(task);
+                                const state = getTaskDueState(task, timeZone);
                                 const isSelected = selectedTask?.id === task.id;
                                 const isCompleted = !isOpenTask(task);
 
                                 return (
-                                    <div
-                                        key={task.id}
+                                    <BulkRow key={task.id} selection={bulk} id={task.id} label={task.title}><div
                                         role="button"
                                         tabIndex={0}
                                         className={
                                             isSelected
-                                                ? `application-list-item task-list-item tasks-table-columns status-accent ${getTaskStatusClass(task)} active`
+                                                ? `application-list-item task-list-item tasks-table-columns status-accent ${getTaskStatusClass(task, timeZone)} active`
                                                 : "application-list-item task-list-item tasks-table-columns"
                                         }
                                         aria-current={isSelected ? "true" : undefined}
@@ -373,33 +303,32 @@ export function TasksView({
                                             {getTaskApplicationLabel(task)}
                                         </span>
                                         <span className="application-table-cell" data-label="Due">
-                                            {formatTaskDueDate(task.dueDate)}
+                                            {formatTaskDueDate(task.dueDate, timeZone)}
                                         </span>
                                         <span className="application-table-cell" data-label="Type">
                                             {getTaskTypeLabel(task.type)}
                                         </span>
                                         <span
-                                            className={`status-pill ${getTaskStatusClass(task)}`}
+                                            className={`status-pill ${getTaskStatusClass(task, timeZone)}`}
                                         >
                                             {TASK_STATUS_LABELS[state]}
                                         </span>
-                                    </div>
+                                    </div></BulkRow>
                                 );
                             })}
                         </div>
                         <div className="mobile-grouped-list" role="list" aria-label="Tasks by due state">
                             {taskActionGroups.map((group) => (
                                 <section key={group.label} className="mobile-record-group">
-                                    <h3>{group.label}</h3>
+                                    {group.label && <h3>{group.label}</h3>}
                                     {group.tasks.map((task) => {
-                                        const state = getTaskDueState(task);
+                                        const state = getTaskDueState(task, timeZone);
                                         const isCompleted = !isOpenTask(task);
                                         return (
-                                            <div
-                                                key={task.id}
+                                            <BulkRow key={task.id} selection={bulk} id={task.id} label={task.title}><div
                                                 role="button"
                                                 tabIndex={0}
-                                                className={`mobile-task-card status-accent ${getTaskStatusClass(task)}`}
+                                                className={`mobile-task-card status-accent ${getTaskStatusClass(task, timeZone)}`}
                                                 onClick={() => openMobileDetail(task.id)}
                                                 onKeyDown={(event) => {
                                                     if (event.key === "Enter" || event.key === " ") {
@@ -420,13 +349,13 @@ export function TasksView({
                                                 <span className="mobile-agenda-copy">
                                                     <strong>{task.title}</strong>
                                                     <span>{task.companyName ?? "No linked company"}</span>
-                                                    <small>{formatTaskDueDate(task.dueDate)} · {getTaskTypeLabel(task.type)}</small>
+                                                    <small>{formatTaskDueDate(task.dueDate, timeZone)} · {getTaskTypeLabel(task.type)}</small>
                                                 </span>
-                                                <span className={`status-pill ${getTaskStatusClass(task)}`}>
+                                                <span className={`status-pill ${getTaskStatusClass(task, timeZone)}`}>
                                                     {TASK_STATUS_LABELS[state]}
                                                 </span>
                                                 <AppIcon name="arrow-right" size={18} className="mobile-record-chevron" />
-                                            </div>
+                                            </div></BulkRow>
                                         );
                                     })}
                                 </section>
@@ -462,7 +391,7 @@ export function TasksView({
 
                 {selectedTask && detailPane.isOpen && <CollectionPaneDivider onResizeStart={detailPane.beginResize} onResizeBy={detailPane.resizeWithKeyboard} />}
                 <aside
-                    className={`application-detail-panel task-detail-panel status-accent ${selectedTask ? getTaskStatusClass(selectedTask) : ""}`}
+                    className={`application-detail-panel task-detail-panel status-accent ${selectedTask ? getTaskStatusClass(selectedTask, timeZone) : ""}`}
                     aria-label="Selected task"
                 >
                     {selectedTask ? (
@@ -489,8 +418,8 @@ export function TasksView({
                                         </p>
                                         <div className="application-detail-status-row">
                                             <label className="application-detail-status-control">
-                                                <select aria-label="Task status" className={`status-select ${getTaskStatusClass(selectedTask)}`} value={getTaskDueState(selectedTask)} onChange={(event) => { if (event.target.value === "completed") onCompleteTask(selectedTask.id); if (event.target.value === "edit") onStartEdit(selectedTask); }}>
-                                                    <option value={getTaskDueState(selectedTask)}>{TASK_STATUS_LABELS[getTaskDueState(selectedTask)]}</option>
+                                                <select aria-label="Task status" className={`status-select ${getTaskStatusClass(selectedTask, timeZone)}`} value={getTaskDueState(selectedTask, timeZone)} onChange={(event) => { if (event.target.value === "completed") onCompleteTask(selectedTask.id); if (event.target.value === "edit") onStartEdit(selectedTask); }}>
+                                                    <option value={getTaskDueState(selectedTask, timeZone)}>{TASK_STATUS_LABELS[getTaskDueState(selectedTask, timeZone)]}</option>
                                                     {isOpenTask(selectedTask) && <option value="completed">Completed</option>}
                                                     <option value="edit">Edit task details…</option>
                                                 </select>
@@ -546,12 +475,12 @@ export function TasksView({
                                         </dt>
                                         <dd>
                                             <strong>
-                                                {formatTaskDueDate(selectedTask.dueDate)}
+                                                {formatTaskDueDate(selectedTask.dueDate, timeZone)}
                                             </strong>
                                             <span>
                                                 {
                                                     TASK_STATUS_LABELS[
-                                                    getTaskDueState(selectedTask)
+                                                    getTaskDueState(selectedTask, timeZone)
                                                     ]
                                                 }
                                             </span>
@@ -591,7 +520,7 @@ export function TasksView({
                                             <span>
                                                 {selectedTask.completedAt
                                                     ? `Completed ${formatTaskDueDate(
-                                                        selectedTask.completedAt,
+                                                        selectedTask.completedAt, timeZone,
                                                     )}`
                                                     : "Open task"}
                                             </span>

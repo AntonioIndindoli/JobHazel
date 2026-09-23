@@ -1,5 +1,7 @@
 "use client";
 
+import { BulkActions, BulkRow, useBulkSelection, type BulkHandler } from "./BulkActions";
+
 import { useMemo, useRef, useState } from "react";
 
 import {
@@ -12,11 +14,13 @@ import { INTERVIEW_OUTCOMES, INTERVIEW_TYPES } from "../lib/constants";
 import type { Application, Interview } from "../lib/types";
 import { AddInterviewButton } from "./AddInterviewButton";
 import { AppIcon } from "./AppIcon";
+import { CollectionListControls } from "./CollectionListControls";
 import { ActiveFilterChips, type ActiveFilterChip } from "./ActiveFilterChips";
 import { CollectionPaneCollapse, CollectionPaneDivider } from "./CollectionPaneControls";
 import { useCollectionDetailPane } from "./useCollectionDetailPane";
 
 type InterviewsViewProps = {
+    onBulkApply?: BulkHandler;
     applications: Application[];
     focusedInterviewId?: string | null;
     interviews: Interview[];
@@ -116,6 +120,7 @@ export function InterviewsView({
     onUpdateNotes,
     onStartEdit,
     onViewApplication,
+    onBulkApply,
 }: InterviewsViewProps) {
     const [filters, setFilters] = useState<InterviewFilters>(INITIAL_FILTERS);
     const [sortKey, setSortKey] = useState<SortKey>("scheduledAt");
@@ -159,6 +164,7 @@ export function InterviewsView({
         });
     }, [filteredInterviews, sortDirection, sortKey]);
 
+    const bulk = useBulkSelection(sortedInterviews, JSON.stringify(filters));
     const selectedInterview =
         sortedInterviews.find((interview) => interview.id === detailPane.selectedId) ?? null;
     const selectedInterviewerName =
@@ -171,43 +177,12 @@ export function InterviewsView({
         : false;
 
 
-    const hasActiveFilters = Object.values(filters).some(Boolean);
     const activeFilterCount = [filters.type, filters.outcome].filter(Boolean).length;
     const activeFilterChips: ActiveFilterChip[] = [
         ...(filters.type ? [{ id: "type", label: "Type", value: getInterviewTypeLabel(filters.type), onRemove: () => setFilters((current) => ({ ...current, type: "" })) }] : []),
         ...(filters.outcome ? [{ id: "status", label: "Status", value: getInterviewOutcomeLabel(filters.outcome), onRemove: () => setFilters((current) => ({ ...current, outcome: "" })) }] : []),
     ];
-    const interviewAgendaGroups = useMemo(() => {
-        const startOfToday = new Date();
-        startOfToday.setHours(0, 0, 0, 0);
-        const startOfTomorrow = new Date(startOfToday);
-        startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
-        const groups = [
-            {
-                label: "Upcoming",
-                interviews: filteredInterviews
-                    .filter((interview) => getInterviewTimestamp(interview) >= startOfTomorrow.getTime())
-                    .sort((left, right) => getInterviewTimestamp(left) - getInterviewTimestamp(right)),
-            },
-            {
-                label: "Today",
-                interviews: filteredInterviews
-                    .filter((interview) => {
-                        const timestamp = getInterviewTimestamp(interview);
-                        return timestamp >= startOfToday.getTime() && timestamp < startOfTomorrow.getTime();
-                    })
-                    .sort((left, right) => getInterviewTimestamp(left) - getInterviewTimestamp(right)),
-            },
-            {
-                label: "Past",
-                interviews: filteredInterviews
-                    .filter((interview) => getInterviewTimestamp(interview) < startOfToday.getTime())
-                    .sort((left, right) => getInterviewTimestamp(right) - getInterviewTimestamp(left)),
-            },
-        ];
-
-        return groups.filter((group) => group.interviews.length > 0);
-    }, [filteredInterviews]);
+    const interviewAgendaGroups = [{ label: "", interviews: sortedInterviews }];
 
     function openMobileDetail(interviewId: string) {
         listScrollPosition.current = window.scrollY;
@@ -226,41 +201,6 @@ export function InterviewsView({
         );
     }
 
-    function updateSort(nextSortKey: SortKey) {
-        if (nextSortKey === sortKey) {
-            setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
-            return;
-        }
-
-        setSortKey(nextSortKey);
-        setSortDirection("asc");
-    }
-
-    function renderSortButton(label: string, nextSortKey: SortKey) {
-        const isActive = sortKey === nextSortKey;
-
-        return (
-            <button
-                type="button"
-                className={isActive ? "table-sort-button active" : "table-sort-button"}
-                onClick={() => updateSort(nextSortKey)}
-                aria-label={`Sort by ${label}${isActive ? `, currently ${sortDirection === "asc" ? "ascending" : "descending"}` : ""}`}
-                aria-pressed={isActive}
-            >
-                <span>{label}</span>
-                <AppIcon
-                    name="chevron-down"
-                    size={14}
-                    className={
-                        isActive && sortDirection === "asc"
-                            ? "sort-icon ascending"
-                            : "sort-icon"
-                    }
-                />
-            </button>
-        );
-    }
-
     return (
         <section className={isMobileDetailOpen ? "applications-page interviews-page mobile-page-detail-open" : "applications-page interviews-page"}>
             <div
@@ -269,11 +209,9 @@ export function InterviewsView({
                 className={`applications-split-panel interviews-split-panel${selectedInterview && detailPane.isOpen ? " detail-pane-open" : ""}${isMobileDetailOpen ? " mobile-detail-open" : ""}${detailPane.isDragging ? " is-resizing" : ""}`}
             >
                 <aside className="application-list-panel interviews-list-panel">
-                    <div
-                        className={isFiltersOpen ? "applications-toolbar collection-filter-toolbar mobile-filters-open" : "applications-toolbar collection-filter-toolbar"}
-                        aria-label="Interview table filters"
-                    >
-                        <label className="applications-search-field">
+                    <CollectionListControls
+                        noun="interviews"
+                        search={<label className="applications-search-field">
                             <AppIcon name="search" size={18} />
                             <input
                                 aria-label="Search interviews"
@@ -283,17 +221,8 @@ export function InterviewsView({
                                 }
                                 placeholder="Search interviews"
                             />
-                        </label>
-                        <button
-                            type="button"
-                            className="mobile-filter-toggle"
-                            aria-expanded={isFiltersOpen}
-                            onClick={() => setIsFiltersOpen((open) => !open)}
-                        >
-                            <AppIcon name="filter" size={18} />
-                            Filters{activeFilterCount ? ` (${activeFilterCount})` : ""}
-                        </button>
-                        <select
+                        </label>}
+                        filters={<><select
                             aria-label="Filter interviews by type"
                             value={filters.type}
                             onChange={(event) =>
@@ -320,36 +249,28 @@ export function InterviewsView({
                                     {getInterviewOutcomeLabel(outcome)}
                                 </option>
                             ))}
-                        </select>
-                        <button
-                            type="button"
-                            className="interviews-reset-button"
-                            disabled={!hasActiveFilters}
-                            onClick={() => setFilters(INITIAL_FILTERS)}
-                        >
-                            <AppIcon name="history" size={15} />
-                            Reset
-                        </button>
-                    </div>
+                        </select></>}
+                        filtersOpen={isFiltersOpen}
+                        onToggleFilters={() => setIsFiltersOpen(open => !open)}
+                        activeFilterCount={activeFilterCount}
+                        hasActiveFilters={Boolean(filters.query.trim() || activeFilterCount)}
+                        onReset={() => setFilters(INITIAL_FILTERS)}
+                        sortValue={`${sortKey}:${sortDirection}`}
+                        sortOptions={[{ value: "scheduledAt:asc", label: "Date: soonest first" }, { value: "scheduledAt:desc", label: "Date: latest first" }, { value: "applicationTitle:asc", label: "Role: A to Z" }, { value: "applicationTitle:desc", label: "Role: Z to A" }, { value: "companyName:asc", label: "Company: A to Z" }, { value: "companyName:desc", label: "Company: Z to A" }, { value: "type:asc", label: "Stage: A to Z" }, { value: "type:desc", label: "Stage: Z to A" }, { value: "outcome:asc", label: "Status: A to Z" }, { value: "outcome:desc", label: "Status: Z to A" }]}
+                        onSortChange={value => { const [key, direction] = value.split(":"); setSortKey(key as SortKey); setSortDirection(direction as SortDirection); }}
+                    />
                     <ActiveFilterChips chips={activeFilterChips} />
+                    <BulkActions selection={bulk} count={sortedInterviews.length} noun="interviews" onApply={onBulkApply} fields={[{ key: "outcome", label: "Outcome", options: INTERVIEW_OUTCOMES.map(outcome => ({ value: outcome, label: getInterviewOutcomeLabel(outcome) })) }, { key: "type", label: "Type", options: INTERVIEW_TYPES.map(type => ({ value: type, label: getInterviewTypeLabel(type) })) }]} />
 
                     {sortedInterviews.length > 0 ? (
                         <>
                             <div className="application-list desktop-record-list" role="list">
-                                <div className="application-table-header interviews-table-columns" role="row" aria-label="Interview columns and sorting">
-                                    {renderSortButton("Date", "scheduledAt")}
-                                    {renderSortButton("Role", "applicationTitle")}
-                                    {renderSortButton("Company", "companyName")}
-                                    {renderSortButton("Stage", "type")}
-                                    {renderSortButton("Status", "outcome")}
-                                </div>
                                 {sortedInterviews.map((interview) => {
                                     const isSelected =
                                         selectedInterview?.id === interview.id;
 
                                     return (
-                                        <button
-                                            key={interview.id}
+                                        <BulkRow key={interview.id} selection={bulk} id={interview.id} label={`${interview.applicationTitle ?? "Interview"} at ${interview.companyName ?? "Unknown company"} on ${formatInterviewDateLabel(interview.scheduledAt)}`}><button
                                             type="button"
                                             className={
                                                 isSelected
@@ -377,17 +298,16 @@ export function InterviewsView({
                                             >
                                                 {getInterviewOutcomeLabel(interview.outcome)}
                                             </span>
-                                        </button>
+                                        </button></BulkRow>
                                     );
                                 })}
                             </div>
                             <div className="mobile-grouped-list" role="list" aria-label="Interview agenda">
                                 {interviewAgendaGroups.map((group) => (
                                     <section key={group.label} className="mobile-record-group">
-                                        <h3>{group.label}</h3>
+                                        {group.label && <h3>{group.label}</h3>}
                                         {group.interviews.map((interview) => (
-                                            <button
-                                                key={interview.id}
+                                            <BulkRow key={interview.id} selection={bulk} id={interview.id} label={`${interview.applicationTitle ?? "Interview"} at ${interview.companyName ?? "Unknown company"} on ${formatInterviewDateLabel(interview.scheduledAt)}`}><button
                                                 type="button"
                                                 className={`mobile-agenda-card status-accent ${interview.outcome.toLowerCase()}`}
                                                 onClick={() => openMobileDetail(interview.id)}
@@ -405,7 +325,7 @@ export function InterviewsView({
                                                     {getInterviewOutcomeLabel(interview.outcome)}
                                                 </span>
                                                 <AppIcon name="arrow-right" size={18} className="mobile-record-chevron" />
-                                            </button>
+                                            </button></BulkRow>
                                         ))}
                                     </section>
                                 ))}

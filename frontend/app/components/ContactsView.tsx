@@ -1,14 +1,18 @@
 "use client";
 
+import { BulkActions, BulkRow, useBulkSelection, type BulkHandler } from "./BulkActions";
+
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { CONTACT_RELATIONSHIPS, CONTACT_RELATIONSHIP_LABELS, EMPTY_CONTACT_FORM } from "../lib/constants";
 import type { Application, Contact, ContactFormValues } from "../lib/types";
 import { AppIcon } from "./AppIcon";
+import { CollectionListControls } from "./CollectionListControls";
 import { ActiveFilterChips } from "./ActiveFilterChips";
 import { CollectionPaneCollapse, CollectionPaneDivider } from "./CollectionPaneControls";
 import { useCollectionDetailPane } from "./useCollectionDetailPane";
 
 type Props = {
+    onBulkApply?: BulkHandler;
     applications: Application[];
     contacts: Contact[];
     createRequest: number;
@@ -21,7 +25,7 @@ function initials(name: string) {
     return name.split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase();
 }
 
-export function ContactsView({ applications, contacts, createRequest, onSave, onRemove, onSummaryChange }: Props) {
+export function ContactsView({ applications, contacts, createRequest, onSave, onRemove, onSummaryChange, onBulkApply }: Props) {
     const [query, setQuery] = useState("");
     const [relationship, setRelationship] = useState("");
     const {
@@ -43,12 +47,20 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
     const [isDetailMenuOpen, setIsDetailMenuOpen] = useState(false);
     const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(false);
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+    const [sortKey, setSortKey] = useState<"name" | "companyName" | "relationship" | "updatedAt">("name");
+    const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
     const listScrollPosition = useRef(0);
 
     const filtered = useMemo(() => contacts.filter((contact) => {
         const haystack = [contact.name, contact.role, contact.email, contact.companyName, contact.applicationTitle].join(" ").toLowerCase();
         return (!query.trim() || haystack.includes(query.trim().toLowerCase())) && (!relationship || contact.relationship === relationship);
     }), [contacts, query, relationship]);
+    const sortedContacts = useMemo(() => [...filtered].sort((left, right) => {
+        const leftValue = sortKey === "relationship" ? CONTACT_RELATIONSHIP_LABELS[left.relationship] : left[sortKey] ?? "";
+        const rightValue = sortKey === "relationship" ? CONTACT_RELATIONSHIP_LABELS[right.relationship] : right[sortKey] ?? "";
+        return String(leftValue).localeCompare(String(rightValue)) * (sortDirection === "asc" ? 1 : -1);
+    }), [filtered, sortKey, sortDirection]);
+    const bulk = useBulkSelection(sortedContacts, JSON.stringify([query, relationship]));
     const selected = contacts.find((contact) => contact.id === selectedContactId) ?? null;
 
     function openCreate() {
@@ -95,16 +107,24 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
             className={`applications-split-panel contacts-layout${selected && isDetailPaneOpen ? " detail-pane-open" : ""}${isMobileDetailOpen ? " mobile-detail-open" : ""}${isResizingDetailPane ? " is-resizing" : ""}`}
         >
             <div className="application-list-panel contacts-list" aria-label="Contacts list">
-                <div className={isFiltersOpen ? "applications-toolbar contacts-toolbar mobile-filters-open" : "applications-toolbar contacts-toolbar"} aria-label="Contact filters">
-                    <label className="applications-search-field contacts-search"><AppIcon name="search" size={18} /><input aria-label="Search contacts" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name, company, role, or email" /></label>
-                    <button type="button" className="mobile-filter-toggle" aria-expanded={isFiltersOpen} onClick={() => setIsFiltersOpen((open) => !open)}><AppIcon name="filter" size={18} /> Filters{hasActiveFilters ? " (1)" : ""}</button>
-                    <select aria-label="Filter contacts by relationship" value={relationship} onChange={(e) => setRelationship(e.target.value)}><option value="">All relationships</option>{CONTACT_RELATIONSHIPS.map((item) => <option key={item} value={item}>{CONTACT_RELATIONSHIP_LABELS[item]}</option>)}</select>
-                    <button type="button" className="interviews-reset-button" disabled={!hasActiveFilters} onClick={() => { setQuery(""); setRelationship(""); }}><AppIcon name="history" size={15} /> Reset</button>
-                </div>
+                <CollectionListControls
+                    noun="contacts"
+                    search={<label className="applications-search-field contacts-search"><AppIcon name="search" size={18} /><input aria-label="Search contacts" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name, company, role, or email" /></label>}
+                    filters={<select aria-label="Filter contacts by relationship" value={relationship} onChange={(e) => setRelationship(e.target.value)}><option value="">All relationships</option>{CONTACT_RELATIONSHIPS.map((item) => <option key={item} value={item}>{CONTACT_RELATIONSHIP_LABELS[item]}</option>)}</select>}
+                    filtersOpen={isFiltersOpen}
+                    onToggleFilters={() => setIsFiltersOpen(open => !open)}
+                    activeFilterCount={Number(Boolean(relationship))}
+                    hasActiveFilters={hasActiveFilters}
+                    onReset={() => { setQuery(""); setRelationship(""); }}
+                    sortValue={`${sortKey}:${sortDirection}`}
+                    sortOptions={[{ value: "name:asc", label: "Name: A to Z" }, { value: "name:desc", label: "Name: Z to A" }, { value: "companyName:asc", label: "Company: A to Z" }, { value: "companyName:desc", label: "Company: Z to A" }, { value: "relationship:asc", label: "Relationship: A to Z" }, { value: "relationship:desc", label: "Relationship: Z to A" }, { value: "updatedAt:desc", label: "Recently updated" }, { value: "updatedAt:asc", label: "Least recently updated" }]}
+                    onSortChange={value => { const [key, direction] = value.split(":"); setSortKey(key as typeof sortKey); setSortDirection(direction as typeof sortDirection); }}
+                />
                 <ActiveFilterChips chips={relationship ? [{ id: "relationship", label: "Relationship", value: CONTACT_RELATIONSHIP_LABELS[relationship], onRemove: () => setRelationship("") }] : []} />
-                {filtered.length ? filtered.map((contact) => <button key={contact.id} type="button" className={selected?.id === contact.id ? "contact-row active" : "contact-row"} onClick={() => openMobileDetail(contact.id)}>
+                    <BulkActions selection={bulk} count={sortedContacts.length} noun="contacts" onApply={onBulkApply} fields={[{ key: "relationship", label: "Relationship", options: CONTACT_RELATIONSHIPS.map(relationship => ({ value: relationship, label: CONTACT_RELATIONSHIP_LABELS[relationship] })) }]} />
+                {sortedContacts.length ? sortedContacts.map((contact) => <BulkRow key={contact.id} selection={bulk} id={contact.id} label={contact.name}><button type="button" className={selected?.id === contact.id ? "contact-row active" : "contact-row"} onClick={() => openMobileDetail(contact.id)}>
                     <span className="contact-avatar">{initials(contact.name)}</span><span className="contact-row-copy"><strong>{contact.name}</strong><span>{contact.role || CONTACT_RELATIONSHIP_LABELS[contact.relationship]}</span><small>{contact.companyName || "No company linked"}</small></span><AppIcon name="arrow-right" size={17} />
-                </button>) : (
+                </button></BulkRow>) : (
                     <div className="applications-empty application-list-empty">
                         <span className="empty-illustration">
                             <AppIcon name="contacts" size={31} />

@@ -6,10 +6,6 @@ import {
     filterApplications,
     groupDashboardApplications,
 } from "../../lib/application-analytics";
-import {
-    isUpcomingInterview,
-    sortInterviewsBySchedule,
-} from "../../lib/interview-utils";
 import type {
     ActivityLog,
     Application,
@@ -18,9 +14,7 @@ import type {
     Interview,
     Task,
 } from "../../lib/types";
-import { AppIcon } from "../AppIcon";
 import { ApplicationTracker } from "./ApplicationTracker";
-import { DashboardCards } from "./DashboardCards";
 import { DashboardStats } from "./DashboardStats";
 
 type DashboardHomeProps = {
@@ -58,18 +52,13 @@ export function DashboardHome({
     openTimelineId,
     tasks,
     onApplicationGoalChange,
-    onCreateInterview,
-    onCreateTask,
     onFiltersChange,
     onRemoveApplication,
     onRemoveHistoryEvent,
     onStartEdit,
     onToggleTimeline,
     onTransitionStatus,
-    onViewApplications,
     onViewApplication,
-    onViewInterviews,
-    onViewTasks,
 }: DashboardHomeProps) {
     const trackerApplications = useMemo(
         () => filterApplications(applications, filters),
@@ -85,14 +74,6 @@ export function DashboardHome({
                 filterApplications(applications, { ...filters, status: "" }),
             ),
         [applications, filters],
-    );
-    const upcomingInterviews = useMemo(
-        () =>
-            sortInterviewsBySchedule(
-                interviews.filter(isUpcomingInterview),
-                "asc",
-            ),
-        [interviews],
     );
 
     return (

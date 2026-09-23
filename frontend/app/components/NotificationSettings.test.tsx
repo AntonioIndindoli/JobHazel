@@ -3,9 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NotificationSettings } from "./NotificationSettings";
 import UnsubscribePage from "../unsubscribe/page";
-import { requestNotificationPreferences, unsubscribeReminders } from "../lib/notification-api";
+import { requestNotificationPreferences, retryNotificationScheduling, unsubscribeReminders } from "../lib/notification-api";
 
-vi.mock("../lib/notification-api", () => ({ requestNotificationPreferences: vi.fn(), unsubscribeReminders: vi.fn() }));
+vi.mock("../lib/notification-api", () => ({ requestNotificationPreferences: vi.fn(), retryNotificationScheduling: vi.fn(), unsubscribeReminders: vi.fn() }));
 const preferences = {
     emailEnabled: false, upcomingTasks: true, overdueTasks: true, interviewReminders: true,
     taskReminderDays: 1, interviewReminderMinutes: 60, timeZone: "UTC",
@@ -18,6 +18,28 @@ beforeEach(() => {
 });
 
 describe("NotificationSettings", () => {
+    it("explains daily snapshots and retries pending scheduling without changing preferences", async () => {
+        const delivery = { mode: "daily-digest-scheduled-interviews", needsAttention: true, pending: 1 };
+        vi.mocked(requestNotificationPreferences).mockResolvedValue({ ...preferences, delivery });
+        vi.mocked(retryNotificationScheduling).mockResolvedValue({ ...delivery, needsAttention: false, pending: 0 });
+        render(<NotificationSettings token="token" />);
+        await screen.findByText(/Task summaries are prepared daily at 15:07 UTC/);
+        expect(screen.queryByText(/every five minutes/)).toBeNull();
+        await userEvent.click(screen.getByRole("button", { name: "Retry reminder scheduling" }));
+        await screen.findByText("Reminder scheduling is up to date.");
+        expect(retryNotificationScheduling).toHaveBeenCalledWith("token");
+        expect(requestNotificationPreferences).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not promise cancellation when the provider is unavailable", async () => {
+        vi.mocked(requestNotificationPreferences).mockResolvedValue({ ...preferences, delivery: { mode: "daily-digest-scheduled-interviews", needsAttention: true } });
+        render(<NotificationSettings token="token" />);
+        await screen.findByRole("switch", { name: /Email reminders/ });
+        await userEvent.click(screen.getByRole("button", { name: "Unsubscribe from all reminders" }));
+        await screen.findByText("Emails disabled. Cancellation is pending; an already-scheduled email may still arrive.");
+        expect(screen.queryByText("Unsubscribed from all reminder emails.")).toBeNull();
+    });
+
     it("loads, edits and saves reminders with timezone and quiet hours", async () => {
         render(<NotificationSettings token="session-token" />);
         await screen.findByRole("switch", { name: /Email reminders/ });
