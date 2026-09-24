@@ -87,13 +87,6 @@
     font-weight: 900;
 }
 
-.contact-avatar.large {
-    width: 64px;
-    height: 64px;
-    border-radius: 18px;
-    font-size: 18px;
-}
-
 .contact-row-copy {
     min-width: 0;
 }
@@ -122,48 +115,6 @@
     margin-top: 3px;
     color: var(--muted);
     font-size: 12px;
-}
-
-.contact-detail {
-    min-height: 480px;
-    padding: 26px;
-}
-
-.contact-detail-header {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 16px;
-    padding-bottom: 24px;
-    border-bottom: 1px solid var(--border);
-}
-
-.contact-detail-header .application-detail-header-actions {
-    align-self: start;
-}
-
-.contact-detail-header h2 {
-    margin: 5px 0 3px;
-    color: var(--text-heading);
-    font-size: 24px;
-}
-
-.contact-detail-header p {
-    margin: 0;
-    color: var(--muted);
-    font-size: 14px;
-}
-
-.contact-badge {
-    display: inline-flex;
-    padding: 4px 8px;
-    border-radius: 999px;
-    background: var(--purple-surface);
-    color: #5145cd;
-    font-size: 11px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: .04em;
 }
 
 .icon-button {
@@ -215,31 +166,6 @@
 .contact-facts dd span {
     color: var(--text-faint);
     font-weight: 500;
-}
-
-.contact-notes {
-    min-height: 130px;
-    padding: 18px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-}
-
-.contact-notes h3 {
-    margin: 0 0 10px;
-    color: var(--text-heading);
-    font-size: 14px;
-}
-
-.contact-notes p {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 14px;
-    line-height: 1.6;
-    white-space: pre-wrap;
-}
-
-.contact-notes .muted {
-    color: var(--text-faint);
 }
 
 .contacts-empty,
@@ -390,10 +316,6 @@
         overflow-y: auto;
     }
 
-    .contact-detail {
-        min-height: 380px;
-    }
-
     .contact-facts {
         grid-template-columns: 1fr;
     }
@@ -411,37 +333,9 @@
     .contacts-list {
         max-height: none;
     }
-
-    .contacts-layout.mobile-detail-open>.contact-detail {
-        padding-top: 0;
-    }
 }
 
 @media (max-width: 620px) {
-    .contact-detail {
-        padding: 18px;
-    }
-
-    .contact-detail-header {
-        grid-template-columns: auto minmax(0, 1fr) auto;
-        align-items: start;
-        gap: 12px;
-    }
-
-    .contact-detail-header .application-detail-header-actions {
-        grid-column: 3;
-        grid-row: 1;
-        width: auto;
-        align-self: start;
-        justify-content: flex-end;
-    }
-
-    .contact-avatar.large {
-        width: 52px;
-        height: 52px;
-        border-radius: 15px;
-        font-size: 15px;
-    }
 
     .contact-drawer .form-grid {
         grid-template-columns: 1fr;

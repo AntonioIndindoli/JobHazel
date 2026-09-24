@@ -409,26 +409,6 @@ export function TasksView({
                                 <div className="application-detail-top-row">
                                     <div className="application-detail-heading">
                                         <h2>{selectedTask.title}</h2>
-                                        <p className="application-detail-company-location">
-                                            <span className="application-detail-context-item application-detail-company">
-                                                <AppIcon name="company" size={20} />
-                                                {selectedTask.companyName ?? "Unknown company"}
-                                            </span>
-                                            <span className="application-detail-context-separator" aria-hidden="true" />
-                                            <span className="application-detail-context-item">
-                                                <AppIcon name="location" size={20} />
-                                                {selectedTaskApplication?.location || "Location not set"}
-                                            </span>
-                                        </p>
-                                        <div className="application-detail-status-row">
-                                            <label className="application-detail-status-control">
-                                                <select aria-label="Task status" className={`status-select ${getTaskStatusClass(selectedTask, timeZone)}`} value={getTaskDueState(selectedTask, timeZone)} onChange={(event) => { if (event.target.value === "completed") onCompleteTask(selectedTask.id); if (event.target.value === "edit") onStartEdit(selectedTask); }}>
-                                                    <option value={getTaskDueState(selectedTask, timeZone)}>{TASK_STATUS_LABELS[getTaskDueState(selectedTask, timeZone)]}</option>
-                                                    {isOpenTask(selectedTask) && <option value="completed">Completed</option>}
-                                                    <option value="edit">Edit task details…</option>
-                                                </select>
-                                            </label>
-                                        </div>
                                     </div>
                                     <div className="application-detail-header-actions">
                                         <button
@@ -447,6 +427,26 @@ export function TasksView({
                                             </div>}
                                         </div>
                                     </div>
+                                </div>
+                                <p className="application-detail-company-location">
+                                    <span className="application-detail-context-item application-detail-company">
+                                        <AppIcon name="company" size={20} />
+                                        {selectedTask.companyName ?? "Unknown company"}
+                                    </span>
+                                    <span className="application-detail-context-separator" aria-hidden="true" />
+                                    <span className="application-detail-context-item">
+                                        <AppIcon name="location" size={20} />
+                                        {selectedTaskApplication?.location || "Location not set"}
+                                    </span>
+                                </p>
+                                <div className="application-detail-status-row">
+                                    <label className="application-detail-status-control">
+                                        <select aria-label="Task status" className={`status-select ${getTaskStatusClass(selectedTask, timeZone)}`} value={getTaskDueState(selectedTask, timeZone)} onChange={(event) => { if (event.target.value === "completed") onCompleteTask(selectedTask.id); if (event.target.value === "edit") onStartEdit(selectedTask); }}>
+                                            <option value={getTaskDueState(selectedTask, timeZone)}>{TASK_STATUS_LABELS[getTaskDueState(selectedTask, timeZone)]}</option>
+                                            {isOpenTask(selectedTask) && <option value="completed">Completed</option>}
+                                            <option value="edit">Edit task details…</option>
+                                        </select>
+                                    </label>
                                 </div>
                                 <div className="application-detail-summary" aria-label="Task summary">
                                     <span><AppIcon name="checklist" size={19} /> {getTaskTypeLabel(selectedTask.type)} task</span>
@@ -533,8 +533,8 @@ export function TasksView({
                                     </dl>
                                 </section>
 
-                                <section className="application-detail-section application-detail-card-section interview-notes-card task-notes-card">
-                                    <div className="interview-detail-section-title">
+                                <section className="collection-notes-section">
+                                    <div className="collection-notes-heading">
                                         <div className="interview-notes-card-title">
                                             <h3>Description</h3>
                                         </div>

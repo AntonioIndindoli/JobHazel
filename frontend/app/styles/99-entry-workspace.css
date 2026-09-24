@@ -55,28 +55,6 @@
     padding: 24px;
     border: 0;
     border-radius: 0;
-    background: var(--surface-soft);
-}
-
-.applications-page .collection-controls {
-    margin-bottom: 20px;
-    border: 0;
-    background: transparent;
-}
-
-.applications-page .collection-controls-row {
-    padding: 0;
-    gap: 10px;
-}
-
-.applications-page .collection-controls-row .applications-search-field {
-    grid-column: auto;
-    border-radius: 8px;
-    background: var(--surface-raised);
-}
-
-.applications-page .collection-filter-count {
-    background: var(--collection-blue);
 }
 
 .applications-page .bulk-toolbar {
@@ -252,13 +230,6 @@
     align-self: center;
 }
 
-.applications-page .application-detail-panel {
-    padding: 30px;
-    border: 0;
-    border-radius: 0;
-    background: var(--surface-soft);
-}
-
 .applications-page .application-detail-heading h2 {
     font-size: 26px;
 }
@@ -274,19 +245,10 @@
     gap: 0;
 }
 
-.applications-page .application-detail-main>.application-next-action-section {
-    order: -2;
-    margin: 14px 0 24px;
-    padding: 20px;
-    border: 1px solid color-mix(in srgb, var(--collection-blue) 18%, var(--border));
-    border-radius: 10px;
-    background: color-mix(in srgb, var(--collection-blue) 5%, var(--surface-soft));
-}
-
-.applications-page .application-detail-main>.application-resume-detail-section {
+.applications-page .application-reference-detail .application-detail-main>.application-resume-detail-section {
     order: -1;
-    padding: 16px;
     margin-bottom: 22px;
+    padding: 16px 18px;
     border: 1px solid var(--border);
     border-radius: 10px;
 }
@@ -311,18 +273,11 @@
     font-size: 12px;
 }
 
-.applications-page .application-next-action-card {
-    background: transparent;
-    border: 0;
-    padding: 16px 0 0;
-}
-
 .applications-page .application-detail-section h3 {
     font-size: 17px;
 }
 
-.applications-page .application-interviews-empty,
-.applications-page .application-notes-card>p.is-empty {
+.applications-page .application-interviews-empty {
     display: block;
     min-height: 0;
     padding: 10px 0 0;
@@ -331,8 +286,7 @@
     font-size: 14px;
 }
 
-.applications-page .application-interviews-empty>svg,
-.applications-page .application-notes-card>p.is-empty>svg {
+.applications-page .application-interviews-empty>svg {
     display: none;
 }
 
@@ -359,13 +313,6 @@
 }
 
 @container collection-list (max-width: 620px) {
-    .applications-page .collection-controls-row {
-        grid-template-columns: minmax(0, 1fr) auto;
-    }
-
-    .applications-page .collection-controls-row .applications-search-field {
-        grid-column: 1 / -1;
-    }
 
     .applications-page .application-list-item.applications-table-columns {
         grid-template-columns: minmax(0, 1fr) auto;
@@ -402,30 +349,6 @@
     .mobile-page-detail-open>.collection-tabs {
         display: none;
     }
-}
-
-.applications-page .application-detail-layout .application-detail-main>.application-next-action-section {
-    padding: 20px;
-}
-
-.applications-page .application-detail-layout .application-detail-main>.application-resume-detail-section {
-    padding: 16px;
-}
-
-.collection-next-actions {
-    display: flex;
-    gap: 12px;
-    margin-top: 18px;
-}
-
-.collection-next-actions>button {
-    flex: 1;
-    justify-content: center;
-    min-height: 42px;
-}
-
-.applications-page .application-next-action-card>.application-task-checkbox {
-    display: none;
 }
 
 .applications-page .application-list-item:focus-visible,
@@ -492,34 +415,6 @@
     min-height: 48px;
 }
 
-.applications-page .application-detail-panel .application-detail-top-row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
-}
-
-.applications-page .application-detail-panel .application-detail-heading {
-    min-width: 0;
-}
-
-.applications-page .application-detail-panel .application-detail-header-actions {
-    flex-wrap: nowrap;
-    align-self: start;
-    grid-row: 1;
-    grid-column: 2;
-    width: auto;
-    margin-top: 0;
-}
-
-.applications-page .application-detail-panel .contact-detail-header {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-}
-
-.applications-page .application-detail-panel .contact-detail-header .application-detail-header-actions {
-    grid-column: 3;
-    grid-row: 1;
-}
-
 @media (min-width: 1101px) {
     .collection-workspace .topbar-page-controls {
         grid-column: 1 / -1;
@@ -541,133 +436,6 @@
 }
 
 /* Application follow-up and resume cards share the compact reference layout. */
-.applications-page .application-detail-layout .application-detail-main>.application-next-action-section {
-    padding: 18px 22px 20px;
-    margin-bottom: 26px;
-    border-color: color-mix(in srgb, var(--collection-blue) 16%, var(--surface));
-    background: color-mix(in srgb, var(--collection-blue) 5%, var(--surface-soft));
-}
-
-.next-action-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-
-.applications-page .next-action-heading h3 {
-    margin: 0;
-    color: var(--text-secondary);
-    font-size: 17px;
-    font-weight: 650;
-}
-
-.next-action-due-badge {
-    flex-shrink: 0;
-    padding: 5px 10px;
-    border: 1px solid color-mix(in srgb, var(--collection-blue) 18%, transparent);
-    border-radius: 9px;
-    background: color-mix(in srgb, var(--collection-blue) 5%, var(--surface));
-    color: var(--collection-blue);
-    font-size: 12px;
-    font-weight: 650;
-}
-
-.next-action-due-badge.overdue {
-    color: var(--danger);
-    border-color: var(--danger-border);
-    background: var(--danger-surface);
-}
-
-.next-action-content {
-    margin-top: 10px;
-    min-width: 0;
-}
-
-.next-action-content>strong {
-    display: block;
-    color: var(--text-heading);
-    font-size: 18px;
-    font-weight: 700;
-    line-height: 1.4;
-    overflow-wrap: anywhere;
-}
-
-.next-action-content>p {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin: 10px 0 0;
-    color: var(--text-secondary);
-    font-size: 14px;
-    line-height: 1.4;
-}
-
-.next-action-content svg {
-    flex-shrink: 0;
-}
-
-.collection-next-actions {
-    display: flex;
-    gap: 12px;
-    margin-top: 18px;
-    align-items: stretch;
-}
-
-.collection-next-actions>button,
-.next-action-more {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    min-height: 42px;
-    padding: 8px 12px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--surface-raised);
-    color: var(--text-secondary);
-    font: inherit;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.collection-next-actions>button.primary {
-    background: #009b39;
-    border-color: #009b39;
-    color: white;
-}
-
-.collection-next-actions>button.primary:hover {
-    background: #008530;
-}
-
-.collection-next-actions>button.alternative:hover,
-.next-action-more:hover {
-    background: var(--surface-blue);
-}
-
-.next-action-menu {
-    flex: 0 0 50px;
-}
-
-.next-action-more {
-    width: 100%;
-    height: 100%;
-}
-
-.next-action-more>svg {
-    transform: rotate(90deg);
-}
-
-.collection-next-actions button:focus-visible {
-    outline: 2px solid var(--collection-blue);
-    outline-offset: 2px;
-}
-
-.applications-page .application-detail-layout .application-detail-main>.application-resume-detail-section {
-    padding: 16px 18px;
-}
 
 .applications-page :is(.application-resume-detail-empty, .application-resume-detail-card) {
     display: flex;
@@ -693,7 +461,6 @@
 .applications-page .application-resume-detail-copy {
     flex: 1;
     min-width: 0;
-    gap: 4px;
 }
 
 .applications-page .application-resume-detail-empty strong {
@@ -737,22 +504,6 @@
 }
 
 @container collection-detail (max-width: 380px) {
-    .applications-page .application-detail-layout .application-detail-main>.application-next-action-section {
-        padding: 16px;
-    }
-
-    .collection-next-actions {
-        gap: 8px;
-    }
-
-    .collection-next-actions>button {
-        padding-inline: 8px;
-        font-size: 12px;
-    }
-
-    .next-action-menu {
-        flex-basis: 42px;
-    }
 
     .applications-page :is(.application-resume-detail-empty, .application-resume-detail-card) {
         flex-wrap: wrap;
@@ -770,108 +521,6 @@
 }
 
 /* Full application detail layout. */
-.applications-page .application-reference-detail {
-    padding: 30px 24px;
-}
-
-.application-reference-detail .application-detail-company-location {
-    margin-top: 8px;
-    font-size: 16px;
-    font-weight: 400;
-}
-
-.application-reference-detail .application-detail-company {
-    font-weight: 400;
-    color: var(--text-secondary);
-}
-
-.application-reference-detail .application-detail-context-separator {
-    display: inline;
-    width: auto;
-    height: auto;
-    background: transparent;
-}
-
-.application-reference-detail .application-detail-status-row {
-    margin-top: 18px;
-    padding-bottom: 0;
-    gap: 12px;
-}
-
-.application-reference-detail .application-detail-status-date {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    min-height: 38px;
-    padding: 8px 12px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--surface-soft);
-    color: var(--text-secondary);
-}
-
-.application-reference-detail .application-detail-status-date svg {
-    width: 18px;
-    height: 18px;
-}
-
-.application-reference-detail .application-detail-header .status-select {
-    min-height: 38px;
-}
-
-.application-reference-detail .application-detail-summary {
-    padding-top: 14px;
-    padding-bottom: 0;
-}
-
-.application-reference-detail .application-detail-posting-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.applications-page .application-reference-detail .application-detail-main>.application-next-action-section {
-    margin-top: 28px;
-    margin-bottom: 22px;
-    padding: 16px 26px 16px;
-    background: light-dark(#f6f5ff, #201e32);
-    border-color: light-dark(#dddfff, #3b365e);
-}
-
-.application-reference-detail .next-action-heading h3 {
-    text-transform: uppercase;
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.application-reference-detail .next-action-due-badge:not(.overdue) {
-    padding: 6px 14px;
-    border: 0;
-    border-radius: 999px;
-    background: light-dark(#ece4ff, #382663);
-    color: light-dark(#7728ff, #c3a0ff);
-}
-
-.application-reference-detail .next-action-content>strong {
-    font-size: 20px;
-}
-
-.application-reference-detail .next-action-content>p {
-    font-size: 16px;
-}
-
-.application-reference-detail .collection-next-actions>button {
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.applications-page .application-reference-detail .application-detail-main>.resume-not-recorded {
-    padding: 14px 18px;
-    margin-bottom: 26px;
-    background: light-dark(#fffbf1, #302819);
-    border: 1px solid light-dark(#ffe4ac, #63502b);
-    border-radius: 9px;
-}
 
 .application-reference-detail .resume-not-recorded .application-resume-detail-empty {
     min-height: 28px;
@@ -902,7 +551,7 @@
     color: var(--collection-blue);
 }
 
-.applications-page .application-reference-detail .application-detail-main> :is(.application-detail-interviews-section, .application-notes-card, .application-facts-section) {
+.applications-page .application-reference-detail .application-detail-main> :is(.application-detail-interviews-section, .application-facts-section) {
     padding: 20px 0 24px;
     border-top: 1px solid var(--border);
 }
@@ -912,12 +561,7 @@
     font-weight: 700;
 }
 
-.applications-page .application-reference-detail .next-action-heading h3 {
-    font-size: 13px;
-    font-weight: 600;
-}
-
-.application-reference-detail :is(.application-detail-interviews-section, .application-notes-card) .application-section-action {
+.application-reference-detail :is(.application-detail-actions-section, .application-detail-interviews-section) .application-section-action {
     border: 0;
     padding: 4px 0 4px 8px;
     background: transparent;
@@ -940,12 +584,12 @@
 }
 
 .application-reference-detail .application-interview-copy strong {
-    font-size: 16px;
-    font-weight: 650;
+    font-size: 14px;
+    font-weight: 700;
 }
 
 .application-reference-detail .application-interview-copy span {
-    font-size: 14px;
+    font-size: 12px;
     color: var(--text-muted);
 }
 
@@ -976,9 +620,6 @@
 }
 
 @container collection-detail (max-width: 380px) {
-    .applications-page .application-reference-detail .application-detail-main>.application-next-action-section {
-        padding: 16px;
-    }
 
     .application-reference-detail .resume-not-recorded .application-resume-detail-empty {
         gap: 10px;
@@ -999,49 +640,7 @@
     }
 }
 
-.applications-page .application-reference-detail .application-detail-company-location,
-.applications-page .application-reference-detail .application-detail-company {
-    font-weight: 400;
-    color: var(--text-secondary);
-}
-
-.applications-page .application-reference-detail .application-notes-card>p.is-empty,
 .applications-page .application-reference-detail .application-interviews-empty {
     color: var(--text-muted);
     font-weight: 400;
-}
-/* Keep expanded controls and applied filters together in one compact surface. */
-.applications-page .collection-controls { margin-bottom: 16px; }
-.applications-page .collection-filters-panel {
-    gap: 12px;
-    margin-top: 12px;
-    padding: 14px 16px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--surface-raised);
-}
-.collection-filters-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 28px; }
-.collection-filters-heading > strong { color: var(--text-secondary); font-size: 13px; font-weight: 650; }
-.applications-page .collection-filter-reset { min-height: 28px; padding: 4px 0; color: var(--text-muted); font-size: 12px; white-space: nowrap; }
-.applications-page .collection-filter-reset:hover { color: var(--collection-blue); }
-.applications-page .collection-filter-fields { grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 280px)); gap: 10px; }
-.applications-page .collection-filter-fields > select,
-.applications-page .collection-filter-fields .applications-date-filter-trigger { min-height: 40px; background-color: var(--surface-soft); border-color: var(--border); font-size: 13px; color: var(--text-secondary); }
-.applications-page .collection-filters-button:is(:hover, [aria-expanded="true"]) { color: var(--collection-blue); border-color: color-mix(in srgb, var(--collection-blue) 30%, var(--border)); background: color-mix(in srgb, var(--collection-blue) 5%, var(--surface-raised)); }
-.collection-applied-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding-top: 12px; border-top: 1px solid var(--border); }
-.collection-applied-filters.is-collapsed { padding-top: 10px; border: 0; }
-.collection-applied-filters .active-filter-chips { flex: 1; display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; padding: 0; border: 0; background: transparent; }
-.collection-applied-filters .active-filter-chip { min-height: 30px; padding: 5px 9px; border: 1px solid color-mix(in srgb, var(--collection-blue) 18%, var(--border)); border-radius: 6px; background: color-mix(in srgb, var(--collection-blue) 5%, var(--surface-raised)); color: var(--text-secondary); }
-.collection-applied-filters .active-filter-chip > span { overflow-wrap: anywhere; text-align: left; }
-.collection-applied-filters .active-filter-chip strong { font-weight: 600; }
-.collection-applied-filters .active-filter-chip:hover { border-color: var(--collection-blue); background: var(--collection-selected); }
-.collection-applied-filters .active-filter-chip:focus-visible,
-.applications-page .collection-filter-fields > select:focus-visible,
-.applications-page .collection-filter-reset:focus-visible { outline: 2px solid var(--collection-blue); outline-offset: 2px; }
-@container collection-list (max-width: 620px) {
-    .applications-page .collection-filter-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-}
-@container collection-list (max-width: 400px) {
-    .applications-page .collection-filters-panel { padding: 12px; }
-    .applications-page .collection-filter-fields { grid-template-columns: minmax(0, 1fr); }
 }

@@ -300,7 +300,6 @@ export function ApplicationsView({
             ),
         )
         : [];
-    const nextTask = selectedTasks[0] ?? null;
     const activeFilterCount = [
         needsAction,
         filters.status,
@@ -554,10 +553,12 @@ export function ApplicationsView({
                                 </div>
                                 <p className="application-detail-company-location">
                                     <span className="application-detail-context-item application-detail-company">
+                                        <AppIcon name="company" size={20} />
                                         {selectedApplication.companyName || "Unknown company"}
                                     </span>
-                                    <span className="application-detail-context-separator" aria-hidden="true">·</span>
+                                    <span className="application-detail-context-separator" aria-hidden="true" />
                                     <span className="application-detail-context-item">
+                                        <AppIcon name="location" size={20} />
                                         {selectedApplication.location || "Location not set"}
                                     </span>
                                 </p>
@@ -636,33 +637,47 @@ export function ApplicationsView({
                                             </div>
                                         )}
                                     </section>
-                                    <section className="application-detail-section application-detail-card-section application-next-action-section">
-                                        <div className="next-action-heading">
-                                            <h3>{nextTask ? "Next action" : "No next action"}</h3>
-                                            {nextTask ? <span className={"next-action-due-badge " + getTaskDueState(nextTask, timeZone)}>{formatTaskRemaining(nextTask.dueDate, timeZone) || "No due date"}</span> :
-                                                <button type="button" className="alternative application-section-action" onClick={() => onCreateTask(selectedApplication.id)}><AppIcon name="plus" size={15} />Add task</button>}
+                                    <section className="application-detail-section application-detail-card-section application-detail-actions-section">
+                                        <div className="application-detail-section-heading">
+                                            <div className="interview-detail-section-title">
+                                                <div className="interview-notes-card-title"><h3>Actions</h3></div>
+                                            </div>
+                                            <button type="button" className="alternative application-section-action" onClick={() => onCreateTask(selectedApplication.id)}>
+                                                <AppIcon name="plus" size={15} />Add task
+                                            </button>
                                         </div>
-                                        {nextTask ? <>
-                                            <div className="next-action-content">
-                                                <strong>{nextTask.title}</strong>
-                                                <p><AppIcon name="calendar" size={18} />{nextTask.dueDate ? formatTaskDueDate(nextTask.dueDate, timeZone) : "No due date"}</p>
+                                        {selectedTasks.length > 0 ? (
+                                            <div className="application-interview-list">
+                                                {selectedTasks.map((task) => (
+                                                    <article key={task.id} className="application-interview-item">
+                                                        <div className="application-interview-copy">
+                                                            <strong>{task.title}</strong>
+                                                            <span><AppIcon name="calendar" size={18} />{task.dueDate ? formatTaskDueDate(task.dueDate, timeZone) : "No due date"}</span>
+                                                        </div>
+                                                        <span className={`status-pill ${getTaskDueState(task, timeZone)}`}>
+                                                            {formatTaskRemaining(task.dueDate, timeZone) || "No due date"}
+                                                        </span>
+                                                        <div className="application-interview-actions">
+                                                            <button type="button" className="application-interview-icon-button" aria-label={`Mark ${task.title} done`} onClick={() => onCompleteTask(task.id)}>
+                                                                <AppIcon name="check" size={18} />
+                                                            </button>
+                                                            {onStartEditTask && <div className="application-detail-menu" onBlur={(event) => {
+                                                                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setTaskMenuId(null);
+                                                            }}>
+                                                                <button type="button" className="application-interview-icon-button" aria-label={`More actions for ${task.title}`} aria-haspopup="menu" aria-expanded={taskMenuId === task.id} onClick={() => setTaskMenuId((current) => current === task.id ? null : task.id)}>
+                                                                    <AppIcon name="dots-vertical" size={18} />
+                                                                </button>
+                                                                {taskMenuId === task.id && <div className="application-detail-menu-popover application-interview-menu-popover" role="menu">
+                                                                    <button type="button" role="menuitem" onClick={() => { setTaskMenuId(null); onStartEditTask(task); }}><AppIcon name="edit" size={18} />Edit task</button>
+                                                                </div>}
+                                                            </div>}
+                                                        </div>
+                                                    </article>
+                                                ))}
                                             </div>
-                                            <div className="collection-next-actions">
-                                                <button type="button" className="primary" onClick={() => onCompleteTask(nextTask.id)}>Mark done</button>
-                                                {onStartEditTask && <button type="button" className="alternative" onClick={() => onStartEditTask(nextTask)}>Reschedule</button>}
-                                                <div className="next-action-menu application-detail-menu" onBlur={event => {
-                                                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setTaskMenuId(null);
-                                                }} onKeyDown={event => {
-                                                    if (event.key === "Escape") { setTaskMenuId(null); event.currentTarget.querySelector<HTMLButtonElement>("button")?.focus(); }
-                                                }}>
-                                                    <button type="button" className="next-action-more" aria-label="More task actions" aria-haspopup="menu" aria-expanded={taskMenuId === nextTask.id} onClick={() => setTaskMenuId(current => current === nextTask.id ? null : nextTask.id)}><AppIcon name="dots-vertical" size={20} /></button>
-                                                    {taskMenuId === nextTask.id && <div className="application-detail-menu-popover" role="menu">
-                                                        {onStartEditTask && <button type="button" role="menuitem" onClick={() => { setTaskMenuId(null); onStartEditTask(nextTask); }}><AppIcon name="edit" size={16} />Edit task</button>}
-                                                        <button type="button" role="menuitem" onClick={() => { setTaskMenuId(null); onCreateTask(selectedApplication.id); }}><AppIcon name="plus" size={16} />Add task</button>
-                                                    </div>}
-                                                </div>
-                                            </div>
-                                        </> : null}
+                                        ) : (
+                                            <div className="application-interviews-empty"><AppIcon name="checklist" size={37} /><div>No actions yet</div></div>
+                                        )}
                                     </section>
 
                                     <section className="application-detail-section application-detail-card-section application-detail-interviews-section">
@@ -748,8 +763,8 @@ export function ApplicationsView({
                                         )}
                                     </section>
 
-                                    <section className="application-detail-section application-detail-card-section application-notes-card interview-notes-card">
-                                        <div className="interview-detail-section-title">
+                                    <section className="collection-notes-section">
+                                        <div className="collection-notes-heading">
                                             <div className="interview-notes-card-title">
                                                 <h3>Notes</h3>
                                             </div>

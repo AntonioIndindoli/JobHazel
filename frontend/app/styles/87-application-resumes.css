@@ -65,7 +65,6 @@
 .application-resume-detail-empty > span {
     display: grid;
     min-width: 0;
-    gap: 4px;
 }
 
 .application-resume-detail-copy {
@@ -77,7 +76,7 @@
     overflow: hidden;
     color: var(--text-primary);
     font-size: 14px;
-    font-weight: 800;
+    font-weight: 700;
     text-overflow: ellipsis;
     white-space: nowrap;
 }

@@ -169,10 +169,7 @@
     width: 25px;
     height: 25px;
     padding: 0;
-    background: var(--surface);
-    color: var(--text-muted);
 }
-
 
 .application-interview-icon-button:hover {
     border-color: var(--accent-border);
@@ -233,11 +230,6 @@
     color: var(--text-soft);
     font-size: 13px;
     font-weight: 650;
-}
-
-.application-notes-card .interview-detail-section-title {
-    align-items: center;
-    justify-content: space-between;
 }
 
 .application-notes-editor {
@@ -355,23 +347,6 @@
     display: inline-flex;
     align-items: center;
     gap: 3px;
-}
-
-.application-detail-card-section.interview-notes-card p {
-    margin: 0;
-    min-height: 48px;
-    padding: 13px 14px;
-    border: 0;
-}
-
-.application-next-action-section>.application-detail-empty-copy {
-    min-height: 48px;
-    margin: 0;
-    padding: 13px 14px;
-    border-radius: 8px;
-    color: var(--text-soft);
-    font-size: 13px;
-    font-weight: 650;
 }
 
 .applications-date-filter {
@@ -655,12 +630,6 @@
 }
 
 /* Spacious application detail layout, aligned to the supplied reference. */
-.applications-page .application-detail-panel {
-    min-height: 620px;
-    padding: clamp(26px, 2.8vw, 36px) clamp(28px, 3.2vw, 42px);
-    border-color: var(--border-strong);
-    background: var(--surface);
-}
 
 .applications-page .application-detail-header {
     gap: 0;
@@ -879,17 +848,6 @@
     text-decoration: underline;
 }
 
-.applications-page .application-next-action-card {
-    grid-template-columns: 32px minmax(0, 1fr);
-    gap: 18px;
-    min-height: 78px;
-    padding: 14px 18px;
-    border-color: var(--border-strong);
-    border-radius: 11px;
-    background: var(--surface);
-    box-shadow: 0 8px 16px rgba(31, 60, 100, .05);
-}
-
 .applications-page .application-task-checkbox {
     width: 32px;
     height: 32px;
@@ -897,31 +855,12 @@
     border-radius: 7px;
 }
 
-.applications-page .application-next-action-card strong {
-    color: var(--text-primary);
-    font-size: 15px;
-    font-weight: 850;
-    line-height: 1.28;
-}
-
-.applications-page .application-next-action-card p {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 7px;
-    margin-top: 5px;
-    color: var(--text-primary);
-    font-size: 14px;
-    line-height: 1.35;
-}
-
 .applications-page .application-task-due-copy.overdue {
     color: var(--danger);
     font-weight: 700;
 }
 
-.applications-page .application-interviews-empty,
-.applications-page .application-notes-card>p.is-empty,
-.applications-page .application-next-action-section>.application-detail-empty-copy {
+.applications-page .application-interviews-empty {
     display: flex;
     align-items: center;
     gap: 16px;
@@ -935,8 +874,7 @@
     box-shadow: none;
 }
 
-.applications-page .application-interviews-empty svg,
-.applications-page .application-notes-card>p.is-empty svg {
+.applications-page .application-interviews-empty svg {
     flex: 0 0 auto;
     color: var(--text-primary);
     width: 22px;
@@ -961,16 +899,6 @@
     font-size: 13px;
 }
 
-.applications-page .application-notes-card>p:not(.is-empty) {
-    min-height: 58px;
-    padding: 13px 18px;
-    border: 1px solid var(--border-strong);
-    border-radius: 11px;
-    background: var(--surface-muted);
-    color: var(--text-primary);
-    font-size: 14px;
-}
-
 .applications-page .application-notes-editor textarea {
     min-height: 130px;
     padding: 13px 14px;
@@ -985,8 +913,7 @@
     }
 
     .applications-page .applications-split-panel > .application-list-panel,
-    .applications-page .applications-split-panel.detail-pane-open > .application-detail-panel,
-    .applications-page .applications-split-panel.detail-pane-open > .collection-pane-divider {
+.applications-page .applications-split-panel.detail-pane-open > .collection-pane-divider {
         min-height: calc(100dvh - 90px);
     }
 
@@ -996,18 +923,13 @@
 }
 
 @media (max-width: 900px) {
-    .applications-page .application-detail-panel {
-        min-height: 100dvh;
-        padding: 24px 20px 32px;
-        border-radius: 12px;
-    }
 
     .applications-page .application-detail-heading h2 {
         font-size: clamp(24px, 6vw, 28px);
     }
 
     .applications-page .application-detail-header-actions>.alternative,
-    .applications-page .application-detail-menu-trigger {
+.applications-page .application-detail-menu-trigger {
         width: 40px;
         min-width: 40px;
         height: 40px;
@@ -1042,7 +964,7 @@
     }
 
     .applications-page .application-detail-header .status-select,
-    .applications-page .application-detail-status-date {
+.applications-page .application-detail-status-date {
         min-height: 38px;
         font-size: 13px;
     }
@@ -1084,31 +1006,18 @@
     }
 
     .applications-page .application-detail-section-heading span,
-    .applications-page .application-section-action,
-    .applications-page .application-next-action-card p {
+.applications-page .application-section-action {
         font-size: 14px;
     }
 
-    .applications-page .application-next-action-card,
-    .applications-page .application-interviews-empty,
-    .applications-page .application-notes-card>p.is-empty,
-    .applications-page .application-next-action-section>.application-detail-empty-copy {
+    .applications-page .application-interviews-empty {
         min-height: 60px;
         padding: 13px;
-    }
-
-    .applications-page .application-next-action-card {
-        grid-template-columns: 30px minmax(0, 1fr);
-        gap: 14px;
     }
 
     .applications-page .application-task-checkbox {
         width: 30px;
         height: 30px;
-    }
-
-    .applications-page .application-next-action-card strong {
-        font-size: 16px;
     }
 }
 
@@ -1172,8 +1081,7 @@
 }
 
 .interviews-page .interview-detail-content-grid>.application-detail-card-section h3,
-.tasks-page .task-detail-body>.application-detail-card-section h3,
-.contacts-page .contact-notes h3 {
+.tasks-page .task-detail-body>.application-detail-card-section h3 {
     margin: 0;
     color: var(--text-primary);
     font-size: 18px;
@@ -1207,41 +1115,6 @@
     --status-accent: #0c7f58;
 }
 
-.contacts-page .contact-detail-header {
-    align-items: start;
-    gap: 18px;
-    padding-bottom: 22px;
-    border-bottom-color: var(--border-strong);
-}
-
-.contacts-page .contact-detail-header .application-detail-header-actions {
-    position: relative;
-    z-index: 2;
-}
-
-.contacts-page .contact-detail-header h2 {
-    margin: 5px 0 4px;
-    color: var(--text-primary);
-    font-size: clamp(24px, 2.25vw, 30px);
-    font-weight: 900;
-    line-height: 1.08;
-    letter-spacing: -.035em;
-}
-
-.contacts-page .contact-detail-header p {
-    color: var(--text-secondary);
-    font-size: 15px;
-}
-
-.contacts-page .contact-detail-header .contact-avatar.large {
-    border-radius: 11px;
-    box-shadow: inset 0 0 0 1px rgba(11, 107, 255, .12);
-}
-
-.contacts-page .contact-badge {
-    border: 1px solid var(--accent-border);
-}
-
 .contacts-page .contact-facts {
     gap: 12px;
     margin: 22px 0;
@@ -1265,58 +1138,12 @@
     font-size: 14px;
 }
 
-.contacts-page .contact-notes {
-    display: grid;
-    gap: 12px;
-    min-height: 0;
-    padding: 22px 0 0;
-    border-width: 1px 0 0;
-    border-color: var(--border-strong);
-    border-radius: 0;
-}
-
-.contacts-page .contact-notes-heading {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-
-.contacts-page .contact-notes p {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    min-height: 58px;
-    margin: 0;
-    padding: 12px 18px;
-    border: 1px solid var(--border-strong);
-    border-radius: 11px;
-    background: var(--surface-muted);
-    color: var(--text-secondary);
-    font-size: 14px;
-    line-height: 1.55;
-}
-
-.contacts-page .contact-notes p.is-empty {
-    color: var(--text-soft);
-}
-
-.contacts-page .contact-notes p svg {
-    flex: 0 0 auto;
-    color: var(--text-primary);
-}
-
 @media (max-width: 900px) {
     .interviews-page .detail-facts-section,
-    .tasks-page .detail-facts-section,
-    .interviews-page .interview-detail-content-grid>.application-detail-card-section,
-    .tasks-page .task-detail-body>.application-detail-card-section,
-    .contacts-page .contact-notes {
+.tasks-page .detail-facts-section,
+.interviews-page .interview-detail-content-grid>.application-detail-card-section,
+.tasks-page .task-detail-body>.application-detail-card-section {
         padding-top: 20px;
-    }
-
-    .contacts-page .contact-detail-header h2 {
-        font-size: clamp(24px, 6vw, 28px);
     }
 
     .contacts-page .contact-facts {

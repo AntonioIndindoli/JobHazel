@@ -1,0 +1,590 @@
+/* Collection detail panel: box, content, and responsive states.
+   Edit the base box here; page styles must not override its geometry. */
+
+.application-detail-panel {
+    position: relative;
+    overflow: visible;
+    min-width: 0;
+    min-height: 620px;
+    padding: 30px;
+    border: 0;
+    border-radius: 0;
+    background: var(--surface-soft);
+    container: collection-detail / inline-size;
+    color: var(--text-secondary);
+    line-height: 1.55;
+
+    &.application-reference-detail {
+        padding: 30px 24px;
+    }
+
+    html[data-theme="dark"] & {
+        border-color: var(--border);
+        background-color: var(--surface);
+        box-shadow: var(--shadow-card);
+    }
+
+    .applications-split-panel:not(.detail-pane-open) > & {
+        display: none;
+    }
+
+    @media (min-width: 901px) {
+
+        .applications-split-panel.detail-pane-open > & {
+            min-height: calc(100dvh - 90px);
+        }
+    }
+
+    @media (max-width: 900px) {
+        min-height: 100dvh;
+
+        .applications-split-panel > & {
+            display: none;
+        }
+
+        .applications-split-panel.mobile-detail-open > & {
+            display: block;
+        }
+    }
+
+    @media (max-width: 1100px) {
+
+        .applications-split-panel.mobile-detail-open > & {
+            position: fixed;
+            inset: 12px;
+            z-index: 70;
+            overflow-x: hidden;
+            overflow-y: auto;
+            width: calc(100% - 24px);
+            min-height: calc(100dvh - 24px);
+            padding: 0 24px calc(38px + env(safe-area-inset-bottom));
+            border: 1px solid var(--border-strong);
+            border-radius: 0;
+            background: var(--surface-muted);
+            box-shadow: none;
+            overscroll-behavior: contain;
+        }
+    }
+
+    /* Header and actions */
+
+    & .application-detail-top-row {
+        gap: 16px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: start;
+    }
+
+    & :is(.application-detail-heading h2) {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
+        line-height: 1.3;
+        letter-spacing: -.025em;
+        overflow-wrap: anywhere;
+    }
+
+    & .application-detail-header-actions {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+        gap: 8px;
+        flex-wrap: nowrap;
+        align-self: start;
+        grid-row: 1;
+        grid-column: 2;
+        width: auto;
+        margin-top: 0;
+    }
+
+    & .application-detail-header-actions > button.alternative,
+& .application-detail-header-actions .application-detail-menu-trigger {
+        display: grid;
+        place-items: center;
+        width: 38px;
+        min-width: 38px;
+        height: 38px;
+        min-height: 38px;
+        padding: 0;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: var(--surface-raised);
+        color: var(--text-secondary);
+        box-shadow: var(--shadow-card);
+        cursor: pointer;
+        transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+    }
+
+    & .application-detail-header-actions > button.alternative:hover,
+& .application-detail-header-actions .application-detail-menu-trigger:is(:hover, [aria-expanded="true"]) {
+        border-color: var(--border-strong);
+        background: var(--surface-muted);
+        color: var(--text-heading);
+    }
+
+    & .application-detail-header-actions button:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+    }
+
+    & .application-detail-header-actions svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    /* Action menu */
+
+    & .application-detail-menu-popover {
+        top: calc(100% + 8px);
+        min-width: 196px;
+        padding: 6px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--surface-raised);
+        box-shadow: var(--shadow-floating);
+    }
+
+    & .application-detail-menu-popover button {
+        min-height: 40px;
+        gap: 10px;
+        padding: 10px 12px;
+        border-radius: 7px;
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 1.4;
+        white-space: nowrap;
+        cursor: pointer;
+        box-shadow: none;
+    }
+
+    & .application-detail-menu-popover button.danger-text {
+        color: var(--danger);
+    }
+
+    & .application-detail-menu-popover button.danger-text:is(:hover, :focus-visible) {
+        background: var(--danger-surface);
+    }
+
+    & .application-detail-menu-popover svg {
+        flex-shrink: 0;
+        width: 16px;
+        height: 16px;
+    }
+
+    @media (pointer: coarse) {
+
+        & .application-detail-header-actions > button.alternative,
+& .application-detail-header-actions .application-detail-menu-trigger {
+            width: 44px;
+            min-width: 44px;
+            height: 44px;
+            min-height: 44px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+
+        & .application-detail-header-actions button {
+            transition: none;
+        }
+    }
+
+    /* Company and status context */
+
+    & .application-detail-company-location {
+        gap: 8px 14px;
+        margin: 10px 0 0;
+        font-size: 14px;
+        line-height: 1.5;
+        color: var(--text-secondary);
+    }
+
+    & .application-detail-context-item {
+        display: inline-flex;
+        align-items: start;
+        gap: 7px;
+        min-width: 0;
+        padding: 0;
+        overflow-wrap: anywhere;
+    }
+
+    & .application-detail-context-item svg {
+        flex-shrink: 0;
+        width: 18px;
+        height: 18px;
+        margin-top: 2px;
+    }
+
+    & .application-detail-context-separator {
+        display: none;
+    }
+
+    & .application-detail-status-row {
+        gap: 8px;
+        margin-top: 16px;
+        padding: 0 0 16px;
+        border: 0;
+    }
+
+    & .application-detail-header .status-select {
+        min-height: 34px;
+        max-width: 100%;
+        padding: 6px 30px 6px 12px;
+        border-radius: 8px;
+        background-image: none;
+        font-size: 13px;
+        font-weight: 650;
+    }
+
+    & .application-detail-status-control::after {
+        right: 12px;
+    }
+
+    & .application-detail-status-date {
+        min-height: 34px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    /* Summary and content sections */
+
+    & .application-detail-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 18px;
+        margin: 0;
+        padding: 16px 0;
+        border-top: 1px solid var(--border);
+        font-size: 13px;
+        line-height: 1.5;
+        color: var(--text-secondary);
+    }
+
+    & .application-detail-summary > span {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    & .application-detail-summary svg {
+        flex-shrink: 0;
+        width: 17px;
+        height: 17px;
+    }
+
+    & .application-detail-layout .application-detail-main > section,
+& .detail-facts-section,
+& .interview-detail-content-grid > .application-detail-card-section,
+& .task-detail-body > .application-detail-card-section {
+        padding: 20px 0;
+        border-top: 1px solid var(--border);
+    }
+
+    & .application-detail-section-heading span {
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 400;
+    }
+
+    & .application-section-action {
+        min-height: 34px;
+        padding: 6px 10px;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        color: var(--accent);
+        background: var(--surface);
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    /* Interview facts */
+
+    & .interview-detail-fact {
+        grid-template-columns: minmax(90px, .38fr) minmax(0, 1fr);
+        gap: 12px;
+        padding: 14px 0;
+    }
+
+    & .interview-detail-fact dd strong {
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.5;
+    }
+
+    & .interview-detail-fact dd :is(span, a) {
+        font-size: 13px;
+        line-height: 1.5;
+    }
+
+    /* Contact facts */
+
+    & .contact-facts {
+        grid-template-columns: 1fr;
+        gap: 0;
+        margin: 20px 0;
+        padding: 0 16px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+    }
+
+    & .contact-facts > div {
+        display: grid;
+        grid-template-columns: 90px minmax(0, 1fr);
+        gap: 12px;
+        min-height: 0;
+        padding: 14px 0;
+        border: 0;
+        border-bottom: 1px solid var(--border);
+        border-radius: 0;
+        background: transparent;
+    }
+
+    & .contact-facts > div:last-child {
+        border-bottom: 0;
+    }
+
+    & .contact-facts dt {
+        margin: 0;
+        font-size: 13px;
+        font-weight: 500;
+        text-transform: none;
+        letter-spacing: 0;
+        color: var(--text-muted);
+    }
+
+    /* Linked records and next actions */
+
+    & .application-interview-item {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 14px;
+    }
+
+    & .application-interview-copy {
+        flex: 1 1 160px;
+        min-width: 0;
+    }
+
+    & .application-interview-copy strong {
+        overflow-wrap: anywhere;
+    }
+
+    & .application-interview-icon-button {
+        width: 32px;
+        height: 32px;
+    }
+
+    & :is(button, a, select, textarea):focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 3px;
+    }
+
+    @container collection-detail (max-width: 380px) {
+
+        & .application-detail-header-actions {
+            margin-left: auto;
+        }
+
+        & .interview-detail-fact,
+& .contact-facts > div {
+            grid-template-columns: 1fr;
+            gap: 6px;
+        }
+
+        & :is(.application-detail-heading h2) {
+            font-size: 22px;
+        }
+    }
+
+    & .application-detail-heading {
+        min-width: 0;
+    }
+
+    /* Notes and task descriptions share the application note presentation. */
+
+    .applications-page & .collection-notes-section {
+        display: grid;
+        min-width: 0;
+        margin: 0;
+        padding: 20px 0 0;
+        border-top: 1px solid var(--border);
+
+        & > .collection-notes-heading {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px 12px;
+            min-height: 34px;
+            margin-bottom: 12px;
+        }
+
+        & h3 {
+            margin: 0;
+            color: var(--text-primary);
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1.4;
+            letter-spacing: 0;
+        }
+
+        & .application-section-action {
+            min-height: 34px;
+            padding: 4px 0 4px 8px;
+            border: 0;
+            border-radius: 7px;
+            background: transparent;
+            color: var(--accent-strong);
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.2;
+        }
+
+        & > p {
+            display: block;
+            min-height: 0;
+            margin: 0;
+            padding: 16px;
+            border: 1px solid var(--border-strong);
+            border-radius: 8px;
+            background: var(--surface-soft);
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 400;
+            line-height: 1.75;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        & > p.is-empty {
+            padding: 10px 0 0;
+            border: 0;
+            border-radius: 11px;
+            background: transparent;
+            color: var(--text-muted);
+            line-height: 1.55;
+            text-align: left;
+        }
+
+        & > p.is-empty > svg {
+            display: none;
+        }
+    }
+
+    & :is(.application-detail-section h3, .detail-facts-section > h3) {
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.4;
+        letter-spacing: 0;
+    }
+
+    & :is(.application-detail-section-heading, .interview-detail-section-title) {
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px 12px;
+    }
+
+    /* Contact identity: name and actions lead; role and relationship are secondary. */
+
+    & .contact-detail-header {
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 8px 12px;
+        padding-bottom: 22px;
+        border-bottom: 1px solid var(--border);
+
+        & > .contact-avatar {
+            grid-column: 1;
+            grid-row: 1;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--surface-blue);
+            color: var(--accent-strong);
+            font-size: 15px;
+            font-weight: 750;
+        }
+
+        & > h2 {
+            grid-column: 2;
+            grid-row: 1;
+            min-width: 0;
+            margin: 0;
+            color: var(--text-heading);
+            font-size: 24px;
+            font-weight: 700;
+            line-height: 1.3;
+            letter-spacing: -.025em;
+            overflow-wrap: anywhere;
+        }
+
+        & > .application-detail-header-actions {
+            grid-column: 3;
+            grid-row: 1;
+            align-self: center;
+            margin: 0;
+            position: relative;
+            z-index: 2;
+        }
+
+        & > .contact-detail-meta {
+            grid-column: 2 / -1;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px 12px;
+            min-width: 0;
+        }
+
+        & .contact-detail-meta > p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.5;
+            overflow-wrap: anywhere;
+        }
+
+        & .contact-badge {
+            display: inline-flex;
+            max-width: 100%;
+            padding: 3px 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface-muted);
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 650;
+            line-height: 1.4;
+            overflow-wrap: anywhere;
+        }
+
+        @container collection-detail (max-width: 380px) {
+            grid-template-columns: 36px minmax(0, 1fr) auto;
+            column-gap: 10px;
+
+            & > .contact-avatar {
+                width: 36px;
+                height: 36px;
+                border-radius: 10px;
+                font-size: 13px;
+            }
+
+            & > h2 {
+                font-size: 22px;
+            }
+
+            & > .contact-detail-meta {
+                grid-column: 1 / -1;
+            }
+        }
+    }
+}
+
+
+
+
+
+

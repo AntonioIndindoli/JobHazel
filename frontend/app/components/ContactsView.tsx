@@ -148,14 +148,22 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
                 {selected ? <>
                     <button type="button" className="mobile-detail-back" onClick={closeMobileDetail}><AppIcon name="arrow-left" size={20} /> Contacts</button>
                     <CollectionPaneCollapse label="contact" onCollapse={() => { collapseDetailPane(); setIsMobileDetailOpen(false); }} />
-                    <header className="contact-detail-header"><span className="contact-avatar large">{initials(selected.name)}</span><div><span className="contact-badge">{CONTACT_RELATIONSHIP_LABELS[selected.relationship]}</span><h2>{selected.name}</h2><p>{selected.role || "Role not set"}{selected.companyName ? ` at ${selected.companyName}` : ""}</p></div><div className="application-detail-header-actions"><button className="alternative icon-button" aria-label="Edit contact" onClick={() => openEdit(selected)}><AppIcon name="edit" size={20} /></button><div className="application-detail-menu" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsDetailMenuOpen(false); }}><button type="button" className="application-detail-menu-trigger" aria-label="More contact actions" aria-haspopup="menu" aria-expanded={isDetailMenuOpen} onClick={() => setIsDetailMenuOpen((open) => !open)}><AppIcon name="dots-vertical" size={25} /></button>{isDetailMenuOpen && <div className="application-detail-menu-popover" role="menu"><button type="button" role="menuitem" className="danger-text" onClick={async () => { setIsDetailMenuOpen(false); if (window.confirm(`Delete ${selected.name}?`)) { await onRemove(selected.id); collapseDetailPane(); } }}><AppIcon name="trash" size={15} /> Delete contact</button></div>}</div></div></header>
+                    <header className="contact-detail-header">
+                        <span className="contact-avatar large" aria-hidden="true">{initials(selected.name)}</span>
+                        <h2>{selected.name}</h2>
+                        <div className="application-detail-header-actions"><button className="alternative icon-button" aria-label="Edit contact" onClick={() => openEdit(selected)}><AppIcon name="edit" size={20} /></button><div className="application-detail-menu" onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsDetailMenuOpen(false); }}><button type="button" className="application-detail-menu-trigger" aria-label="More contact actions" aria-haspopup="menu" aria-expanded={isDetailMenuOpen} onClick={() => setIsDetailMenuOpen((open) => !open)}><AppIcon name="dots-vertical" size={25} /></button>{isDetailMenuOpen && <div className="application-detail-menu-popover" role="menu"><button type="button" role="menuitem" className="danger-text" onClick={async () => { setIsDetailMenuOpen(false); if (window.confirm(`Delete ${selected.name}?`)) { await onRemove(selected.id); collapseDetailPane(); } }}><AppIcon name="trash" size={15} /> Delete contact</button></div>}</div></div>
+                        <div className="contact-detail-meta">
+                            <p>{selected.role || "Role not set"}{selected.companyName ? ` at ${selected.companyName}` : ""}</p>
+                            <span className="contact-badge">{CONTACT_RELATIONSHIP_LABELS[selected.relationship]}</span>
+                        </div>
+                    </header>
                     <dl className="contact-facts">
                         <div><dt>Email</dt><dd>{selected.email ? <a href={`mailto:${selected.email}`}>{selected.email}</a> : <span>Not added</span>}</dd></div>
                         <div><dt>LinkedIn</dt><dd>{selected.linkedinUrl ? <a href={selected.linkedinUrl} target="_blank" rel="noreferrer">View profile <AppIcon name="external-link" size={14} /></a> : <span>Not added</span>}</dd></div>
                         <div><dt>Application</dt><dd>{selected.applicationTitle || "Not linked"}</dd></div>
                     </dl>
-                    <section className="contact-notes">
-                        <div className="contact-notes-heading">
+                    <section className="collection-notes-section">
+                        <div className="collection-notes-heading">
                             <h3>Notes</h3>
                             <button type="button" className="alternative application-section-action" onClick={() => openEdit(selected)}>Edit notes</button>
                         </div>

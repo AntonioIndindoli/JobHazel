@@ -63,10 +63,6 @@
     height: 38px;
   }
 
-  .application-detail-panel {
-    padding: 18px 14px;
-  }
-
   .interview-detail-header .application-detail-top-row {
     grid-template-columns: 1fr;
   }
@@ -148,8 +144,7 @@
     grid-template-columns: 1fr;
   }
 
-  .application-list-panel,
-  .application-detail-panel {
+  .application-list-panel {
     min-height: 0;
   }
 

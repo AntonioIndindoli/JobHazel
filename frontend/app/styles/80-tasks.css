@@ -1,27 +1,5 @@
 /* Task automation, list, and detail views. */
 
-.tasks-header-meta {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.tasks-header-meta strong {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--muted);
-  font: inherit;
-  font-weight: 600;
-}
-
-.tasks-header-meta strong+strong::before {
-  content: "\2022";
-  color: var(--text-faint);
-  font-weight: 500;
-}
-
 .tasks-header-meta strong:nth-child(2) {
   color: var(--danger);
 }
@@ -218,10 +196,6 @@
 
 .task-detail-facts {
   grid-template-columns: 1fr;
-}
-
-.task-notes-card {
-  display: block;
 }
 
 .task-drawer textarea {

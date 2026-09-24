@@ -375,28 +375,6 @@ export function InterviewsView({
                                 <div className="application-detail-top-row">
                                     <div className="application-detail-heading">
                                         <h2>{selectedInterview.applicationTitle ?? "Unknown role"}</h2>
-                                        <p className="application-detail-company-location">
-                                            <span className="application-detail-context-item application-detail-company">
-                                                <AppIcon name="company" size={20} />
-                                                {selectedInterview.companyName ?? "Unknown company"}
-                                            </span>
-                                            <span className="application-detail-context-separator" aria-hidden="true" />
-                                            <span className="application-detail-context-item">
-                                                <AppIcon name="location" size={20} />
-                                                {selectedInterview.location || "Location not set"}
-                                            </span>
-                                        </p>
-                                        <div className="application-detail-status-row">
-                                            <label className="application-detail-status-control">
-                                                <select aria-label="Interview status" className={`status-select ${selectedInterview.outcome.toLowerCase()}`} value={selectedInterview.outcome} onChange={(event) => onOutcomeChange(selectedInterview.id, event.target.value)}>
-                                                    {INTERVIEW_OUTCOMES.map((outcome) => <option key={outcome} value={outcome}>{getInterviewOutcomeLabel(outcome)}</option>)}
-                                                </select>
-                                            </label>
-                                            <span className="detail-type-label">
-                                                <AppIcon name="contacts" size={18} />
-                                                {getInterviewTypeLabel(selectedInterview.type)} interview
-                                            </span>
-                                        </div>
                                     </div>
                                     <div
                                         className="application-detail-header-actions"
@@ -417,6 +395,28 @@ export function InterviewsView({
                                             </div>}
                                         </div>
                                     </div>
+                                </div>
+                                <p className="application-detail-company-location">
+                                    <span className="application-detail-context-item application-detail-company">
+                                        <AppIcon name="company" size={20} />
+                                        {selectedInterview.companyName ?? "Unknown company"}
+                                    </span>
+                                    <span className="application-detail-context-separator" aria-hidden="true" />
+                                    <span className="application-detail-context-item">
+                                        <AppIcon name="location" size={20} />
+                                        {selectedInterview.location || "Location not set"}
+                                    </span>
+                                </p>
+                                <div className="application-detail-status-row">
+                                    <label className="application-detail-status-control">
+                                        <select aria-label="Interview status" className={`status-select ${selectedInterview.outcome.toLowerCase()}`} value={selectedInterview.outcome} onChange={(event) => onOutcomeChange(selectedInterview.id, event.target.value)}>
+                                            {INTERVIEW_OUTCOMES.map((outcome) => <option key={outcome} value={outcome}>{getInterviewOutcomeLabel(outcome)}</option>)}
+                                        </select>
+                                    </label>
+                                    <span className="detail-type-label">
+                                        <AppIcon name="contacts" size={18} />
+                                        {getInterviewTypeLabel(selectedInterview.type)} interview
+                                    </span>
                                 </div>
                                 <div className="application-detail-summary" aria-label="Interview summary">
 
@@ -523,8 +523,8 @@ export function InterviewsView({
                                 </section>
 
                                 <div className="interview-detail-content-grid">
-                                    <section className="application-detail-section application-detail-card-section interview-notes-card">
-                                        <div className="interview-detail-section-title">
+                                    <section className="collection-notes-section">
+                                        <div className="collection-notes-heading">
                                             <div className="interview-notes-card-title">
                                                 <h3>Notes</h3>
                                             </div>

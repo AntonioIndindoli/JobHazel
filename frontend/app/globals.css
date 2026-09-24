@@ -7,6 +7,7 @@
 @import "./styles/30-drawers.css";
 @import "./styles/40-account.css";
 @import "./styles/50-analytics.css";
+@import "./styles/59-collections.css";
 @import "./styles/60-applications.css";
 @import "./styles/70-interviews.css";
 @import "./styles/80-tasks.css";
@@ -18,7 +19,7 @@
 @import "./styles/93-collection-responsive.css";
 @import "./styles/94-design-system.css";
 @import "./styles/95-dark-theme.css";
-@import "./styles/96-detail-readability.css";
+@import "./styles/96-collection-detail.css";
 
 @import "./styles/97-bulk-actions.css";
 @import "./styles/98-collection-controls.css";
