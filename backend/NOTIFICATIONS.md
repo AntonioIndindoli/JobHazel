@@ -1,5 +1,7 @@
 # Reminder emails
 
+Production startup now requires an explicit mode and validates production auth/cron settings. Scheduled mode also requires provider credentials, a webhook secret, a verified-domain sender, and a stable unsubscribe secret. The new read-only `GET /notifications/maintenance/status` endpoint uses CRON_SECRET and reports missed runs, pending work, and capacity exclusions. See [release verification](RELEASE.md).
+
 ## Daily digest and scheduled interview mode
 
 The redesign is implemented behind `NOTIFICATION_MODE`. The default remains `legacy` for a coordinated rollout. The notification cron stays **once daily at 15:07 UTC**. No additional background scheduler is required.

@@ -53,7 +53,7 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
     const listScrollPosition = useRef(0);
 
     const filtered = useMemo(() => contacts.filter((contact) => {
-        const haystack = [contact.name, contact.role, contact.email, contact.companyName, contact.applicationTitle].join(" ").toLowerCase();
+        const haystack = [contact.name, contact.role, contact.email, contact.phone, contact.companyName, contact.applicationTitle].join(" ").toLowerCase();
         return (!query.trim() || haystack.includes(query.trim().toLowerCase())) && (!relationship || contact.relationship === relationship);
     }), [contacts, query, relationship]);
     const sortedContacts = useMemo(() => [...filtered].sort((left, right) => {
@@ -69,7 +69,7 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
     }
     function openEdit(contact: Contact) {
         setEditingId(contact.id);
-        setForm({ name: contact.name, role: contact.role ?? "", email: contact.email ?? "", linkedinUrl: contact.linkedinUrl ?? "", relationship: contact.relationship, notes: contact.notes ?? "", companyName: contact.companyName ?? "", applicationId: contact.applicationId ?? "" });
+        setForm({ name: contact.name, role: contact.role ?? "", email: contact.email ?? "", phone: contact.phone ?? "", linkedinUrl: contact.linkedinUrl ?? "", relationship: contact.relationship, notes: contact.notes ?? "", companyName: contact.companyName ?? "", applicationId: contact.applicationId ?? "" });
         setError(""); setIsFormOpen(true);
     }
     function openMobileDetail(contactId: string) {
@@ -112,7 +112,7 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
                 <CollectionListControls
                         activeFilters={<ActiveFilterChips chips={relationship ? [{ id: "relationship", label: "Relationship", value: CONTACT_RELATIONSHIP_LABELS[relationship], onRemove: () => setRelationship("") }] : []} />}
                     noun="contacts"
-                    search={<label className="applications-search-field contacts-search"><AppIcon name="search" size={18} /><input aria-label="Search contacts" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name, company, role, or email" /></label>}
+                    search={<label className="applications-search-field contacts-search"><AppIcon name="search" size={18} /><input aria-label="Search contacts" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by name, company, role, email, or phone" /></label>}
                     filters={<select aria-label="Filter contacts by relationship" value={relationship} onChange={(e) => setRelationship(e.target.value)}><option value="">All relationships</option>{CONTACT_RELATIONSHIPS.map((item) => <option key={item} value={item}>{CONTACT_RELATIONSHIP_LABELS[item]}</option>)}</select>}
                     filtersOpen={isFiltersOpen}
                     onToggleFilters={() => setIsFiltersOpen(open => !open)}
@@ -159,6 +159,7 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
                     </header>
                     <dl className="contact-facts">
                         <div><dt>Email</dt><dd>{selected.email ? <a href={`mailto:${selected.email}`}>{selected.email}</a> : <span>Not added</span>}</dd></div>
+                        <div><dt>Phone</dt><dd>{selected.phone ? <a href={`tel:${selected.phone.replace(/[\s().-]/g, "")}`}>{selected.phone}</a> : <span>Not added</span>}</dd></div>
                         <div><dt>LinkedIn</dt><dd>{selected.linkedinUrl ? <a href={selected.linkedinUrl} target="_blank" rel="noreferrer">View profile <AppIcon name="external-link" size={14} /></a> : <span>Not added</span>}</dd></div>
                         <div><dt>Application</dt><dd>{selected.applicationTitle || "Not linked"}</dd></div>
                     </dl>
@@ -183,6 +184,7 @@ export function ContactsView({ applications, contacts, createRequest, onSave, on
                 <label className="field"><span>Role</span><input value={form.role} onChange={(e) => setForm({...form, role:e.target.value})} placeholder="Senior recruiter" /></label>
                 <label className="field"><span>Relationship</span><select value={form.relationship} onChange={(e) => setForm({...form, relationship:e.target.value})}>{CONTACT_RELATIONSHIPS.map((item) => <option key={item} value={item}>{CONTACT_RELATIONSHIP_LABELS[item]}</option>)}</select></label>
                 <label className="field"><span>Email</span><input type="email" value={form.email} onChange={(e) => setForm({...form, email:e.target.value})} placeholder="maya@company.com" /></label>
+                <label className="field"><span>Phone number</span><input type="tel" autoComplete="tel" maxLength={50} value={form.phone} onChange={(e) => setForm({...form, phone:e.target.value})} placeholder="+1 (415) 555-0123" /></label>
                 <label className="field"><span>LinkedIn URL</span><input type="url" value={form.linkedinUrl} onChange={(e) => setForm({...form, linkedinUrl:e.target.value})} placeholder="https://linkedin.com/in/..." /></label>
                 <label className="field"><span>Company</span><input value={form.companyName} onChange={(e) => setForm({...form, companyName:e.target.value})} placeholder="Company name" /></label>
                 <label className="field"><span>Application</span><select value={form.applicationId} onChange={(e) => { const app=applications.find(a=>a.id===e.target.value); setForm({...form, applicationId:e.target.value, companyName:app?.companyName ?? form.companyName}); }}><option value="">Not linked</option>{applications.map((app) => <option key={app.id} value={app.id}>{app.title} · {app.companyName || "Unknown company"}</option>)}</select></label>

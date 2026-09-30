@@ -2,6 +2,7 @@
    Edit the base box here; page styles must not override its geometry. */
 
 .application-detail-panel {
+    --detail-action-color: #477955;
     position: relative;
     overflow: visible;
     min-width: 0;
@@ -20,7 +21,6 @@
 
     html[data-theme="dark"] & {
         border-color: var(--border);
-        background-color: var(--surface);
         box-shadow: var(--shadow-card);
     }
 
@@ -60,7 +60,6 @@
             padding: 0 24px calc(38px + env(safe-area-inset-bottom));
             border: 1px solid var(--border-strong);
             border-radius: 0;
-            background: var(--surface-muted);
             box-shadow: none;
             overscroll-behavior: contain;
         }
@@ -171,17 +170,6 @@
         height: 16px;
     }
 
-    @media (pointer: coarse) {
-
-        & .application-detail-header-actions > button.alternative,
-& .application-detail-header-actions .application-detail-menu-trigger {
-            width: 44px;
-            min-width: 44px;
-            height: 44px;
-            min-height: 44px;
-        }
-    }
-
     @media (prefers-reduced-motion: reduce) {
 
         & .application-detail-header-actions button {
@@ -192,8 +180,8 @@
     /* Company and status context */
 
     & .application-detail-company-location {
-        gap: 8px 14px;
-        margin: 10px 0 0;
+        gap: 6px 14px;
+        margin: 5px 0 0;
         font-size: 14px;
         line-height: 1.5;
         color: var(--text-secondary);
@@ -202,7 +190,7 @@
     & .application-detail-context-item {
         display: inline-flex;
         align-items: start;
-        gap: 7px;
+        gap: 6px;
         min-width: 0;
         padding: 0;
         overflow-wrap: anywhere;
@@ -221,7 +209,6 @@
 
     & .application-detail-status-row {
         gap: 8px;
-        margin-top: 16px;
         padding: 0 0 16px;
         border: 0;
     }
@@ -238,14 +225,6 @@
 
     & .application-detail-status-control::after {
         right: 12px;
-    }
-
-    & .application-detail-status-date {
-        min-height: 34px;
-        padding: 6px 10px;
-        border-radius: 8px;
-        font-size: 13px;
-        font-weight: 500;
     }
 
     /* Summary and content sections */
@@ -292,10 +271,18 @@
         padding: 6px 10px;
         border: 1px solid var(--border);
         border-radius: 7px;
-        color: var(--accent);
+        color: var(--detail-action-color);
         background: var(--surface);
         font-size: 12px;
         font-weight: 600;
+    }
+
+    & .application-section-action:is(:hover, :focus-visible) {
+        color: var(--detail-action-color);
+    }
+
+    & button.application-detail-posting-link:is(:hover, :focus-visible) {
+        color: var(--detail-action-color);
     }
 
     /* Interview facts */
@@ -436,7 +423,7 @@
             border: 0;
             border-radius: 7px;
             background: transparent;
-            color: var(--accent-strong);
+            color: var(--detail-action-color);
             font-size: 13px;
             font-weight: 600;
             line-height: 1.2;
@@ -490,21 +477,21 @@
 
     & .contact-detail-header {
         display: grid;
-        grid-template-columns: 44px minmax(0, 1fr) auto;
+        grid-template-columns: 56px minmax(0, 1fr) auto;
         align-items: center;
-        gap: 8px 12px;
+        gap: 2px 12px;
         padding-bottom: 22px;
         border-bottom: 1px solid var(--border);
 
         & > .contact-avatar {
             grid-column: 1;
-            grid-row: 1;
-            width: 44px;
-            height: 44px;
+            grid-row: 1 / span 2;
+            width: 56px;
+            height: 56px;
             border-radius: 12px;
             background: var(--surface-blue);
             color: var(--accent-strong);
-            font-size: 15px;
+            font-size: 17px;
             font-weight: 750;
         }
 
@@ -532,6 +519,7 @@
 
         & > .contact-detail-meta {
             grid-column: 2 / -1;
+            grid-row: 2;
             display: flex;
             flex-wrap: wrap;
             align-items: center;
@@ -562,14 +550,14 @@
         }
 
         @container collection-detail (max-width: 380px) {
-            grid-template-columns: 36px minmax(0, 1fr) auto;
+            grid-template-columns: 50px minmax(0, 1fr) auto;
             column-gap: 10px;
 
             & > .contact-avatar {
-                width: 36px;
-                height: 36px;
+                width: 50px;
+                height: 50px;
                 border-radius: 10px;
-                font-size: 13px;
+                font-size: 15px;
             }
 
             & > h2 {
@@ -577,14 +565,9 @@
             }
 
             & > .contact-detail-meta {
-                grid-column: 1 / -1;
+                grid-column: 2 / -1;
             }
         }
     }
 }
-
-
-
-
-
 

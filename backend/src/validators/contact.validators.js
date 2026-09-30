@@ -27,6 +27,14 @@ function normalizeEmail(value) {
   return normalized;
 }
 
+function normalizePhone(value) {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== "string") throw new Error("phone must be a string.");
+  const phone = normalizeOptional(value);
+  validateLength(phone, 50, "phone");
+  return phone;
+}
+
 function normalizeHttpUrl(value, field) {
   const url = normalizeOptional(value);
   if (!url) return null;
@@ -71,6 +79,7 @@ function normalizeCreatePayload(body = {}) {
 
   const role = normalizeOptional(body.role);
   const email = normalizeEmail(body.email);
+  const phone = normalizePhone(body.phone);
   const linkedinUrl = normalizeHttpUrl(body.linkedinUrl, "linkedinUrl");
   const relationship = normalizeRelationship(body.relationship) ?? "OTHER";
   const notes = normalizeOptional(body.notes);
@@ -91,6 +100,7 @@ function normalizeCreatePayload(body = {}) {
     name,
     role,
     email,
+    phone,
     linkedinUrl,
     relationship,
     notes,
@@ -128,6 +138,10 @@ function normalizePatchPayload(body = {}) {
     const linkedinUrl = normalizeHttpUrl(body.linkedinUrl, "linkedinUrl");
     validateLength(linkedinUrl, 2000, "linkedinUrl");
     payload.linkedinUrl = linkedinUrl;
+  }
+
+  if (hasOwn(body, "phone")) {
+    payload.phone = normalizePhone(body.phone);
   }
 
   if (hasOwn(body, "relationship")) {

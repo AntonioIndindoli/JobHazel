@@ -439,6 +439,17 @@ export function TasksView({
                                         {selectedTaskApplication?.location || "Location not set"}
                                     </span>
                                 </p>
+                                <div className="application-detail-date-row">
+                                    <p className="application-detail-status-date">
+                                        <AppIcon name="calendar" size={20} />
+                                        {selectedTask.dueDate ? `Due ${formatTaskDueDate(selectedTask.dueDate, timeZone)}` : "No due date"}
+                                    </p>
+                                    {selectedTask.applicationId && (
+                                        <button type="button" className="application-detail-posting-link" onClick={() => onViewApplication(selectedTask.applicationId!)}>
+                                            <AppIcon name="applications" size={15} />View application
+                                        </button>
+                                    )}
+                                </div>
                                 <div className="application-detail-status-row">
                                     <label className="application-detail-status-control">
                                         <select aria-label="Task status" className={`status-select ${getTaskStatusClass(selectedTask, timeZone)}`} value={getTaskDueState(selectedTask, timeZone)} onChange={(event) => { if (event.target.value === "completed") onCompleteTask(selectedTask.id); if (event.target.value === "edit") onStartEdit(selectedTask); }}>
@@ -447,19 +458,6 @@ export function TasksView({
                                             <option value="edit">Edit task details…</option>
                                         </select>
                                     </label>
-                                </div>
-                                <div className="application-detail-summary" aria-label="Task summary">
-                                    <span><AppIcon name="checklist" size={19} /> {getTaskTypeLabel(selectedTask.type)} task</span>
-                                    {selectedTask.applicationId && (
-                                        <button
-                                            type="button"
-                                            className="application-detail-posting-link"
-                                            onClick={() => onViewApplication(selectedTask.applicationId!)}
-                                        >
-                                            <AppIcon name="applications" size={15} />
-                                            View application
-                                        </button>
-                                    )}
                                 </div>
                             </header>
 

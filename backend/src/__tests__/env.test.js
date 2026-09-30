@@ -69,7 +69,13 @@ test("production requires authenticated cleanup and parses lifecycle controls", 
     ...BASE_ENV,
     ...COMPLETE_R2_ENV,
     NODE_ENV: "production",
-    CRON_SECRET: "maintenance-secret",
+    NEON_AUTH_BASE_URL: "https://auth.example.com/auth",
+    AUTH_RATE_LIMIT_SECRET: "a".repeat(32),
+    APP_URL: "https://example.com",
+    API_PUBLIC_URL: "https://api.example.com",
+    CORS_ORIGIN: "https://example.com",
+    NOTIFICATION_MODE: "legacy",
+    CRON_SECRET: "maintenance-secret".repeat(2),
     RESUME_CLEANUP_STALE_HOURS: "48",
     RESUME_CLEANUP_BATCH_SIZE: "50",
     RESUME_RATE_LIMIT_WINDOW_SECONDS: "300",
@@ -77,7 +83,7 @@ test("production requires authenticated cleanup and parses lifecycle controls", 
     RESUME_UPLOAD_COMPLETE_RATE_LIMIT: "8",
     RESUME_DOWNLOAD_RATE_LIMIT: "30",
   });
-  assert.equal(config.RESUME_CLEANUP_SECRET, "maintenance-secret");
+  assert.equal(config.RESUME_CLEANUP_SECRET, "maintenance-secret".repeat(2));
   assert.equal(config.RESUME_CLEANUP_STALE_HOURS, 48);
   assert.equal(config.RESUME_CLEANUP_BATCH_SIZE, 50);
   assert.equal(config.RESUME_RATE_LIMIT_WINDOW_SECONDS, 300);

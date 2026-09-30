@@ -173,6 +173,7 @@ export type Contact = {
     role: string | null;
     email: string | null;
     linkedinUrl: string | null;
+    phone: string | null;
     relationship: string;
     notes: string | null;
     companyId: string | null;
@@ -188,6 +189,7 @@ export type ContactFormValues = {
     role: string;
     email: string;
     linkedinUrl: string;
+    phone: string;
     relationship: string;
     notes: string;
     companyName: string;

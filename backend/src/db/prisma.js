@@ -29,7 +29,12 @@ export function getPrisma() {
 
 export async function checkPrisma() {
   const client = await getPrismaAsync();
-  await client.$queryRaw`SELECT 1`;
+  // Resolve required tables/columns without reading account data. A reachable
+  // database with unapplied release migrations must not report ready.
+  await client.$queryRaw`SELECT u."neonAuthId", c."phone", s."cursor", o."providerEventAt", r."completedAt", v."storageKey", v."uploadStatus", cleanup."completedAt"
+    FROM "User" u, "Contact" c, "NotificationSync" s, "NotificationOperation" o, "NotificationRun" r,
+      "ResumeVersion" v, "ResumeCleanupRun" cleanup
+    LIMIT 0`;
   return { ok: true };
 }
 

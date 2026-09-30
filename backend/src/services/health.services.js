@@ -21,7 +21,7 @@ export const healthService = {
       ok,
       service: "backend",
       dependencies: {
-        db: dbOk ? { ok: true } : { ok: false, error: db.reason?.message },
+        db: dbOk ? { ok: true } : { ok: false, error: "Database or required schema is unavailable." },
       },
       durationMs: Date.now() - started,
       timestamp: new Date().toISOString(),

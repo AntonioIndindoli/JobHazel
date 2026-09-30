@@ -44,6 +44,7 @@ type ApplicationsViewProps = {
     onCreateTask: (applicationId?: string) => void;
     onCompleteTask: (id: string) => void | Promise<void>;
     onDownloadResume: (resume: ApplicationResumeSummary) => void | Promise<void>;
+    onChangeResume: (applicationId: string, resumeVersionId: string | null) => Promise<void>;
     onRemoveApplication: (id: string) => void;
     onRemoveInterview: (id: string) => void | Promise<void>;
     onStartEdit: (application: Application) => void;
@@ -156,6 +157,7 @@ export function ApplicationsView({
     onCreateTask,
     onCompleteTask,
     onDownloadResume,
+    onChangeResume,
     onRemoveApplication,
     onRemoveInterview,
     onStartEdit,
@@ -178,6 +180,9 @@ export function ApplicationsView({
     const [notesDraft, setNotesDraft] = useState("");
     const [isSavingNotes, setIsSavingNotes] = useState(false);
     const [openInterviewMenuId, setOpenInterviewMenuId] = useState<string | null>(null);
+    const [openResumeMenuId, setOpenResumeMenuId] = useState<string | null>(null);
+    const [savingResumeForId, setSavingResumeForId] = useState<string | null>(null);
+    const [resumeChangeError, setResumeChangeError] = useState("");
     const [isAppliedDateOpen, setIsAppliedDateOpen] = useState(false);
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
     const [isMobileDetailOpen, setIsMobileDetailOpen] = useState(
@@ -209,6 +214,22 @@ export function ApplicationsView({
             left.name.localeCompare(right.name),
         );
     }, [applications, resumes]);
+    const selectableResumes = resumes
+        .filter((resume) => resume.uploadStatus === "READY" && !resume.archivedAt)
+        .sort((left, right) => left.name.localeCompare(right.name));
+
+    async function changeApplicationResume(applicationId: string, resumeVersionId: string | null) {
+        setSavingResumeForId(applicationId);
+        setResumeChangeError("");
+        try {
+            await onChangeResume(applicationId, resumeVersionId);
+            setOpenResumeMenuId(null);
+        } catch (error) {
+            setResumeChangeError(error instanceof Error ? error.message : "Could not change resume.");
+        } finally {
+            setSavingResumeForId(null);
+        }
+    }
 
     const filteredApplications = useMemo(() => {
         const query = filters.query.trim().toLowerCase();
@@ -381,61 +402,61 @@ export function ApplicationsView({
                                 </option>
                             ))}
                         </select>
-                        <select
-                            aria-label="Filter applications by source"
-                            value={filters.source}
-                            onChange={(event) =>
-                                setFilters({ ...filters, source: event.target.value })
-                            }
-                        >
-                            <option value="">All sources</option>
-                            {sourceOptions.map((source) => (
-                                <option key={source} value={source}>
-                                    {source}
-                                </option>
-                            ))}
-                        </select>
-                        <select
-                            aria-label="Filter by resume"
-                            value={filters.resumeVersionId}
-                            onChange={(event) =>
-                                setFilters({
-                                    ...filters,
-                                    resumeVersionId: event.target.value,
-                                })
-                            }
-                        >
-                            <option value="">All resumes</option>
-                            <option value={NO_RESUME_FILTER}>No resume</option>
-                            {resumeOptions.map((resume) => (
-                                <option key={resume.id} value={resume.id}>
-                                    {resume.name}{resume.archivedAt ? " (Archived)" : ""}
-                                </option>
-                            ))}
-                        </select>
-                        <div className="applications-date-filter" onBlur={(event) => {
-                            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsAppliedDateOpen(false);
-                        }}>
-                            <button type="button" className="applications-date-filter-trigger" aria-haspopup="dialog" aria-expanded={isAppliedDateOpen} onClick={() => setIsAppliedDateOpen((open) => !open)}>
-                                <span>Date: {filters.startDate || filters.endDate
-                                    ? `${filters.startDate ? formatFilterDate(filters.startDate) : "Any"} – ${filters.endDate ? formatFilterDate(filters.endDate) : "Any"}`
-                                    : "Any time"}</span>
-                            </button>
-                            {isAppliedDateOpen && (
-                                <div className="applications-date-filter-popover" role="dialog" aria-label="Applied date range">
-                                    <div className="applications-date-filter-heading">
-                                        <strong>Applied date</strong>
-                                        <span>Choose a date range</span>
+                            <select
+                                aria-label="Filter applications by source"
+                                value={filters.source}
+                                onChange={(event) =>
+                                    setFilters({ ...filters, source: event.target.value })
+                                }
+                            >
+                                <option value="">All sources</option>
+                                {sourceOptions.map((source) => (
+                                    <option key={source} value={source}>
+                                        {source}
+                                    </option>
+                                ))}
+                            </select>
+                            <select
+                                aria-label="Filter by resume"
+                                value={filters.resumeVersionId}
+                                onChange={(event) =>
+                                    setFilters({
+                                        ...filters,
+                                        resumeVersionId: event.target.value,
+                                    })
+                                }
+                            >
+                                <option value="">All resumes</option>
+                                <option value={NO_RESUME_FILTER}>No resume</option>
+                                {resumeOptions.map((resume) => (
+                                    <option key={resume.id} value={resume.id}>
+                                        {resume.name}{resume.archivedAt ? " (Archived)" : ""}
+                                    </option>
+                                ))}
+                            </select>
+                            <div className="applications-date-filter" onBlur={(event) => {
+                                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsAppliedDateOpen(false);
+                            }}>
+                                <button type="button" className="applications-date-filter-trigger" aria-haspopup="dialog" aria-expanded={isAppliedDateOpen} onClick={() => setIsAppliedDateOpen((open) => !open)}>
+                                    <span>Date: {filters.startDate || filters.endDate
+                                        ? `${filters.startDate ? formatFilterDate(filters.startDate) : "Any"} – ${filters.endDate ? formatFilterDate(filters.endDate) : "Any"}`
+                                        : "Any time"}</span>
+                                </button>
+                                {isAppliedDateOpen && (
+                                    <div className="applications-date-filter-popover" role="dialog" aria-label="Applied date range">
+                                        <div className="applications-date-filter-heading">
+                                            <strong>Applied date</strong>
+                                            <span>Choose a date range</span>
+                                        </div>
+                                        <label>From<input type="date" value={filters.startDate} max={filters.endDate || undefined} onChange={(event) => setFilters({ ...filters, startDate: event.target.value })} /></label>
+                                        <label>To<input type="date" value={filters.endDate} min={filters.startDate || undefined} onChange={(event) => setFilters({ ...filters, endDate: event.target.value })} /></label>
+                                        <div className="applications-date-filter-actions">
+                                            <button type="button" className="applications-date-filter-clear" onClick={() => setFilters({ ...filters, startDate: "", endDate: "" })}>Clear</button>
+                                            <button type="button" className="primary" onClick={() => setIsAppliedDateOpen(false)}>Done</button>
+                                        </div>
                                     </div>
-                                    <label>From<input type="date" value={filters.startDate} max={filters.endDate || undefined} onChange={(event) => setFilters({ ...filters, startDate: event.target.value })} /></label>
-                                    <label>To<input type="date" value={filters.endDate} min={filters.startDate || undefined} onChange={(event) => setFilters({ ...filters, endDate: event.target.value })} /></label>
-                                    <div className="applications-date-filter-actions">
-                                        <button type="button" className="applications-date-filter-clear" onClick={() => setFilters({ ...filters, startDate: "", endDate: "" })}>Clear</button>
-                                        <button type="button" className="primary" onClick={() => setIsAppliedDateOpen(false)}>Done</button>
-                                    </div>
-                                </div>
-                            )}
-                        </div></>}
+                                )}
+                            </div></>}
                         filtersOpen={isFiltersOpen}
                         onToggleFilters={() => { setIsFiltersOpen(open => !open); setIsAppliedDateOpen(false); }}
                         activeFilterCount={activeFilterCount}
@@ -562,6 +583,18 @@ export function ApplicationsView({
                                         {selectedApplication.location || "Location not set"}
                                     </span>
                                 </p>
+                                <div className="application-detail-date-row">
+                                    <p className="application-detail-status-date">
+                                        <AppIcon name="calendar" size={27} />
+                                        {selectedApplication.dateApplied
+                                            ? `Applied ${formatDisplayDate(selectedApplication.dateApplied)}`
+                                            : formatDisplayDate(selectedApplication.dateApplied)}
+                                    </p>
+                                    {selectedApplication.sourceUrl &&
+                                        <a className="application-detail-posting-link" href={selectedApplication.sourceUrl} target="_blank" rel="noreferrer"><AppIcon name="external-link" size={16} />Original posting</a>
+                                    }
+                                </div>
+
                                 <div className="application-detail-status-row">
                                     <label className="application-detail-status-control">
                                         <select
@@ -574,7 +607,7 @@ export function ApplicationsView({
                                                     event.target.value,
                                                 )
                                             }
-                                        >
+                                        >Application Status:
                                             {STATUSES.map((status) => (
                                                 <option key={status} value={status}>
                                                     {STATUS_LABELS[status]}
@@ -582,59 +615,53 @@ export function ApplicationsView({
                                             ))}
                                         </select>
                                     </label>
-                                    <span className="application-detail-status-date">
-                                        <AppIcon name="calendar" size={27} />
-                                        {selectedApplication.dateApplied
-                                            ? `Applied ${formatDisplayDate(selectedApplication.dateApplied)}`
-                                            : formatDisplayDate(selectedApplication.dateApplied)}
-                                    </span>
+
                                 </div>
-                                {selectedApplication.sourceUrl && <div className="application-detail-summary">
-                                    <a className="application-detail-posting-link" href={selectedApplication.sourceUrl} target="_blank" rel="noreferrer"><AppIcon name="external-link" size={16} />Original posting</a>
-                                </div>}
+
 
                             </header>
 
                             <div className="application-detail-layout">
                                 <div className="application-detail-main">
-                                    <section className={`application-detail-section application-detail-card-section application-resume-detail-section${selectedApplication.resumeVersion ? "" : " resume-not-recorded"}`}>
-                                        {selectedApplication.resumeVersion ? (
-                                            <div className="application-resume-detail-card">
-                                                <span className="application-resume-detail-icon" aria-hidden="true">
-                                                    <AppIcon name="document" size={21} />
-                                                </span>
-                                                <span className="application-resume-detail-copy">
-                                                    <strong>{selectedApplication.resumeVersion.name}</strong>
-                                                    <small>
-                                                        {selectedApplication.resumeVersion.originalFilename}
-                                                        {selectedApplication.resumeVersion.targetRole
-                                                            ? ` · ${selectedApplication.resumeVersion.targetRole}`
-                                                            : ""}
-                                                    </small>
-                                                </span>
-                                                {selectedApplication.resumeVersion.archivedAt && (
-                                                    <span className="application-resume-archived-badge">Archived</span>
-                                                )}
-                                                <button
-                                                    type="button"
-                                                    className="alternative application-resume-download"
-                                                    onClick={() =>
-                                                        onDownloadResume(
-                                                            selectedApplication.resumeVersion!,
-                                                        )
-                                                    }
-                                                >
-                                                    Download PDF
+                                    <section className="application-detail-section application-detail-card-section application-detail-resume-section">
+                                        <div className="application-detail-section-heading">
+                                            <div className="interview-detail-section-title">
+                                                <div className="interview-notes-card-title"><h3>Resume</h3></div>
+                                            </div>
+                                            <div className="application-detail-menu application-resume-menu" onBlur={(event) => {
+                                                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpenResumeMenuId(null);
+                                            }}>
+                                                <button type="button" className="alternative application-section-action" aria-haspopup="menu" aria-expanded={openResumeMenuId === selectedApplication.id} disabled={savingResumeForId === selectedApplication.id} onClick={() => { setResumeChangeError(""); setOpenResumeMenuId((current) => current === selectedApplication.id ? null : selectedApplication.id); }}>
+                                                    <AppIcon name={selectedApplication.resumeVersion ? "edit" : "plus"} size={15} />
+                                                    {savingResumeForId === selectedApplication.id ? "Saving…" : selectedApplication.resumeVersion ? "Change resume" : "Add resume"}
                                                 </button>
+                                                {openResumeMenuId === selectedApplication.id && <div className="application-detail-menu-popover application-resume-menu-popover" role="menu" aria-label="Select a resume">
+                                                    <button type="button" role="menuitem" disabled={!selectedApplication.resumeVersion} onClick={() => changeApplicationResume(selectedApplication.id, null)}><AppIcon name="trash" size={16} />Remove resume</button>
+                                                    {selectableResumes.filter((resume) => resume.id !== selectedApplication.resumeVersion?.id).length > 0 ? selectableResumes.filter((resume) => resume.id !== selectedApplication.resumeVersion?.id).map((resume) => (
+                                                        <button type="button" role="menuitem" key={resume.id} onClick={() => changeApplicationResume(selectedApplication.id, resume.id)}>{resume.name}{resume.targetRole ? ` · ${resume.targetRole}` : ""}</button>
+                                                    )) : <span className="application-resume-menu-empty">No other resumes available</span>}
+                                                </div>}
+                                            </div>
+                                        </div>
+                                        {resumeChangeError && <p className="application-resume-change-error" role="alert">{resumeChangeError}</p>}
+                                        {selectedApplication.resumeVersion ? (
+                                            <div className="application-interview-list">
+                                                <article className="application-interview-item application-resume-item">
+                                                    <div className="application-interview-copy">
+                                                        <strong>{selectedApplication.resumeVersion.name}</strong>
+                                                        <span>
+                                                            {selectedApplication.resumeVersion.originalFilename}
+                                                            {selectedApplication.resumeVersion.targetRole ? ` · ${selectedApplication.resumeVersion.targetRole}` : ""}
+                                                        </span>
+                                                    </div>
+                                                    {selectedApplication.resumeVersion.archivedAt && <span className="application-resume-archived-badge">Archived</span>}
+                                                    <div className="application-interview-actions">
+                                                        <button type="button" className="alternative application-resume-download" onClick={() => onDownloadResume(selectedApplication.resumeVersion!)}>Download PDF</button>
+                                                    </div>
+                                                </article>
                                             </div>
                                         ) : (
-                                            <div className="application-resume-detail-empty">
-                                                <AppIcon name="warning" size={22} />
-                                                <span>
-                                                    <strong>No resume recorded</strong>
-                                                </span>
-                                                <button type="button" className="alternative application-section-action" onClick={() => onStartEdit(selectedApplication)}>Attach resume</button>
-                                            </div>
+                                            <div className="application-interviews-empty"><AppIcon name="document" size={37} /><div>No resume yet</div></div>
                                         )}
                                     </section>
                                     <section className="application-detail-section application-detail-card-section application-detail-actions-section">

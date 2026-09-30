@@ -219,6 +219,7 @@ model Contact {
   name          String
   role          String?
   email         String?
+  phone         String?
   linkedinUrl   String?
   relationship  ContactRelationship @default(OTHER)
   notes         String?

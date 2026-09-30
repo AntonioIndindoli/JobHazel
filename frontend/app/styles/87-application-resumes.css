@@ -38,59 +38,6 @@
         auto;
 }
 
-.application-resume-detail-card,
-.application-resume-detail-empty {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-height: 68px;
-    padding: 13px 14px;
-    border: 1px solid var(--border-strong);
-    border-radius: 12px;
-    background: var(--surface-soft);
-}
-
-.application-resume-detail-icon,
-.application-resume-detail-empty > svg {
-    display: inline-grid;
-    flex: 0 0 auto;
-    place-items: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 10px;
-    color: var(--accent);
-}
-
-.application-resume-detail-copy,
-.application-resume-detail-empty > span {
-    display: grid;
-    min-width: 0;
-}
-
-.application-resume-detail-copy {
-    flex: 1 1 auto;
-}
-
-.application-resume-detail-copy strong,
-.application-resume-detail-empty strong {
-    overflow: hidden;
-    color: var(--text-primary);
-    font-size: 14px;
-    font-weight: 700;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.application-resume-detail-copy small,
-.application-resume-detail-empty small {
-    overflow: hidden;
-    color: var(--muted);
-    font-size: 13px;
-    line-height: 1.4;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
 .application-resume-archived-badge {
     flex: 0 0 auto;
     padding: 5px 8px;
@@ -111,8 +58,33 @@
     font-weight: 750;
 }
 
-.application-resume-detail-empty {
+.application-resume-item .application-interview-actions {
+    grid-column: 3;
+    justify-self: end;
+}
+
+.application-resume-menu-popover {
+    min-width: 240px;
+    max-width: min(320px, calc(100vw - 40px));
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.application-resume-menu-popover button {
+    overflow-wrap: anywhere;
+}
+
+.application-resume-menu-empty {
+    display: block;
+    padding: 9px 10px;
     color: var(--muted);
+    font-size: 13px;
+}
+
+.application-resume-change-error {
+    margin: 8px 0 0;
+    color: var(--danger);
+    font-size: 13px;
 }
 
 @media (max-width: 1180px) and (min-width: 761px) {
@@ -129,24 +101,5 @@
 @media (max-width: 760px) {
     .applications-page .applications-toolbar {
         grid-template-columns: minmax(0, 1fr) auto;
-    }
-
-    .application-resume-detail-card {
-        align-items: flex-start;
-        flex-wrap: wrap;
-    }
-
-    .application-resume-detail-copy {
-        min-width: calc(100% - 50px);
-    }
-
-    .application-resume-detail-copy small,
-    .application-resume-detail-empty small {
-        white-space: normal;
-    }
-
-    .application-resume-download {
-        width: 100%;
-        justify-content: center;
     }
 }

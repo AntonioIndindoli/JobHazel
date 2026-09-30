@@ -35,6 +35,10 @@ html[data-theme="dark"] {
     --shadow-floating: 0 20px 52px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .025);
 }
 
+html[data-theme="dark"] .application-detail-panel {
+    --detail-action-color: #91bda0;
+}
+
 html[data-theme="dark"] body,
 html[data-theme="dark"] .dashboard-shell {
     background-image: radial-gradient(circle at 72% -10%, rgba(73, 200, 117, .055), transparent 34%);
@@ -110,7 +114,6 @@ html[data-theme="dark"] .primary {
     border-color: #56ce7e;
     background: #45c573;
     color: #07160d;
-    box-shadow: 0 6px 18px rgba(37, 151, 78, .18);
 }
 
 html[data-theme="dark"] .primary:hover {

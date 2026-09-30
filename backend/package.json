@@ -8,6 +8,7 @@
     "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "test": "node --test src/__tests__/*.test.js",
+    "verify:release": "node scripts/verify-release.mjs",
     "auth:migrate": "node scripts/migrate-neon-auth.mjs",
     "test:auth:integration": "node scripts/verify-neon-auth.mjs",
     "test:notifications:integration": "node scripts/verify-notifications.mjs",

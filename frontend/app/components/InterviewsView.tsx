@@ -239,20 +239,20 @@ export function InterviewsView({
                                 </option>
                             ))}
                         </select>
-                        <select
-                            aria-label="Filter interviews by status"
-                            value={filters.outcome}
-                            onChange={(event) =>
-                                setFilters({ ...filters, outcome: event.target.value })
-                            }
-                        >
-                            <option value="">All statuses</option>
-                            {INTERVIEW_OUTCOMES.map((outcome) => (
-                                <option key={outcome} value={outcome}>
-                                    {getInterviewOutcomeLabel(outcome)}
-                                </option>
-                            ))}
-                        </select></>}
+                            <select
+                                aria-label="Filter interviews by status"
+                                value={filters.outcome}
+                                onChange={(event) =>
+                                    setFilters({ ...filters, outcome: event.target.value })
+                                }
+                            >
+                                <option value="">All statuses</option>
+                                {INTERVIEW_OUTCOMES.map((outcome) => (
+                                    <option key={outcome} value={outcome}>
+                                        {getInterviewOutcomeLabel(outcome)}
+                                    </option>
+                                ))}
+                            </select></>}
                         filtersOpen={isFiltersOpen}
                         onToggleFilters={() => setIsFiltersOpen(open => !open)}
                         activeFilterCount={activeFilterCount}
@@ -301,7 +301,7 @@ export function InterviewsView({
                                             >
                                                 {getInterviewOutcomeLabel(interview.outcome)}
                                             </span>
-                                        <AppIcon name="arrow-right" size={18} className="collection-record-chevron" />
+                                            <AppIcon name="arrow-right" size={18} className="collection-record-chevron" />
                                         </button></BulkRow>
                                     );
                                 })}
@@ -407,20 +407,19 @@ export function InterviewsView({
                                         {selectedInterview.location || "Location not set"}
                                     </span>
                                 </p>
+                                <div className="application-detail-date-row">
+                                    <span className="detail-type-label">
+                                        <AppIcon name="contacts" size={18} />
+                                        {getInterviewTypeLabel(selectedInterview.type)} interview
+                                    </span>
+                                    <button type="button" className="application-detail-posting-link" onClick={() => onViewApplication(selectedInterview.applicationId)}><AppIcon name="applications" size={15} />View application</button>
+                                </div>
                                 <div className="application-detail-status-row">
                                     <label className="application-detail-status-control">
                                         <select aria-label="Interview status" className={`status-select ${selectedInterview.outcome.toLowerCase()}`} value={selectedInterview.outcome} onChange={(event) => onOutcomeChange(selectedInterview.id, event.target.value)}>
                                             {INTERVIEW_OUTCOMES.map((outcome) => <option key={outcome} value={outcome}>{getInterviewOutcomeLabel(outcome)}</option>)}
                                         </select>
                                     </label>
-                                    <span className="detail-type-label">
-                                        <AppIcon name="contacts" size={18} />
-                                        {getInterviewTypeLabel(selectedInterview.type)} interview
-                                    </span>
-                                </div>
-                                <div className="application-detail-summary" aria-label="Interview summary">
-
-                                    <button type="button" className="application-detail-posting-link" onClick={() => onViewApplication(selectedInterview.applicationId)}><AppIcon name="applications" size={15} /> View application</button>
                                 </div>
                             </header>
 

@@ -1,6 +1,9 @@
 **/.env*
 **/node_modules/**
 **/.next/**
+**/.next-e2e/**
+**/playwright-report/**
+**/test-results/**
 **/out/**
 **/.vercel/**
 .git/**

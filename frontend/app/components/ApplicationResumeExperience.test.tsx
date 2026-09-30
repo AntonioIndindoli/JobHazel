@@ -79,6 +79,7 @@ function createResume(
 
 function renderApplicationsView() {
     const onDownloadResume = vi.fn();
+    const onChangeResume = vi.fn().mockResolvedValue(undefined);
     render(
         <ApplicationsView
             applications={applications}
@@ -90,6 +91,7 @@ function renderApplicationsView() {
             onCreateInterview={vi.fn()}
             onCreateTask={vi.fn()}
             onDownloadResume={onDownloadResume}
+            onChangeResume={onChangeResume}
             onRemoveApplication={vi.fn()}
             onRemoveInterview={vi.fn()}
             onStartEdit={vi.fn()}
@@ -99,7 +101,7 @@ function renderApplicationsView() {
             onViewInterview={vi.fn()}
         />,
     );
-    return { onDownloadResume };
+    return { onDownloadResume, onChangeResume };
 }
 
 describe("application resume experience", () => {
@@ -136,6 +138,52 @@ describe("application resume experience", () => {
         ).toBeGreaterThan(0);
         expect(within(applicationList).queryByText("Product Engineer")).toBeNull();
         await userEvent.click(screen.getByRole("button", { name: /Platform EngineerNorthstar/ }));
-        expect(screen.getByText("No resume recorded")).toBeTruthy();
+        expect(screen.getByText("No resume yet")).toBeTruthy();
+    });
+
+    it("changes the resume directly from the detail panel", async () => {
+        const replacementResume = createResume("resume-replacement", "Engineering resume");
+        const onChangeResume = vi.fn().mockResolvedValue(undefined);
+        const onStartEdit = vi.fn();
+        render(
+            <ApplicationsView
+                applications={applications}
+                interviews={[]}
+                resumes={[activeResume, replacementResume, archivedResume]}
+                tasks={[]}
+                onChangeResume={onChangeResume}
+                onCompleteTask={vi.fn()}
+                onCreateApplication={vi.fn()}
+                onCreateInterview={vi.fn()}
+                onCreateTask={vi.fn()}
+                onDownloadResume={vi.fn()}
+                onRemoveApplication={vi.fn()}
+                onRemoveInterview={vi.fn()}
+                onStartEdit={onStartEdit}
+                onStartEditInterview={vi.fn()}
+                onStatusChange={vi.fn()}
+                onUpdateNotes={vi.fn().mockResolvedValue(undefined)}
+                onViewInterview={vi.fn()}
+            />,
+        );
+
+        await userEvent.click(screen.getByRole("button", { name: /Product EngineerExample Labs/ }));
+        await userEvent.click(screen.getByRole("button", { name: "Change resume" }));
+        const menu = screen.getByRole("menu", { name: "Select a resume" });
+        expect(within(menu).getAllByRole("menuitem")[0].textContent).toContain("Remove resume");
+        expect(within(menu).queryByText("Product resume · Product Engineer")).toBeNull();
+        expect(within(menu).queryByText("2025 resume · Product Engineer")).toBeNull();
+        await userEvent.click(within(menu).getByRole("menuitem", { name: "Engineering resume · Product Engineer" }));
+        expect(onChangeResume).toHaveBeenCalledWith("application-with-resume", "resume-replacement");
+        expect(onStartEdit).not.toHaveBeenCalled();
+    });
+
+    it("removes the attached resume from the first menu option", async () => {
+        const { onChangeResume } = renderApplicationsView();
+        await userEvent.click(screen.getByRole("button", { name: /Product EngineerExample Labs/ }));
+        await userEvent.click(screen.getByRole("button", { name: "Change resume" }));
+        const menu = screen.getByRole("menu", { name: "Select a resume" });
+        await userEvent.click(within(menu).getAllByRole("menuitem")[0]);
+        expect(onChangeResume).toHaveBeenCalledWith("application-with-resume", null);
     });
 });

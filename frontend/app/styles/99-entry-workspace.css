@@ -76,6 +76,16 @@
     background: var(--surface-raised);
 }
 
+.applications-page .bulk-row:nth-child(even of .bulk-row):not(.bulk-row-selected):not(:has(.active)) {
+    background: color-mix(in srgb, var(--collection-blue) 3%, var(--surface-raised));
+}
+
+@media (max-width: 900px) {
+    .applications-page .mobile-record-group > .bulk-row:nth-child(even of .bulk-row):not(.bulk-row-selected) > :last-child:not(:hover, :focus-visible) {
+        background: color-mix(in srgb, var(--collection-blue) 3%, var(--surface-raised));
+    }
+}
+
 .applications-page .bulk-checkbox-target {
     flex-basis: 60px;
     border: 0;
@@ -239,38 +249,36 @@
     padding-top: 0;
 }
 
+.applications-page .application-detail-date-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    width: 100%;
+}
+
+.applications-page .application-detail-date-row .application-detail-status-date {
+    margin: 0;
+}
+
+.applications-page .application-detail-date-row .application-detail-posting-link {
+    white-space: nowrap;
+}
+
+.applications-page .application-detail-panel :is(
+    .application-detail-company-location .application-detail-context-item:not(.application-detail-company),
+    .application-detail-date-row .application-detail-status-date,
+    .application-detail-date-row .application-detail-posting-link
+) {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+}
+
 .applications-page .application-detail-main {
     display: flex;
     flex-direction: column;
     gap: 0;
-}
-
-.applications-page .application-reference-detail .application-detail-main>.application-resume-detail-section {
-    order: -1;
-    margin-bottom: 22px;
-    padding: 16px 18px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-}
-
-.applications-page .application-resume-detail-empty {
-    min-height: 0;
-    display: flex;
-    align-items: center;
-    text-align: left;
-    gap: 14px;
-    padding: 0;
-    background: transparent;
-}
-
-.applications-page .application-resume-detail-empty>span {
-    flex: 1;
-}
-
-.applications-page .application-resume-detail-empty small {
-    display: block;
-    margin-top: 4px;
-    font-size: 12px;
 }
 
 .applications-page .application-detail-section h3 {
@@ -340,10 +348,6 @@
 
     .applications-page .application-list-item {
         padding: 14px 12px 14px 4px;
-    }
-
-    .applications-page .application-resume-detail-empty {
-        flex-wrap: wrap;
     }
 
     .mobile-page-detail-open>.collection-tabs {
@@ -422,6 +426,16 @@
 }
 
 @media (max-width: 700px) {
+    .collection-workspace .topbar {
+        grid-template-rows: auto;
+        min-height: 62px;
+        padding-top: 0;
+    }
+
+    .collection-workspace .collection-header-tabs {
+        display: none;
+    }
+
     .collection-workspace .topbar-page-title {
         font-size: 20px;
     }
@@ -430,126 +444,9 @@
         gap: 8px;
     }
 
-    .collection-header-tabs .collection-tabs {
-        gap: 10px;
-    }
-}
-
-/* Application follow-up and resume cards share the compact reference layout. */
-
-.applications-page :is(.application-resume-detail-empty, .application-resume-detail-card) {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 12px;
-    min-height: 40px;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
-}
-
-.applications-page .application-resume-detail-empty>svg,
-.applications-page .application-resume-detail-icon {
-    width: 24px;
-    height: 28px;
-    flex: 0 0 24px;
-    color: var(--text-heading);
-    border-radius: 0;
-}
-
-.applications-page .application-resume-detail-empty>span,
-.applications-page .application-resume-detail-copy {
-    flex: 1;
-    min-width: 0;
-}
-
-.applications-page .application-resume-detail-empty strong {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 13px;
-    font-weight: 700;
-    white-space: normal;
-}
-
-.applications-page .application-resume-detail-empty strong svg {
-    flex-shrink: 0;
-    color: #efa900;
-    fill: #fff1bd;
-}
-
-.applications-page :is(.application-resume-detail-empty, .application-resume-detail-copy) small {
-    margin: 0;
-    white-space: normal;
-    overflow: visible;
-    color: var(--text-muted);
-    font-size: 12px;
-    line-height: 1.5;
-}
-
-.applications-page .application-resume-detail-empty>.application-section-action,
-.applications-page .application-resume-download {
-    flex: 0 0 auto;
-    width: auto;
-    min-height: 36px;
-    padding: 7px 12px;
-    border: 1px solid color-mix(in srgb, var(--collection-blue) 20%, var(--border));
-    border-radius: 8px;
-    background: color-mix(in srgb, var(--collection-blue) 4%, var(--surface));
-    color: var(--collection-blue);
-    font-size: 12px;
-    font-weight: 650;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-@container collection-detail (max-width: 380px) {
-
-    .applications-page :is(.application-resume-detail-empty, .application-resume-detail-card) {
-        flex-wrap: wrap;
-    }
-
-    .applications-page .application-resume-detail-empty>span,
-    .applications-page .application-resume-detail-copy {
-        flex-basis: calc(100% - 36px);
-    }
-
-    .applications-page .application-resume-detail-empty>.application-section-action,
-    .applications-page .application-resume-download {
-        margin-left: 36px;
-    }
 }
 
 /* Full application detail layout. */
-
-.application-reference-detail .resume-not-recorded .application-resume-detail-empty {
-    min-height: 28px;
-    flex-wrap: nowrap;
-    gap: 18px;
-}
-
-.application-reference-detail .resume-not-recorded .application-resume-detail-empty>svg {
-    color: #ed9800;
-    width: 22px;
-    height: 22px;
-}
-
-.application-reference-detail .resume-not-recorded .application-resume-detail-empty>span {
-    flex: 1;
-}
-
-.application-reference-detail .resume-not-recorded .application-resume-detail-empty strong {
-    font-size: 14px;
-}
-
-.applications-page .application-reference-detail .resume-not-recorded .application-section-action {
-    padding: 0;
-    margin: 0;
-    min-height: 28px;
-    background: transparent;
-    border: 0;
-    color: var(--collection-blue);
-}
 
 .applications-page .application-reference-detail .application-detail-main> :is(.application-detail-interviews-section, .application-facts-section) {
     padding: 20px 0 24px;
@@ -561,11 +458,11 @@
     font-weight: 700;
 }
 
-.application-reference-detail :is(.application-detail-actions-section, .application-detail-interviews-section) .application-section-action {
+.application-reference-detail :is(.application-detail-resume-section, .application-detail-actions-section, .application-detail-interviews-section) .application-section-action {
     border: 0;
     padding: 4px 0 4px 8px;
     background: transparent;
-    color: var(--accent-strong);
+    color: var(--detail-action-color);
     font-size: 13px;
 }
 
@@ -620,19 +517,6 @@
 }
 
 @container collection-detail (max-width: 380px) {
-
-    .application-reference-detail .resume-not-recorded .application-resume-detail-empty {
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-
-    .application-reference-detail .resume-not-recorded .application-resume-detail-empty>span {
-        flex-basis: calc(100% - 34px);
-    }
-
-    .application-reference-detail .resume-not-recorded .application-section-action {
-        margin-left: 34px;
-    }
 
     .application-reference-detail .application-interview-item {
         gap: 8px;

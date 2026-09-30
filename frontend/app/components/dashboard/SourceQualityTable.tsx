@@ -39,7 +39,7 @@ export function SourceQualityTable({
                 Source Quality
                 <InfoTooltip
                     label="Source quality information"
-                    tooltip="Compares application sources by responses, interviews, offers, and response speed."
+                    tooltip="Responses include interviews, offers, and rejections; withdrawal alone does not count. Response speed uses recorded response events with a known application date."
                 />
             </h2>
 
@@ -95,9 +95,9 @@ export function SourceQualityTable({
                                             )}
                                         </strong>
                                         <span>
-                                            {row.responses
-                                                ? "from first response"
-                                                : "no responses yet"}
+                                            {row.averageDaysToResponse !== null
+                                                ? "from recorded responses"
+                                                : row.responses ? "timing unavailable" : "no responses yet"}
                                         </span>
                                     </td>
                                 </tr>

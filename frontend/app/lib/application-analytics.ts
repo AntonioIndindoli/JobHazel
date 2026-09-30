@@ -41,7 +41,6 @@ const RESPONSE_STATUSES = new Set([
     "INTERVIEWING",
     "OFFER",
     "REJECTED",
-    "WITHDRAWN",
 ]);
 const INTERVIEW_STATUSES = new Set(["INTERVIEWING", "OFFER"]);
 const OFFER_STATUSES = new Set(["OFFER"]);
@@ -365,11 +364,10 @@ function getFirstStatusTimestamp(
 }
 
 function getFirstResponseTimestamp(application: Application, history: ActivityLog[]) {
-    if (!applicationReachedStatus(application, history, RESPONSE_STATUSES)) {
-        return null;
-    }
-
-    const appliedTime = getApplicationTimestamp(application);
+    // Import/creation time is not the time an employer responded. Only recorded
+    // response events with a known application date contribute to timing.
+    const appliedTime = application.dateApplied ? Date.parse(application.dateApplied) : NaN;
+    if (!Number.isFinite(appliedTime)) return null;
     const responseTimes: number[] = [];
 
     sortHistoryChronologically(history).forEach((entry) => {
@@ -381,19 +379,29 @@ function getFirstResponseTimestamp(application: Application, history: ActivityLo
             return;
         }
 
-        if (entry.type !== "STATUS_CHANGED" && entry.type !== "APPLICATION_CREATED") {
+        if (entry.type !== "STATUS_CHANGED") {
             return;
         }
 
         const metadata = getMetadataObject(entry.metadata);
-        const status = getStatusValue(
-            entry.type === "APPLICATION_CREATED" ? metadata?.status : metadata?.to,
-        );
+        const status = getStatusValue(metadata?.to);
         if (status && RESPONSE_STATUSES.has(status)) responseTimes.push(entryTime);
     });
 
     if (responseTimes.length) return Math.min(...responseTimes);
-    return appliedTime;
+    return null;
+}
+
+function hasEmployerResponse(application: Application, history: ActivityLog[], interviewsByApplicationId: Set<string>) {
+    return RESPONSE_STATUSES.has(application.status) ||
+        history.some((entry) => {
+            const metadata = getMetadataObject(entry.metadata);
+            return entry.type === "STATUS_CHANGED"
+                ? RESPONSE_STATUSES.has(String(metadata?.from)) || RESPONSE_STATUSES.has(String(metadata?.to))
+                : entry.type === "APPLICATION_CREATED" && RESPONSE_STATUSES.has(String(metadata?.status));
+        }) ||
+        interviewsByApplicationId.has(application.id) ||
+        history.some((entry) => entry.type === "INTERVIEW_ADDED");
 }
 
 function getAverageDaysToResponse(
@@ -450,10 +458,10 @@ function buildPeriodMetrics(
 ) {
     const submittedApplications = getSubmittedApplications(applications, historyByApp);
     const responseCount = submittedApplications.filter((application) =>
-        applicationReachedStatus(
+        hasEmployerResponse(
             application,
             historyByApp[application.id] ?? [],
-            RESPONSE_STATUSES,
+            interviewsByApplicationId,
         ),
     ).length;
     const interviewCount = submittedApplications.filter((application) =>
@@ -497,10 +505,10 @@ export function buildSourceQualityRows(
                 historyByApp,
             );
             const responses = submittedApplications.filter((application) =>
-                applicationReachedStatus(
+                hasEmployerResponse(
                     application,
                     historyByApp[application.id] ?? [],
-                    RESPONSE_STATUSES,
+                    interviewsByApplicationId,
                 ),
             ).length;
             const interviewsCount = submittedApplications.filter((application) =>
@@ -757,8 +765,8 @@ export function buildAnalyticsKpiCards(
     const currentAverageDays = currentPeriodMetrics.averageDaysToResponse;
     const previousAverageDays = previousPeriodMetrics.averageDaysToResponse;
     const averageDaysComparison =
-        currentAverageDays === null && previousAverageDays === null
-            ? `No change ${priorPeriodLabel}`
+        currentAverageDays === null
+            ? "Response timing unavailable"
             : previousAverageDays === null
                 ? "No prior responses"
                 : formatComparison(

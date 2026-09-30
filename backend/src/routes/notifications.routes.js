@@ -1,4 +1,5 @@
 import { flushUserNotifications, notificationStatus } from "../services/notification-operations.services.js";
+import { notificationHealth } from "../services/notification-health.services.js";
 import { getPrismaAsync } from "../db/prisma.js";
 import { consumeResumeRateLimit } from "../services/resume-rate-limit.services.js";
 import crypto from "node:crypto";
@@ -18,6 +19,12 @@ export function requireNotificationCronAuth(req, res, next) {
   }
   return next();
 }
+
+router.get("/maintenance/status", requireNotificationCronAuth, async (_req, res) => {
+  res.set("Cache-Control", "no-store");
+  const status = await notificationHealth();
+  return res.status(status.ok ? 200 : 503).json({ status });
+});
 
 router.get("/maintenance/deliver", requireNotificationCronAuth, async (_req, res) => {
   res.set("Cache-Control", "no-store");

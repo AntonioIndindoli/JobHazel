@@ -157,14 +157,12 @@ html[data-theme="dark"] .landing-page {
     border: 1px solid var(--landing-green);
     color: var(--landing-button-ink);
     background: var(--landing-green);
-    box-shadow: 0 10px 25px #17863d25;
 }
 
 .landing-button:hover,
 .landing-button:focus-visible {
     transform: translateY(-2px);
     background: var(--landing-green-dark);
-    box-shadow: 0 14px 30px #17863d36;
 }
 
 .landing-button-small {

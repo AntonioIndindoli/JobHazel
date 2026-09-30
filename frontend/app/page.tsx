@@ -1716,6 +1716,16 @@ export default function MainPage() {
         loadResumeLibrary();
     }
 
+    async function changeApplicationResume(applicationId: string, resumeVersionId: string | null) {
+        await updateApplicationResume(
+            (path, init) => authedFetch(path, init),
+            applicationId,
+            resumeVersionId,
+        );
+        await loadApplications();
+        await loadResumeLibrary();
+    }
+
     async function updateApplicationNotes(app: Application, notes: string) {
         const res = await authedFetch(`/applications/${app.id}`, {
             method: "PUT",
@@ -2266,6 +2276,7 @@ export default function MainPage() {
                     onCreateTask={openCreateTask}
                     onCompleteTask={completeTask}
                     onDownloadResume={downloadResume}
+                    onChangeResume={changeApplicationResume}
                     onRemoveApplication={removeApplication}
                     onRemoveInterview={removeInterview}
                     onStartEdit={startEdit}

@@ -387,9 +387,7 @@
     padding: 40px 24px;
     border: 1px dashed var(--border-strong);
     border-radius: 18px;
-    background:
-        radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--success) 9%, transparent), transparent 45%),
-        var(--surface-translucent);
+    background: var(--surface-translucent);
     box-shadow: 0 8px 24px rgba(15, 23, 42, .035);
     text-align: center;
 }
@@ -435,7 +433,7 @@
     line-height: 1.55;
 }
 
-.resume-filter-empty > svg {
+.resume-filter-empty>svg {
     margin-bottom: 13px;
     color: var(--text-faint);
 }
@@ -451,8 +449,13 @@
 }
 
 @keyframes resume-skeleton {
-    from { background-position: 100% 0, 0 0; }
-    to { background-position: -100% 0, 0 0; }
+    from {
+        background-position: 100% 0, 0 0;
+    }
+
+    to {
+        background-position: -100% 0, 0 0;
+    }
 }
 
 .resume-dialog {
@@ -556,7 +559,7 @@
 }
 
 .resume-selected-file,
-.resume-dropzone > div {
+.resume-dropzone>div {
     display: flex;
     min-width: 0;
     max-width: 100%;
@@ -596,7 +599,7 @@
     white-space: nowrap;
 }
 
-.resume-dropzone > small {
+.resume-dropzone>small {
     margin-top: 8px;
     color: var(--text-soft);
     font-size: 10px;
@@ -627,13 +630,13 @@
     gap: 6px;
 }
 
-.resume-field > span {
+.resume-field>span {
     color: var(--text-secondary);
     font-size: 12px;
     font-weight: 800;
 }
 
-.resume-field > span small {
+.resume-field>span small {
     margin-left: 4px;
     color: var(--text-soft);
     font-size: 10px;
@@ -703,7 +706,7 @@
     margin-top: 17px;
 }
 
-.resume-upload-progress > div {
+.resume-upload-progress>div {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -752,7 +755,9 @@
 }
 
 @keyframes resume-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @media (max-width: 720px) {
@@ -834,6 +839,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .resume-card,
     .resume-dropzone {
         transition: none;

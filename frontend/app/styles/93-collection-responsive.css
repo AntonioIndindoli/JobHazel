@@ -230,13 +230,11 @@
     .mobile-grouped-list {
         display: grid;
         gap: 18px;
-        padding: 16px;
         background: var(--surface-muted);
     }
 
     .mobile-record-group {
         display: grid;
-        gap: 8px;
     }
 
     .mobile-record-group>h3 {
@@ -485,7 +483,6 @@
 
     .mobile-grouped-list {
         margin: 0 -1px;
-        padding: 14px 10px;
     }
 
     .mobile-agenda-card {

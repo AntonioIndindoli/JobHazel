@@ -6,6 +6,7 @@ export async function getLiveness(req, res) {
 }
 
 export async function getReadiness(req, res) {
+  res.set("Cache-Control", "no-store");
   const result = await healthService.readiness();
   res.status(result.ok ? 200 : 503).json(result);
 }

@@ -11,9 +11,9 @@ export const metadata: Metadata = {
   title: "JobHazel",
   description: "Organize job applications, interviews, contacts, and follow-ups in one clear workspace.",
   icons: {
-    icon: "/JobHazelIcon.png",
-    shortcut: "/JobHazelIcon.png",
-    apple: "/JobHazelIcon.png",
+    icon: "/JobHazelIcon_v2.png",
+    shortcut: "/JobHazelIcon_v2.png",
+    apple: "/JobHazelIcon_v2.png",
   },
 };
 

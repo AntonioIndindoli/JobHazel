@@ -35,6 +35,7 @@ test("contact create validation accepts normalized payload", async () => {
         name: " Ada Lovelace ",
         role: " Recruiter ",
         email: " ADA@EXAMPLE.COM ",
+        phone: " +44 (20) 7946 0958 ext. 12 ",
         linkedinUrl: "https://www.linkedin.com/in/ada-lovelace",
         relationship: "RECRUITER",
         companyName: " ExampleCo ",
@@ -48,6 +49,7 @@ test("contact create validation accepts normalized payload", async () => {
     assert.equal(body.name, "Ada Lovelace");
     assert.equal(body.role, "Recruiter");
     assert.equal(body.email, "ada@example.com");
+    assert.equal(body.phone, "+44 (20) 7946 0958 ext. 12");
     assert.equal(body.linkedinUrl, "https://www.linkedin.com/in/ada-lovelace");
     assert.equal(body.relationship, "RECRUITER");
     assert.equal(body.companyName, "ExampleCo");
@@ -100,6 +102,7 @@ test("contact patch validation accepts partial updates and rejects empty bodies"
     const acceptedBody = await accepted.json();
     assert.equal(acceptedBody.relationship, "HIRING_MANAGER");
     assert.equal(acceptedBody.email, null);
+    assert.equal(Object.hasOwn(acceptedBody, "phone"), false);
     assert.equal(acceptedBody.applicationId, null);
 
     const rejected = await fetch(`${baseUrl}/contacts/contact_123`, {
@@ -110,5 +113,35 @@ test("contact patch validation accepts partial updates and rejects empty bodies"
 
     assert.equal(rejected.status, 400);
     assert.equal((await rejected.json()).message, "Provide at least one contact field to update.");
+  });
+});
+
+test("contact phone can be updated independently and cleared", async () => {
+  await withServer(buildApp(), async (baseUrl) => {
+    for (const [phone, expected] of [[" +1 (415) 555-0123 ", "+1 (415) 555-0123"], ["  ", null], [null, null]]) {
+      const response = await fetch(`${baseUrl}/contacts/contact_123`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ phone }),
+      });
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { phone: expected });
+    }
+  });
+});
+
+test("contact phone rejects oversized and non-string values on create and update", async () => {
+  await withServer(buildApp(), async (baseUrl) => {
+    for (const method of ["POST", "PATCH"]) {
+      for (const phone of ["1".repeat(51), 4155550123, { number: "4155550123" }]) {
+        const response = await fetch(`${baseUrl}/contacts${method === "PATCH" ? "/contact_123" : ""}`, {
+          method,
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ name: "Ada", phone }),
+        });
+        assert.equal(response.status, 400);
+        assert.match((await response.json()).message, /^phone must be/);
+      }
+    }
   });
 });

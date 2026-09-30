@@ -1,5 +1,6 @@
 // src/config/env.js
 import dotenv from "dotenv";
+import { productionConfigurationIssues } from "./release-policy.js";
 dotenv.config();
 
 const R2_ENV_NAMES = [
@@ -107,7 +108,7 @@ export function loadEnv(source = process.env) {
   const cookieSecure = optional(source, "COOKIE_SECURE", nodeEnv === "production" ? "true" : "false") === "true";
   if (cookieSameSite === "none" && !cookieSecure) throw new Error("COOKIE_SAME_SITE=none requires COOKIE_SECURE=true.");
 
-  return {
+  const config = {
     NODE_ENV: nodeEnv,
     PORT: integer(source, "PORT", 4000, { max: 65535 }),
     DATABASE_URL: required(source, "DATABASE_URL"),
@@ -140,6 +141,11 @@ export function loadEnv(source = process.env) {
     ...resumeMaintenance,
     ...resumeStorage,
   };
+  if (nodeEnv === "production") {
+    const issues = productionConfigurationIssues({ ...config, NOTIFICATION_MODE: optional(source, "NOTIFICATION_MODE", null) });
+    if (issues.length) throw new Error(`Invalid production configuration: ${issues.join(" ")}`);
+  }
+  return config;
 }
 
 export const env = loadEnv();

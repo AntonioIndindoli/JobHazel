@@ -34,6 +34,7 @@ function buildContactWhere(userId, query = {}) {
       { name: { contains: search, mode: "insensitive" } },
       { role: { contains: search, mode: "insensitive" } },
       { email: { contains: search, mode: "insensitive" } },
+      { phone: { contains: search, mode: "insensitive" } },
       { notes: { contains: search, mode: "insensitive" } },
       { company: { name: { contains: search, mode: "insensitive" } } },
       { application: { title: { contains: search, mode: "insensitive" } } },
@@ -86,7 +87,7 @@ async function resolveApplication(tx, userId, payload) {
 function pickContactData(payload) {
   const data = {};
 
-  for (const field of ["name", "role", "email", "linkedinUrl", "relationship", "notes"]) {
+  for (const field of ["name", "role", "email", "phone", "linkedinUrl", "relationship", "notes"]) {
     if (Object.prototype.hasOwnProperty.call(payload, field)) {
       data[field] = payload[field];
     }

@@ -33,7 +33,7 @@ The six fixed application statuses are **Saved, Applied, Interviewing, Offer, Re
 
 ### Account verification and recovery
 
-New accounts verify their email through Neon Auth using six-digit codes. Neon manages password recovery, password hashes, sessions and revocation. Web credentials stay in an HttpOnly cookie, and transient failures preserve the session. See [Neon Auth migration and production cutover](backend/NEON_AUTH_MIGRATION.md); the migration has been tested on an isolated branch and is not yet deployed to production.
+New accounts verify their email through Neon Auth using six-digit codes. Neon manages password recovery, password hashes, sessions and revocation. Web credentials stay in an HttpOnly cookie, and transient failures preserve the session. The managed-auth migration and identity links were verified in production on September 29, 2026. See [release verification](backend/RELEASE.md) for observed production state and remaining delivery/storage checks, and [Neon Auth migration and production cutover](backend/NEON_AUTH_MIGRATION.md) for the migration procedure.
 
 Requests to resend verification or recover a password return non-enumerating responses whether or not the email identifies an eligible account. Existing accounts created before the verification migration are marked verified by the migration. Both endpoints have persistent, per-endpoint rate limits of 20 requests per IP and 3 per normalized email in a 15-minute window. Limited requests return HTTP 429 with `AUTH_RATE_LIMITED` and `Retry-After`. Signed-in email-address changes are unavailable in the current managed-auth configuration.
 
@@ -219,7 +219,7 @@ Run `npm test` separately from `backend/`, `frontend/`, and `extension/`. The fr
 
 On September 12, 2026, **84 backend tests, 37 frontend tests, and 14 extension tests passed** against the reviewed workspace. The frontend production build and extension TypeScript/development build also passed. Backend coverage includes authentication and recovery validation, parsing, signup limits, exports, task automation, resume storage/lifecycle and analytics, and application-resume associations. Frontend coverage focuses on authentication UI, resume workflows, API helpers, extension handoff behavior, and application-resume interactions. Extension coverage includes session refresh, capture validation and limits, storage pruning, side-panel behavior, draft creation, and application defaults.
 
-These suites include mocked dependencies. Passing tests does not verify live migrations, R2 permissions/CORS, scheduled maintenance, all browser workflows, or production deployment. Broad browser end-to-end coverage and a production-like manual pass remain verification work.
+The GitHub Actions workflow runs backend tests, frontend lint/tests/build, extension tests/typecheck, and desktop/mobile Chromium workflows against PostgreSQL. Run `npm run test:e2e` from `frontend` with an explicitly configured isolated database; see [browser test setup](frontend/e2e/README.md). These tests exercise the real API/database with simulated auth and storage providers. Passing tests does not certify live Neon email, R2 permissions/CORS, Resend callbacks, or production browser behavior. Use `npm run verify:release` from `backend` and the [release checklist](backend/RELEASE.md) for those checks.
 
 ## Author
 

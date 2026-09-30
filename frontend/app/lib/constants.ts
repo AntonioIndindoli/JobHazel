@@ -245,6 +245,7 @@ export const EMPTY_CONTACT_FORM: ContactFormValues = {
     role: "",
     email: "",
     linkedinUrl: "",
+    phone: "",
     relationship: "RECRUITER",
     notes: "",
     companyName: "",

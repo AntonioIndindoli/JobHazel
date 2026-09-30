@@ -174,6 +174,7 @@ export function DashboardShell({
                                 : "profile-trigger"
                         }
                         aria-haspopup="menu"
+                        aria-label="Account menu"
                         aria-expanded={isProfileMenuOpen}
                         onClick={() => onProfileMenuChange((open) => !open)}
                     >

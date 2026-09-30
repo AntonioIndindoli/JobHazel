@@ -1,5 +1,7 @@
 # Neon Auth cutover
 
+**Status checked September 29, 2026:** production now has the managed-auth migration applied, OTP auth configured, and no unlinked application accounts. The isolated-branch notes below describe the original testing, not current deployment status. See [release verification](RELEASE.md) for current evidence and remaining checks.
+
 The runtime uses Neon managed Better Auth. The web app carries the managed credential in the API's HttpOnly `jobhazel_session` cookie; the extension stores its own managed credential. `/auth/refresh` is a compatibility session check, not token rotation. Every protected API call validates the managed session, so revocation applies immediately. Timeouts, provider errors and rate limits return retryable errors, not a sign-out.
 
 The `accessToken: "cookie-session"` web response is only a UI marker. No credential is returned to browser JavaScript or persisted in localStorage. Keep the app and API on the same site (`https://jobhazel.com` and `https://api.jobhazel.com`). Unrelated domains require `COOKIE_SAME_SITE=none` and HTTPS, and browser third-party-cookie restrictions can still block them.

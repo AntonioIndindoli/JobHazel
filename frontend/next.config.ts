@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  distDir: process.env.JOBHAZEL_E2E === "1" ? ".next-e2e" : ".next",
+  devIndicators: process.env.JOBHAZEL_E2E === "1" ? false : undefined,
   output: "export",
   images: {
     unoptimized: true,
