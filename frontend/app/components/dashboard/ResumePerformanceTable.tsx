@@ -23,7 +23,7 @@ export function ResumePerformanceTable({
 }: ResumePerformanceTableProps) {
     return (
         <section className="source-quality-panel resume-performance-panel" aria-labelledby="resume-performance-title">
-            <div className="resume-performance-heading">
+            <div className="analytics-table-heading">
                 <h2 id="resume-performance-title">
                     <span className="heading-icon"><AppIcon name="document" size={16} /></span>
                     Resume performance
@@ -72,7 +72,7 @@ export function ResumePerformanceTable({
                                     </th>
                                     <td data-label="Submitted">
                                         <strong>{row.submittedApplications}</strong>
-                                        <span>{row.eligibleForComparison ? "Comparison-ready" : `Need ${Math.max(0, analytics.minimumSampleSize - row.submittedApplications)} more`}</span>
+                                        <span className={`resume-sample-status${row.eligibleForComparison ? " is-ready" : ""}`}>{row.eligibleForComparison ? "Comparison-ready" : `Need ${Math.max(0, analytics.minimumSampleSize - row.submittedApplications)} more`}</span>
                                     </td>
                                     <td data-label="Responses">
                                         <strong>{formatRate(row.responseRate)}</strong>
@@ -82,7 +82,7 @@ export function ResumePerformanceTable({
                                         <strong>{formatRate(row.interviewRate)}</strong>
                                         <span>{row.interviews} interviews</span>
                                     </td>
-                                    <td data-label="Offers">
+                                    <td data-label="Offers" className={row.offers > 0 ? "analytics-positive-outcome" : undefined}>
                                         <strong>{formatRate(row.offerRate)}</strong>
                                         <span>{row.offers} offers</span>
                                     </td>

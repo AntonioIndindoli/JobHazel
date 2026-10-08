@@ -41,26 +41,43 @@
   margin-bottom: 14px;
 }
 
-.resume-performance-heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 14px;
+.source-quality-panel {
+  min-width: 0;
+  padding: 24px;
+  background: var(--surface-raised);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-card);
 }
 
-.resume-performance-heading h2 {
-  margin-bottom: 0;
+.analytics-table-heading {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 22px;
 }
 
-.resume-performance-heading>p {
-  max-width: 400px;
+.analytics-table-heading h2 {
   margin: 0;
-  color: var(--text-muted);
-  font-size: 12px;
+  font-size: 17px;
   line-height: 1.4;
   font-weight: 700;
-  text-align: right;
+}
+
+.analytics-table-heading .heading-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 32px;
+  height: 32px;
+  border-radius: 9px;
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 9%, var(--surface-raised));
+}
+
+.analytics-table-heading>p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .resume-performance-table tbody th small {
@@ -68,7 +85,7 @@
   margin-top: 5px;
   color: var(--text-muted);
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 400;
 }
 
 .resume-performance-name {
@@ -107,8 +124,8 @@
   overflow-x: auto;
   overscroll-behavior-inline: contain;
   -webkit-overflow-scrolling: touch;
-  border: 1px solid var(--surface-slate);
-  border-radius: 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
 }
 
 .source-quality-table {
@@ -119,20 +136,26 @@
 
 .source-quality-table th,
 .source-quality-table td {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--surface-slate);
+  padding: 20px 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 65%, transparent);
   text-align: left;
-  vertical-align: top;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+
+.source-quality-table tbody tr:hover {
+  background: color-mix(in srgb, var(--green) 3%, var(--surface-raised));
 }
 
 .source-quality-table thead th {
   color: var(--text-muted);
-  background: var(--surface-soft);
-  font-size: 12px;
-  line-height: 1.2;
-  font-weight: 800;
+  background: color-mix(in srgb, var(--border) 16%, var(--surface-raised));
+  padding-block: 12px;
+  font-size: 10px;
+  line-height: 1.5;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: .04em;
+  letter-spacing: .07em;
 }
 
 .source-quality-table tbody tr:last-child th,
@@ -142,23 +165,44 @@
 
 .source-quality-table tbody th {
   color: var(--text-heading);
-  font-weight: 800;
+  min-width: 160px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 .source-quality-table td strong {
   display: block;
   color: var(--text-heading);
-  font-size: 16px;
+  font-size: 20px;
   line-height: 1.2;
+  font-weight: 650;
 }
 
 .source-quality-table td span {
   display: block;
-  margin-top: 4px;
+  margin-top: 6px;
   color: var(--text-muted);
   font-size: 12px;
-  line-height: 1.25;
-  font-weight: 700;
+  line-height: 1.5;
+  font-weight: 400;
+}
+
+.source-quality-table td.analytics-positive-outcome strong {
+  color: var(--success);
+}
+
+.source-quality-table td .resume-sample-status {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--surface-slate);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.source-quality-table td .resume-sample-status.is-ready {
+  color: var(--success);
+  background: var(--success-surface);
 }
 
 .source-quality-source {
@@ -169,11 +213,19 @@
 }
 
 .source-quality-source b {
+  flex-shrink: 0;
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 3px var(--surface-blue-strong);
+  background: var(--green);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 10%, transparent);
+}
+
+.source-quality-panel .analytics-empty-panel {
+  padding: 24px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
 }
 
 .application-map-layout {
@@ -591,12 +643,8 @@
 }
 
 @media (max-width: 700px) {
-  .resume-performance-heading {
-    display: grid;
-  }
-
-  .resume-performance-heading>p {
-    text-align: left;
+  .analytics-table-heading {
+    margin-bottom: 18px;
   }
   .analytics-kpi-toolbar {
     align-items: flex-start;
@@ -664,6 +712,7 @@
   }
 
   .source-quality-table tbody th {
+    min-width: 0;
     grid-column: 1 / -1;
     padding: 0 0 11px;
     border-bottom: 1px solid var(--border);
@@ -686,7 +735,7 @@
     border: 1px solid var(--border);
   }
 
-  .source-quality-table tbody td:last-child {
+  .source-quality-table tbody td:last-child:nth-child(even) {
     grid-column: 1 / -1;
   }
 
@@ -703,7 +752,7 @@
   }
 
   .source-quality-table td strong {
-    font-size: 15px;
+    font-size: 20px;
   }
 
   .weekly {

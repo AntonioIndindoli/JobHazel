@@ -31,17 +31,20 @@ export function SourceQualityTable({
     );
 
     return (
-        <div className="source-quality-panel">
-            <h2>
-                <span className="heading-icon">
-                    <AppIcon name="analytics" size={16} />
-                </span>
-                Source Quality
-                <InfoTooltip
-                    label="Source quality information"
-                    tooltip="Responses include interviews, offers, and rejections; withdrawal alone does not count. Response speed uses recorded response events with a known application date."
-                />
-            </h2>
+        <section className="source-quality-panel" aria-labelledby="source-quality-title">
+            <div className="analytics-table-heading">
+                <h2 id="source-quality-title">
+                    <span className="heading-icon">
+                        <AppIcon name="analytics" size={16} />
+                    </span>
+                    Source Quality
+                    <InfoTooltip
+                        label="Source quality information"
+                        tooltip="Responses include interviews, offers, and rejections; withdrawal alone does not count. Response speed uses recorded response events with a known application date."
+                    />
+                </h2>
+                <p>Compare outcomes and response times across your application sources.</p>
+            </div>
 
             {rows.length > 0 ? (
                 <div className="source-quality-table-wrap">
@@ -61,7 +64,7 @@ export function SourceQualityTable({
                                 <tr key={row.source}>
                                     <th scope="row">
                                         <span className="source-quality-source">
-                                            <b />
+                                            <b aria-hidden="true" />
                                             {row.source}
                                         </span>
                                     </th>
@@ -82,7 +85,7 @@ export function SourceQualityTable({
                                         <strong>{formatRate(row.interviewRate)}</strong>
                                         <span>{row.interviews} interviews</span>
                                     </td>
-                                    <td data-label="Offers">
+                                    <td data-label="Offers" className={row.offers > 0 ? "analytics-positive-outcome" : undefined}>
                                         <strong>{row.offers}</strong>
                                         <span>
                                             {row.offers === 1 ? "offer" : "offers"}
@@ -114,6 +117,6 @@ export function SourceQualityTable({
                     <p>Add applications with sources to compare channel quality.</p>
                 </div>
             )}
-        </div>
+        </section>
     );
 }
