@@ -143,11 +143,12 @@ export function LandingPage({
                     onPointerLeave={resetPreview}
                 >
                     <div className="landing-product">
-                        <picture className="landing-product-picture">
+                        {(["light", "dark"] as const).map((theme) => (
+                        <picture key={theme} className={`landing-product-picture landing-product-${theme}`}>
                             <source
                                 media="(max-width: 640px)"
                                 type="image/avif"
-                                srcSet="/landing/dashboard-preview-mobile-480.avif 480w, /landing/dashboard-preview-mobile-720.avif 720w"
+                                srcSet={`/landing/dashboard-preview${theme === "dark" ? "-dark" : ""}-mobile-480.avif 480w, /landing/dashboard-preview${theme === "dark" ? "-dark" : ""}-mobile-720.avif 720w`}
                                 sizes="calc(100vw - 32px)"
                                 width="720"
                                 height="1219"
@@ -155,22 +156,22 @@ export function LandingPage({
                             <source
                                 media="(max-width: 640px)"
                                 type="image/webp"
-                                srcSet="/landing/dashboard-preview-mobile-480.webp 480w, /landing/dashboard-preview-mobile-720.webp 720w"
+                                srcSet={`/landing/dashboard-preview${theme === "dark" ? "-dark" : ""}-mobile-480.webp 480w, /landing/dashboard-preview${theme === "dark" ? "-dark" : ""}-mobile-720.webp 720w`}
                                 sizes="calc(100vw - 32px)"
                                 width="720"
                                 height="1219"
                             />
                             <source
                                 type="image/avif"
-                                srcSet="/landing/dashboard-preview-960.avif 960w, /landing/dashboard-preview-1440.avif 1440w"
+                                srcSet={`/landing/dashboard-preview${theme === "dark" ? "-dark" : ""}-960.avif 960w, /landing/dashboard-preview${theme === "dark" ? "-dark" : ""}-1440.avif 1440w`}
                                 sizes="(max-width: 980px) 91vw, 50vw"
                                 width="1440"
                                 height="778"
                             />
                             <img
                                 className="landing-product-frame"
-                                src="/landing/dashboard-preview-960.webp"
-                                srcSet="/landing/dashboard-preview-960.webp 960w, /landing/dashboard-preview-1440.webp 1440w"
+                                src={`/landing/dashboard-preview${theme === "dark" ? "-dark" : ""}-960.webp`}
+                                srcSet={`/landing/dashboard-preview${theme === "dark" ? "-dark" : ""}-960.webp 960w, /landing/dashboard-preview${theme === "dark" ? "-dark" : ""}-1440.webp 1440w`}
                                 sizes="(max-width: 980px) 91vw, 50vw"
                                 width="1440"
                                 height="778"
@@ -179,6 +180,7 @@ export function LandingPage({
                                 decoding="async"
                             />
                         </picture>
+                        ))}
                     </div>
                 </div>
             </section>

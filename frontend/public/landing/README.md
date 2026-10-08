@@ -83,3 +83,24 @@ The hero remains 1440 × 778 on desktop and 720 × 1219 on mobile. If its mobile
 widgets change height, update the source dimensions and the mobile aspect
 ratio in `05-landing.css` to match. Legacy feature PNGs are retained; the story
 uses the new WebP variants. Refresh the landing page after capture.
+
+The hero also includes matching `dashboard-preview-dark-*` desktop and mobile
+AVIF/WebP assets. The page selects the picture using its `data-theme` value,
+including the manual theme toggle. To refresh only the dark hero:
+
+```powershell
+$env:LANDING_BASE_URL = 'http://localhost:3000'
+node scripts/capture-landing.cjs --hero-only --dark-only
+```
+
+Omit `--dark-only` to capture both themes. `--hero-only` preserves story assets.
+
+The separate resume analytics chapter uses `resumeAnalytics*.webp`, captured
+from the actual `ResumePerformanceTable` in light/dark desktop and mobile
+layouts. Its fictional three-version example totals 72 submitted applications
+and 16 responses. All five table columns are retained; mobile uses the product's
+responsive cards. Refresh it with:
+
+```powershell
+node scripts/capture-landing.cjs --story-only --story=resumeAnalytics
+```

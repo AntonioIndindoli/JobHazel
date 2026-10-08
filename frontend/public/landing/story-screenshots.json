@@ -86,5 +86,27 @@
       "width": 2560,
       "height": 1700
     }
+  },
+  "resumeAnalytics": {
+    "desktopLight": {
+      "src": "/landing/resumeAnalytics.webp",
+      "width": 2000,
+      "height": 664
+    },
+    "mobileLight": {
+      "src": "/landing/resumeAnalytics-mobile.webp",
+      "width": 720,
+      "height": 2264
+    },
+    "desktopDark": {
+      "src": "/landing/resumeAnalytics-dark.webp",
+      "width": 2000,
+      "height": 664
+    },
+    "mobileDark": {
+      "src": "/landing/resumeAnalytics-mobile-dark.webp",
+      "width": 720,
+      "height": 2264
+    }
   }
 }

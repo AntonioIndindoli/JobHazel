@@ -76,11 +76,21 @@ export function LandingProductStory({ onGetStarted }: { onGetStarted: () => void
                     <article className="story-chapter story-learn" id="insights" aria-labelledby="story-learn-title">
                         <div className="story-feature-copy" data-reveal>
                             <span className="story-eyebrow">Learn</span>
-                            <h3 id="story-learn-title">See what gets a response.</h3>
-                            <p>Compare application response rates by job source or resume.</p>
+                            <h3 id="story-learn-title">See which job sources get responses.</h3>
+                            <p>Compare response rates by job source to see where your applications are getting noticed.</p>
                         </div>
                         <div className="story-visual story-insights-visual" data-reveal>
                             <LandingScreenshot name="analytics" alt="Example comparison of 72 submitted applications: Indeed has eight responses from 30 submissions, LinkedIn five from 24, and company websites three from 18" caption="72 submitted applications" />
+                        </div>
+                    </article>
+                    <article className="story-chapter story-learn story-workspace" id="resume-insights" aria-labelledby="story-resume-title">
+                        <div className="story-feature-copy" data-reveal>
+                            <span className="story-eyebrow">Learn · Resume analytics</span>
+                            <h3 id="story-resume-title">See how your resumes perform.</h3>
+                            <p>Compare responses, interviews, and offers for each resume version, with application counts alongside every result.</p>
+                        </div>
+                        <div className="story-visual" data-reveal>
+                            <LandingScreenshot name="resumeAnalytics" fullPage alt="Example resume performance for 72 submitted applications: Product design has 30 submissions and a 30% response rate, UX design has 24 and 21%, and General design has 18 and 11%, with interview and offer outcomes shown for each version" caption="Resume performance · Example data" />
                         </div>
                     </article>
                 </div>

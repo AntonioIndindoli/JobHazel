@@ -675,6 +675,15 @@ html[data-theme="dark"] .landing-page {
     height: 100%;
 }
 
+.landing-product-dark,
+html[data-theme="dark"] .landing-product-light {
+    display: none;
+}
+
+html[data-theme="dark"] .landing-product-dark {
+    display: block;
+}
+
 .dashboard-preview-page {
     width: 100%;
     height: 100vh;

@@ -102,6 +102,7 @@ const ApplicationsView = component('ApplicationsView.tsx', 'ApplicationsView');
 const InterviewsView = component('InterviewsView.tsx', 'InterviewsView');
 const ImportDrawer = component('ImportDrawer.tsx', 'ImportDrawer');
 const SourceQualityTable = component('dashboard/SourceQualityTable.tsx', 'SourceQualityTable');
+const ResumePerformanceTable = component('dashboard/ResumePerformanceTable.tsx', 'ResumePerformanceTable');
 // Follow the app's import order, including only styles that actually ship on the page.
 const css = [...fs.readFileSync(path.join(root, 'app/globals.css'), 'utf8').matchAll(/@import "\.\/([^"]+)";/g)]
     .map(([, file]) => fs.readFileSync(path.join(root, 'app', file), 'utf8')).join('\n');
@@ -124,6 +125,14 @@ const views = {
     },
     analytics: {
         view: h(SourceQualityTable, { applications, historyByApp, interviews }),
+    },
+    resumeAnalytics: {
+        view: h(ResumePerformanceTable, { error: '', isLoading: false, onRetry: noop,
+            analytics: { minimumSampleSize: 5, rows: [
+                { resumeVersionId: 'resume-product', name: 'Product design', targetRole: 'Product Designer', submittedApplications: 30, responses: 9, responseRate: 30, interviews: 6, interviewRate: 20, offers: 1, offerRate: 3, eligibleForComparison: true, archivedAt: null, isNoResume: false },
+                { resumeVersionId: 'resume-ux', name: 'UX design', targetRole: 'UX Designer', submittedApplications: 24, responses: 5, responseRate: 21, interviews: 3, interviewRate: 13, offers: 0, offerRate: 0, eligibleForComparison: true, archivedAt: null, isNoResume: false },
+                { resumeVersionId: 'resume-general', name: 'General design', targetRole: 'Designer', submittedApplications: 18, responses: 2, responseRate: 11, interviews: 1, interviewRate: 6, offers: 0, offerRate: 0, eligibleForComparison: true, archivedAt: null, isNoResume: false },
+            ] } }),
     },
     interviews: {
         view: h(InterviewsView, { applications, interviews, focusedInterviewId: 'interview-0',
@@ -214,9 +223,9 @@ async function captureStory(page) {
         const fullWorkspace = name === 'applications' || name === 'interviews';
         for (const theme of ['light', 'dark']) {
             for (const mobile of fullWorkspace ? [false] : [false, true]) {
-                const width = mobile ? 360 : 600;
+                const width = mobile ? 360 : name === 'resumeAnalytics' ? 1000 : 600;
                 await page.setViewportSize({ width: fullWorkspace ? 1280 : width, height:fullWorkspace ? 850 : 1200 });
-                await page.setContent(`<!doctype html><html lang="en" data-theme="${theme}"><head><style>${preflight}\n${fontCss}\n${css}\n${fullWorkspace ? '' : focusCss}</style></head><body><main class="capture">${source}</main></body></html>`);
+                await page.setContent(`<!doctype html><html lang="en" data-theme="${theme}"><head><style>${preflight}\n${fontCss}\n${css}\n${fullWorkspace ? '' : name === 'resumeAnalytics' ? 'body{margin:0}.capture{width:100%}.capture .source-quality-panel{margin:0;border:0;border-radius:0;box-shadow:none}' : focusCss}</style></head><body><main class="capture">${source}</main></body></html>`);
                 if (!fullWorkspace) await page.evaluate(({ name }) => {
                     const root = document.querySelector('.capture');
                     const get = (selector, scope = root) => {
@@ -262,26 +271,32 @@ async function main() {
     const browser = await chromium.launch({ headless: true, channel: process.env.LANDING_BROWSER_CHANNEL || 'msedge' });
     try {
         const page = await browser.newPage({ viewport: { width: 1200, height: 900 }, deviceScaleFactor: 2, locale: 'en-US', timezoneId: 'America/Los_Angeles', reducedMotion: 'reduce' });
-        await captureStory(page);
+        if (!process.argv.includes('--hero-only')) await captureStory(page);
         if (process.argv.includes('--story-only')) return;
+        for (const theme of process.argv.includes('--dark-only') ? ['dark'] : ['light', 'dark']) {
+        const suffix = theme === 'dark' ? '-dark' : '';
+        const heroPage = await browser.newPage({ deviceScaleFactor: 2, locale: 'en-US', timezoneId: 'America/Los_Angeles', reducedMotion: 'reduce' });
         // The real preview route hydrates the chart and uses the current responsive shell.
-        await page.setViewportSize({ width: 1800, height: 973 });
-        await page.goto(baseUrl + '/dashboard-preview', { waitUntil: 'networkidle' });
-        await page.evaluate(() => document.fonts.ready);
-        await page.locator('.sankey-canvas').waitFor({ state: 'visible' });
+        await heroPage.setViewportSize({ width: 1800, height: 973 });
+        await heroPage.addInitScript(theme => localStorage.setItem('jobhazel-theme', theme), theme);
+        await heroPage.goto(baseUrl + '/dashboard-preview', { waitUntil: 'networkidle' });
+        await heroPage.evaluate(() => document.fonts.ready);
+        await heroPage.locator('.sankey-canvas').waitFor({ state: 'visible' });
         // Hide development chrome, which is not part of the product.
-        await page.addStyleTag({ content: 'nextjs-portal{display:none!important}' });
-        const desktop = await page.screenshot();
-        await exportHero(desktop, 'dashboard-preview-1440', 1440, 778);
-        await exportHero(desktop, 'dashboard-preview-960', 960, 519);
-        await page.setViewportSize({ width: 480, height: 1000 });
-        await page.locator('.sankey-canvas').waitFor({ state: 'visible' });
+        await heroPage.addStyleTag({ content: 'nextjs-portal{display:none!important}' });
+        const desktop = await heroPage.screenshot();
+        await exportHero(desktop, `dashboard-preview${suffix}-1440`, 1440, 778);
+        await exportHero(desktop, `dashboard-preview${suffix}-960`, 960, 519);
+        await heroPage.setViewportSize({ width: 480, height: 1000 });
+        await heroPage.locator('.sankey-canvas').waitFor({ state: 'visible' });
         // Focus on complete dashboard widgets so the sticky header cannot cover them.
-        await page.addStyleTag({ content: '.topbar{visibility:hidden}' });
-        const mobile = await page.locator('.pipeline-stats-container').screenshot();
-        await exportHero(mobile, 'dashboard-preview-mobile-720', 720);
-        await exportHero(mobile, 'dashboard-preview-mobile-480', 480);
+        await heroPage.addStyleTag({ content: '.topbar{visibility:hidden}' });
+        const mobile = await heroPage.locator('.pipeline-stats-container').screenshot();
+        await exportHero(mobile, `dashboard-preview${suffix}-mobile-720`, 720);
+        await exportHero(mobile, `dashboard-preview${suffix}-mobile-480`, 480);
+        await heroPage.close();
+        console.log('Captured hero ' + theme);
+        }
     } finally { await browser.close(); }
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
-
