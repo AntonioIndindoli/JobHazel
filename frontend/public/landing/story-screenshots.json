@@ -1,0 +1,90 @@
+{
+  "applications": {
+    "desktopLight": {
+      "src": "/landing/applications.webp",
+      "width": 2560,
+      "height": 1700
+    },
+    "mobileLight": {
+      "src": "/landing/applications.webp",
+      "width": 2560,
+      "height": 1700
+    },
+    "desktopDark": {
+      "src": "/landing/applications-dark.webp",
+      "width": 2560,
+      "height": 1700
+    },
+    "mobileDark": {
+      "src": "/landing/applications-dark.webp",
+      "width": 2560,
+      "height": 1700
+    }
+  },
+  "import": {
+    "desktopLight": {
+      "src": "/landing/import.webp",
+      "width": 1200,
+      "height": 768
+    },
+    "mobileLight": {
+      "src": "/landing/import-mobile.webp",
+      "width": 720,
+      "height": 752
+    },
+    "desktopDark": {
+      "src": "/landing/import-dark.webp",
+      "width": 1200,
+      "height": 768
+    },
+    "mobileDark": {
+      "src": "/landing/import-mobile-dark.webp",
+      "width": 720,
+      "height": 752
+    }
+  },
+  "analytics": {
+    "desktopLight": {
+      "src": "/landing/analytics.webp",
+      "width": 1200,
+      "height": 784
+    },
+    "mobileLight": {
+      "src": "/landing/analytics-mobile.webp",
+      "width": 720,
+      "height": 736
+    },
+    "desktopDark": {
+      "src": "/landing/analytics-dark.webp",
+      "width": 1200,
+      "height": 784
+    },
+    "mobileDark": {
+      "src": "/landing/analytics-mobile-dark.webp",
+      "width": 720,
+      "height": 736
+    }
+  },
+  "interviews": {
+    "desktopLight": {
+      "src": "/landing/interviews.webp",
+      "width": 2560,
+      "height": 1700
+    },
+    "mobileLight": {
+      "src": "/landing/interviews.webp",
+      "width": 2560,
+      "height": 1700
+    },
+    "desktopDark": {
+      "src": "/landing/interviews-dark.webp",
+      "width": 2560,
+      "height": 1700
+    },
+    "mobileDark": {
+      "src": "/landing/interviews-dark.webp",
+      "width": 2560,
+      "height": 1700
+    }
+  }
+}

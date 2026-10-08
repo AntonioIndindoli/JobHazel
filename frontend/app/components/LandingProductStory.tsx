@@ -1,94 +1,102 @@
 "use client";
 
 import Image from "next/image";
+import { AppIcon } from "./AppIcon";
+import { LandingImportDemo } from "./LandingImportDemo";
 import { LandingScreenshot } from "./LandingScreenshot";
 
-import { AppIcon } from "./AppIcon";
+const chapters = [
+    { label: "Save", href: "#job-import" },
+    { label: "Organize", href: "#pipeline" },
+    { label: "Follow through", href: "#follow-through" },
+    { label: "Learn", href: "#insights" },
+];
 
 export function LandingProductStory({ onGetStarted }: { onGetStarted: () => void }) {
     return (
         <div className="landing-story">
-            <section className="story-features story-container" id="features" aria-label="JobHazel features">
-                <article className="story-pipeline" id="pipeline" data-reveal>
-                    <div className="story-feature-copy">
-                        <span className="story-eyebrow"><AppIcon name="pipeline" size={16} /> Application tracking</span>
-                        <h3>See the whole search.<br />Know your next move.</h3>
-                        <p>Give every opportunity a home, from the first saved job to the final decision.</p>
-                        <ul className="story-checks">
-                            <li><AppIcon name="check" size={17} /> Move applications through each hiring stage.</li>
-                            <li><AppIcon name="check" size={17} /> Keep the resume, interviews, and next steps connected to each role.</li>
-                            <li><AppIcon name="check" size={17} /> Find job details, notes, and past activity when you need them.</li>
-                        </ul>
+            <section className="story-features" id="features" aria-labelledby="story-title">
+                <header className="story-introduction">
+                    <div className="story-introduction-copy">
+                        <h2 id="story-title">Bring your whole job search together.</h2>
                     </div>
-                    <LandingScreenshot name="applications" alt="Application tracking preview" />
-                </article>
+                    <nav className="story-path" aria-label="Your job search with JobHazel">
+                        <ol>
+                            {chapters.map((chapter, index) => (
+                                <li key={chapter.href}>
+                                    <a href={chapter.href}>{chapter.label}</a>
+                                    {index < chapters.length - 1 && <AppIcon name="arrow-right" size={16} />}
+                                </li>
+                            ))}
+                        </ol>
+                    </nav>
+                </header>
 
-                <div className="story-feature-pair">
-                    <article className="story-feature-tile story-import" id="job-import" data-reveal>
-                        <div className="story-feature-copy">
-                            <span className="story-eyebrow"><AppIcon name="import" size={16} /> Job import</span>
-                            <h3>Start with a job link.<br />Save the details faster.</h3>
-                            <p>Paste a job URL or description. JobHazel extracts details into a draft you can review, edit, and add to your pipeline.</p>
-                            <div className="story-extension-note">
-                                <strong>Save as you browse with the Chrome extension</strong>
-                                <p>Capture a job link and any selected description text, then review and save the draft in a side panel beside the posting.</p>
-                                <span>Chrome Web Store release coming soon.</span>
-                            </div>
+                <div className="story-chapters">
+                    <article className="story-chapter story-save" id="job-import" aria-labelledby="story-save-title">
+                        <div className="story-feature-copy" data-reveal>
+                            <span className="story-eyebrow">Save</span>
+                            <h3 id="story-save-title">Easy job imports.</h3>
+                            <p>Paste a job link. JobHazel extracts the details for you to review and save to your portfolio.</p>
+                            <aside className="story-extension-card" aria-labelledby="story-extension-title">
+                                <div>
+                                    <h4 id="story-extension-title">Save directly from Chrome.</h4>
+                                    <p>Our extension captures the posting so you can review and save without leaving the page.</p>
+                                    <span className="story-extension-status">Chrome Web Store launch coming soon</span>
+                                </div>
+                            </aside>
                         </div>
-                        <LandingScreenshot name="import" alt="Job import preview" />
+                        <div className="story-visual story-import-visual" data-reveal>
+                            <LandingImportDemo />
+                        </div>
                     </article>
 
-                    <article className="story-feature-tile story-insights" id="insights" data-reveal>
-                        <div className="story-feature-copy">
-                            <span className="story-eyebrow"><AppIcon name="analytics" size={16} /> Search insights</span>
-                            <h3>Compare your sources.<br />Track your results.</h3>
-                            <p>See response rates, interviews, offers, and response times by job source. Compare recorded outcomes across resume versions as your application history grows.</p>
-                            <ul className="story-checks">
-                                <li><AppIcon name="check" size={17} /> Compare sources by outcomes, not just application counts.</li>
-                                <li><AppIcon name="check" size={17} /> Follow your weekly application activity.</li>
-                                <li><AppIcon name="check" size={17} /> Use patterns in your search to plan your next steps.</li>
-                            </ul>
+                    <article className="story-chapter story-organize story-workspace" id="pipeline" aria-labelledby="story-organize-title">
+                        <div className="story-feature-copy" data-reveal>
+                            <span className="story-eyebrow">Organize</span>
+                            <h3 id="story-organize-title">Pick up exactly where you left off.</h3>
+                            <p id="resumes">Find the status, resume you sent, notes, and next task together in each application.</p>
                         </div>
-                        <LandingScreenshot name="analytics" alt="Search analytics preview" />
+                        <div className="story-visual" data-reveal>
+                            <LandingScreenshot name="applications" fullPage alt="Applications workspace with the job list alongside the selected Northstar role, its resume, tasks, and interviews" caption="Applications" />
+                        </div>
+                    </article>
+
+                    <article className="story-chapter story-follow story-workspace" id="follow-through" aria-labelledby="story-follow-title">
+                        <div className="story-feature-copy" data-reveal>
+                            <span className="story-eyebrow">Follow through</span>
+                            <h3 id="story-follow-title">Walk into every interview prepared.</h3>
+                            <p>Keep interview times, meeting links, prep notes, and follow-up tasks connected to the role.</p>
+                        </div>
+                        <div className="story-visual" data-reveal>
+                            <LandingScreenshot name="interviews" fullPage alt="Interviews workspace with the interview list alongside the selected Northstar interview, meeting details, and preparation notes" caption="Interviews" />
+                        </div>
+                    </article>
+
+                    <article className="story-chapter story-learn" id="insights" aria-labelledby="story-learn-title">
+                        <div className="story-feature-copy" data-reveal>
+                            <span className="story-eyebrow">Learn</span>
+                            <h3 id="story-learn-title">See what gets a response.</h3>
+                            <p>Compare responses by job source or resume, with application counts alongside each rate.</p>
+                        </div>
+                        <div className="story-visual story-insights-visual" data-reveal>
+                            <LandingScreenshot name="analytics" alt="Example comparison of 72 submitted applications: Indeed has eight responses from 30 submissions, LinkedIn five from 24, and company websites three from 18" caption="72 submitted applications" />
+                        </div>
                     </article>
                 </div>
-                <article className="story-resumes story-feature-copy" id="resumes" data-reveal>
-                    <div>
-                        <span className="story-eyebrow"><AppIcon name="document" size={16} /> Resume versions</span>
-                        <h3>Know which resume<br />went with which role.</h3>
-                        <p>Keep your PDF resume versions organized and link the right one to each application. Return to it when it is time to prepare for an interview.</p>
-                    </div>
-                    <ul className="story-resume-benefits">
-                        <li><strong>Keep each version distinct</strong><p>Upload a revised PDF as a new version, with its own name and notes.</p></li>
-                        <li><strong>Keep the application connected</strong><p>Find and download the linked resume directly from the application details.</p></li>
-                        <li><strong>Compare recorded outcomes</strong><p>See responses, interviews, and offers grouped by the resume linked to each application.</p></li>
-                    </ul>
-                </article>
             </section>
 
-            <section className="story-follow-through" id="follow-through" aria-labelledby="story-follow-title">
-                <div className="story-container story-follow-grid">
-                    <div className="story-follow-copy" data-reveal>
-                        <h2 id="story-follow-title">Know what needs<br />your attention next.</h2>
-                        <div className="story-follow-benefits">
-                            <div><AppIcon name="calendar" size={21} /><span><strong>Walk into interviews ready</strong><p>See upcoming interviews with meeting links and prep notes connected to the role.</p></span></div>
-                            <div><AppIcon name="contacts" size={21} /><span><strong>Remember the people behind the role</strong><p>Connect recruiters, referrals, and hiring managers to your applications.</p></span></div>
-                            <div><AppIcon name="checklist" size={21} /><span><strong>Turn next steps into a daily plan</strong><p>See due and overdue tasks. Optionally create follow-up and thank-you tasks automatically inside JobHazel.</p></span></div>
-                        </div>
-                    </div>
-                    <div data-reveal><LandingScreenshot name="interviews" alt="Interviews and follow-ups preview" /></div>
+            <section className="story-cta story-container" aria-labelledby="story-cta-title">
+                <div className="story-cta-copy"><h2 id="story-cta-title">Get started today.</h2></div>
+                <div className="story-cta-action">
+                    <button type="button" className="landing-button landing-button-light" onClick={onGetStarted}>Start for free <AppIcon name="arrow-right" size={18} /></button>
+                    <p>No credit card required.</p>
                 </div>
-            </section>
-
-            <section className="story-cta story-container" aria-labelledby="story-cta-title" data-reveal>
-                <div className="story-cta-orbit story-cta-orbit-one" aria-hidden="true" /><div className="story-cta-orbit story-cta-orbit-two" aria-hidden="true" />
-                <div className="story-cta-copy"><h2 id="story-cta-title">Organize your<br />job search.</h2><p>Free to get started. No credit card required.<br />Take the next step with JobHazel.</p></div>
-                <div className="story-cta-action"><button type="button" className="landing-button landing-button-light" onClick={onGetStarted}>Get Started <AppIcon name="arrow-right" size={18} /></button></div>
             </section>
 
             <footer className="story-footer story-container">
-                <div><a className="landing-brand" href="#top"><Image src="/JobHazelIcon.png" alt="" width={32} height={32} /><span>JobHazel</span></a></div>
-                <nav aria-label="Footer navigation"><a href="#job-import">Job import</a><a href="#resumes">Resumes</a><a href="#insights">Insights</a><a className="story-back-top" href="#top">Back to top ↑</a></nav>
+                <a className="landing-brand" href="#top"><Image src="/JobHazelIcon.png" alt="" width={32} height={32} /><span>JobHazel</span></a>
+                <nav aria-label="Footer navigation"><a href="#job-import">Job import</a><a href="#resumes">Resumes</a><a href="#insights">Insights</a><a href="#top">Back to top ↑</a></nav>
                 <span className="story-copyright">© {new Date().getFullYear()} JobHazel</span>
             </footer>
         </div>

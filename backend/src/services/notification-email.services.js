@@ -1,4 +1,5 @@
 import { env } from "../config/env.js";
+import { rateLimitedProviderFetch } from "./provider-rate-limit.services.js";
 import { unsubscribeToken } from "./notification-policy.js";
 
 const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[c]);
@@ -22,13 +23,13 @@ export function buildNotificationEmail(delivery, user, resource, preferences, co
   };
 }
 
-export async function sendNotificationEmail(payload, idempotencyKey, { config = env, fetchImpl = fetch } = {}) {
+export async function sendNotificationEmail(payload, idempotencyKey, { config = env, fetchImpl = fetch, ...rateLimitOptions } = {}) {
   if (!config.RESEND_API_KEY) throw new Error("Reminder email delivery is not configured.");
-  const response = await fetchImpl("https://api.resend.com/emails", {
+  const response = await rateLimitedProviderFetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${config.RESEND_API_KEY}`, "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
-    body: JSON.stringify(payload), signal: AbortSignal.timeout(10000),
-  });
+    body: JSON.stringify(payload), timeoutMs: 10000,
+  }, { config, fetchImpl, ...rateLimitOptions });
   if (!response.ok) {
     // Do not persist provider response bodies containing recipient/content details.
     throw Object.assign(new Error(`Email provider returned HTTP ${response.status}.`), {

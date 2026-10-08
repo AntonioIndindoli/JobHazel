@@ -1,4 +1,5 @@
 import { env } from "../config/env.js";
+import { rateLimitedProviderFetch } from "./provider-rate-limit.services.js";
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) => ({
@@ -6,14 +7,14 @@ function escapeHtml(value) {
   })[character]);
 }
 
-export async function sendAccountEmail({ to, subject, heading, copy, actionLabel, actionUrl }, { fetchImpl = fetch, config = env } = {}) {
+export async function sendAccountEmail({ to, subject, heading, copy, actionLabel, actionUrl }, { fetchImpl = fetch, config = env, ...rateLimitOptions } = {}) {
   if (!config.RESEND_API_KEY) {
     if (config.NODE_ENV === "production") throw new Error("Email delivery is not configured.");
     console.info(`[auth-email] ${subject}: ${actionUrl}`);
     return;
   }
 
-  const response = await fetchImpl("https://api.resend.com/emails", {
+  const response = await rateLimitedProviderFetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${config.RESEND_API_KEY}`,
@@ -25,8 +26,8 @@ export async function sendAccountEmail({ to, subject, heading, copy, actionLabel
       subject,
       html: `<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#183323"><h1>${escapeHtml(heading)}</h1><p>${escapeHtml(copy)}</p><p><a href="${escapeHtml(actionUrl)}" style="display:inline-block;padding:12px 18px;border-radius:9px;background:#238b45;color:white;text-decoration:none;font-weight:700">${escapeHtml(actionLabel)}</a></p><p style="font-size:12px;color:#637369">If you did not request this, you can ignore this email.</p></div>`,
     }),
-    signal: AbortSignal.timeout(10_000),
-  });
+    timeoutMs: 10000,
+  }, { config, fetchImpl, ...rateLimitOptions });
 
   if (!response.ok) {
     const detail = await response.text();

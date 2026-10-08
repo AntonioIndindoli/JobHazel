@@ -63,7 +63,7 @@ The resume library and application association UI are implemented; they are no l
 - Moving an application to Applied without a resume produces a non-blocking warning.
 - Backend lifecycle controls include endpoint rate limits, abandoned-upload cleanup, cleanup status reporting, and retryable storage cleanup during account deletion.
 
-Application saving and resume association use separate requests. If association fails, the application may already be saved; the UI reports that partial result.
+Application create/update requests accept an optional resumeVersionId. The application, company, resume association, history and generated follow-up task commit in one transaction. Invalid, foreign, incomplete or newly selected archived resumes reject the entire save. Omitting the field preserves the association on update; null removes it. The separate association endpoint remains available for quick changes.
 
 A scheduled cleanup entry exists in `backend/vercel.json`. Actual bucket privacy, credentials, CORS, migrations, scheduler execution, and cleanup behavior still need verification in the deployed environment.
 

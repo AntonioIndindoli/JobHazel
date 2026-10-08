@@ -122,7 +122,7 @@ test("parseJobDescription returns an import-draft-ready payload", () => {
     `,
   });
 
-  assert.equal(parsed.sourceUrl, "https://jobs.lever.co/exampleco/senior-frontend-engineer");
+  assert.equal(parsed.sourceUrl, "https://jobs.lever.co/exampleco/senior-frontend-engineer?ref=abc");
   assert.equal(parsed.sourceDomain, "jobs.lever.co");
   assert.equal(parsed.source, "Lever");
   assert.equal(parsed.parsedTitle, "Senior Frontend Engineer");
@@ -281,7 +281,7 @@ test("parseJobDescription falls back to useful URL slugs when fetched text is sp
       "We're obsessed with taking the hassle out of owning a home. We bring together innovative tech and world-class experience to simplify our customers' lives.",
   });
 
-  assert.equal(parsed.sourceUrl, "https://frontdoor.jobs/virtual-usa/software-engineer/72A8979ED0B14D56B48BB397DDE3D312/job");
+  assert.equal(parsed.sourceUrl, "https://frontdoor.jobs/virtual-usa/software-engineer/72A8979ED0B14D56B48BB397DDE3D312/job?vs=1606");
   assert.equal(parsed.parsedTitle, "Software Engineer");
   assert.equal(parsed.parsedCompany, "Frontdoor");
   assert.equal(parsed.parsedLocation, "Virtual - USA");
@@ -293,7 +293,7 @@ test("parseJobDescription ignores blocked Indeed route URLs without content", ()
   });
 
   assert.equal(parsed.source, "Indeed");
-  assert.equal(parsed.sourceUrl, "https://www.indeed.com/viewjob");
+  assert.equal(parsed.sourceUrl, "https://www.indeed.com/viewjob?from=shareddesktop_copy&jk=a02c1d9ae4db17fd");
   assert.equal(parsed.parsedTitle, null);
   assert.equal(parsed.parsedCompany, null);
   assert.equal(parsed.parsedLocation, null);

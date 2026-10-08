@@ -1669,6 +1669,7 @@ export default function MainPage() {
         const { resumeVersionId, ...applicationFields } = form;
         const payload = {
             ...applicationFields,
+            resumeVersionId: resumeVersionId || null,
             salaryMin: form.salaryMin.trim() ? Number(form.salaryMin) : null,
             salaryMax: form.salaryMax.trim() ? Number(form.salaryMax) : null,
             dateApplied: form.dateApplied || null,
@@ -1682,25 +1683,6 @@ export default function MainPage() {
 
         const savedApplicationId = data.application?.id as string | undefined;
         if (!savedApplicationId) return setMessage("Application saved, but its response was incomplete.");
-
-        try {
-            await updateApplicationResume(
-                (path, init) => authedFetch(path, init),
-                savedApplicationId,
-                resumeVersionId || null,
-            );
-        } catch (error) {
-            resetApplicationForm();
-            setIsApplicationFormOpen(false);
-            setMessage(
-                `Application saved, but the resume link was not updated. ${
-                    error instanceof Error ? error.message : "Try editing the application again."
-                }`,
-            );
-            loadApplications();
-            loadResumeLibrary();
-            return;
-        }
 
         resetApplicationForm();
         setIsApplicationFormOpen(false);

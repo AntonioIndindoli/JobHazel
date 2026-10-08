@@ -67,7 +67,7 @@ export function LandingPage({
                     observer.unobserve(entry.target);
                 });
             },
-            { threshold: 0.16 },
+            { threshold: 0.08 },
         );
 
         revealItems.forEach((item) => observer.observe(item));
@@ -102,7 +102,6 @@ export function LandingPage({
                 </a>
 
                 <nav className="landing-nav-links" aria-label="Landing page">
-
                 </nav>
 
                 <div className="landing-nav-actions">
@@ -111,7 +110,7 @@ export function LandingPage({
                         Sign in
                     </button>
                     <button type="button" className="landing-button landing-button-small" onClick={() => onAuthOpen("signup")}>
-                        Get Started
+                        Start for free
                     </button>
                 </div>
             </header>
@@ -123,7 +122,7 @@ export function LandingPage({
                         Less tracking. More <span>growing.</span>
                     </h1>
                     <p>
-                        Keep every application, resume version, interview, and follow-up connected—and see how your job search is progressing.
+                        Keep your applications, resumes, interviews, and follow-ups organized in one place.
                     </p>
                     <div className="landing-hero-actions">
                         <button type="button" className="landing-button" onClick={() => onAuthOpen("signup")}>
@@ -151,7 +150,7 @@ export function LandingPage({
                                 srcSet="/landing/dashboard-preview-mobile-480.avif 480w, /landing/dashboard-preview-mobile-720.avif 720w"
                                 sizes="calc(100vw - 32px)"
                                 width="720"
-                                height="480"
+                                height="1219"
                             />
                             <source
                                 media="(max-width: 640px)"
@@ -159,7 +158,7 @@ export function LandingPage({
                                 srcSet="/landing/dashboard-preview-mobile-480.webp 480w, /landing/dashboard-preview-mobile-720.webp 720w"
                                 sizes="calc(100vw - 32px)"
                                 width="720"
-                                height="480"
+                                height="1219"
                             />
                             <source
                                 type="image/avif"
@@ -175,7 +174,7 @@ export function LandingPage({
                                 sizes="(max-width: 980px) 91vw, 50vw"
                                 width="1440"
                                 height="778"
-                                alt="JobHazel dashboard showing an application flow, job-search metrics, and application tracker"
+                                alt="JobHazel dashboard showing application flow, job-search metrics, and weekly goal progress"
                                 fetchPriority="high"
                                 decoding="async"
                             />

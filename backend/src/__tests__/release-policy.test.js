@@ -18,6 +18,8 @@ test("release configuration rejects silent legacy fallback and unsafe cron confi
     assert.ok(productionConfigurationIssues({ ...config, ...change }).length, JSON.stringify(change));
   }
   assert.ok(productionConfigurationIssues({ ...config, NOTIFICATION_MODE: "legacy" }, { requireScheduled: true }).length);
+  assert.ok(productionConfigurationIssues({ ...config, NOTIFICATION_COHORT_LIMIT: 1000 }).length);
+  assert.deepEqual(productionConfigurationIssues({ ...config, NOTIFICATION_COHORT_LIMIT: 0, NOTIFICATION_WORKER_INTERVAL_SECONDS: 300 }), []);
 });
 test("readiness fails closed for missing schema and never exposes database errors", async () => {
   setPrismaForTests({ $queryRaw: async () => { throw new Error("password=secret database host"); } });
@@ -31,8 +33,10 @@ test("operator status detects missed schedules, capacity exclusions and unresolv
   const prisma = {
     notificationRun: { findFirst: async () => ({ id: "2026-09-28", completedAt: new Date("2026-09-28T15:08Z") }) },
     notificationOperation: { count: async () => 0, findFirst: async () => null },
-    notificationSync: { count: async () => 0 }, user: { count: async () => 5 },
+    notificationSync: { count: async () => 0, findFirst: async () => null }, user: { count: async () => 5 },
     notificationProviderEvent: { findFirst: async () => null },
+    notificationWorkerState: { findUnique: async () => ({ lastFinishedAt: new Date("2026-09-28T15:08Z") }) },
+    providerRateLimit: { findUnique: async () => null },
   };
   assert.equal((await notificationHealth({ prisma, config, now: new Date("2026-09-29T15:30Z") })).ok, true);
   assert.equal((await notificationHealth({ prisma, config, now: new Date("2026-09-29T16:08Z") })).scheduler.stale, true);
@@ -41,4 +45,12 @@ test("operator status detects missed schedules, capacity exclusions and unresolv
   assert.equal(status.ok, false); assert.equal(status.capacity.excludedUsers, 1);
   prisma.notificationOperation.count = async () => 1;
   assert.equal((await notificationHealth({ prisma, config })).unknown, 1);
+  prisma.notificationWorkerState.findUnique = async () => ({ lastFinishedAt: new Date("2026-09-29T08:00Z") });
+  prisma.notificationSync.findFirst = async () => ({ updatedAt: new Date("2026-09-29T08:00Z") });
+  prisma.providerRateLimit.findUnique = async () => ({ blockedUntil: new Date("2026-09-29T10:00Z") });
+  const alerted = await notificationHealth({ prisma, config: { ...config, NOTIFICATION_WORKER_INTERVAL_SECONDS: 300 }, now: new Date("2026-09-29T09:00Z") });
+  for (const code of ["WORKER_MISSED", "UNKNOWN_ACCEPTANCE", "DELIVERY_FAILED", "CAPACITY_EXCLUDED", "BACKLOG_AGED", "PROVIDER_COOLDOWN"]) {
+    assert.ok(alerted.alerts.some(a => a.code === code && a.action), code);
+  }
+  assert.equal((await notificationHealth({ prisma, config: { ...config, NOTIFICATION_COHORT_LIMIT: 0 } })).capacity.excludedUsers, 0);
 });

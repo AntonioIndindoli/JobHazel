@@ -15,7 +15,9 @@
     "db:seed": "node prisma/seed.js",
     "db:dev:reset": "npx prisma migrate reset --force && npm run db:seed",
     "vercel-build": "prisma generate && prisma migrate deploy",
-    "test:notifications:redesign": "node scripts/verify-notification-redesign.mjs"
+    "test:notifications:redesign": "node scripts/verify-notification-redesign.mjs",
+    "monitor:notifications": "node scripts/monitor-notifications.mjs",
+    "test:applications:atomic": "node scripts/verify-application-atomic.mjs"
   },
   "keywords": [],
   "author": "",

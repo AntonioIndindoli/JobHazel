@@ -429,6 +429,7 @@ model NotificationOperation {
   @@index([userId, kind, resourceId])
   @@index([desired, status, nextAttemptAt])
   @@index([familyKey, createdAt])
+  @@index([status, nextAttemptAt])
 }
 
 model NotificationSync {
@@ -437,14 +438,31 @@ model NotificationSync {
   revision  Int    @default(1)
   cursor    String?
   updatedAt DateTime @updatedAt
+  @@index([updatedAt])
 }
 
 model NotificationRun {
   id          String @id
   cursor      String?
   completedAt DateTime?
+  discoveryCompletedAt DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model ProviderRateLimit {
+  scope         String   @id
+  nextAllowedAt DateTime @default(now())
+  blockedUntil  DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model NotificationWorkerState {
+  id             String    @id
+  leaseToken     String?
+  leaseUntil     DateTime?
+  lastStartedAt  DateTime?
+  lastFinishedAt DateTime?
 }
 
 // Store only event identity and delivery outcome, never the raw recipient payload.

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": [
+    "pdx1"
+  ],
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/notifications/maintenance/deliver",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/resumes/maintenance/cleanup",
+      "schedule": "17 4 * * *"
+    },
+    {
+      "path": "/auth/maintenance/cleanup",
+      "schedule": "27 4 * * *"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api/index"
+    }
+  ]
+}

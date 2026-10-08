@@ -31,6 +31,8 @@ jobs:
       DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@127.0.0.1:5432/jobhazel_e2e
       E2E_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/jobhazel_e2e
       E2E_DATABASE_HOST: 127.0.0.1
+      TEST_NOTIFICATION_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/jobhazel_e2e
+      TEST_NOTIFICATION_DATABASE_HOST: 127.0.0.1
       NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:4100
       AUTH_RATE_LIMIT_SECRET: ci-only-rate-limit-secret
     steps:
@@ -48,6 +50,10 @@ jobs:
       - run: npx prisma migrate deploy
         working-directory: backend
       - run: npm test
+        working-directory: backend
+      - run: npm run test:applications:atomic
+        working-directory: backend
+      - run: npm run test:notifications:redesign
         working-directory: backend
       - run: npm ci
         working-directory: frontend

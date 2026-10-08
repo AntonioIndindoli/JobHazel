@@ -45,13 +45,13 @@ test("digest groups local days, repeats open overdue tasks, escapes content and 
 });
 test("provider uses immutable schedule parameters, typed failures and cancellation endpoint", async () => {
   const calls = [];
-  const provider = notificationProvider({ config, fetchImpl: async (url, init) => { calls.push({ url, ...init }); return new Response(JSON.stringify({ id: "provider" })); } });
+  const provider = notificationProvider({ config, acquire: async () => {}, block: async () => {}, fetchImpl: async (url, init) => { calls.push({ url, ...init }); return new Response(JSON.stringify({ id: "provider" })); } });
   await provider.schedule({ scheduled_at: interview.scheduledAt.toISOString() }, "stable-key");
   await provider.cancel("provider");
   assert.equal(calls[0].headers["Idempotency-Key"], "stable-key");
   assert.equal(JSON.parse(calls[0].body).scheduled_at, interview.scheduledAt.toISOString());
   assert.ok(calls[1].url.endsWith("/provider/cancel"));
-  await assert.rejects(notificationProvider({ config, fetchImpl: async () => new Response("", { status: 429, headers: { "Retry-After": "90" } }) }).schedule({}, "k"), (e) => e.retryAfterMs === 90000 && !e.permanent);
+  await assert.rejects(notificationProvider({ config, acquire: async () => {}, block: async () => {}, fetchImpl: async () => new Response("", { status: 429, headers: { "Retry-After": "90" } }) }).schedule({}, "k"), (e) => e.retryAfterMs === 90000 && !e.permanent);
 });
 
 function matches(row, where) {

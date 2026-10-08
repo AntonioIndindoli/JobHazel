@@ -3,31 +3,43 @@
 import Image from "next/image";
 import { useState } from "react";
 import { AppIcon } from "./AppIcon";
-import applications from "../../public/landing/applications.png";
-import jobImport from "../../public/landing/import.png";
-import analytics from "../../public/landing/analytics.png";
-import interviews from "../../public/landing/interviews.png";
+import screenshots from "../../public/landing/story-screenshots.json";
 
-const screenshots = { applications, import: jobImport, analytics, interviews };
+type LandingScreenshotProps = {
+    name: keyof typeof screenshots;
+    alt: string;
+    caption: string;
+    fullPage?: boolean;
+};
 
-export function LandingScreenshot({ name, alt }: { name: keyof typeof screenshots; alt: string }) {
+export function LandingScreenshot({ name, alt, caption, fullPage = false }: LandingScreenshotProps) {
     const [missing, setMissing] = useState(false);
+    const screenshot = screenshots[name];
 
     return (
-        <div className="story-screenshot">
-            {missing ? (
-                <div className="story-screenshot-placeholder" role="img" aria-label={alt}>
-                    <AppIcon name="view" size={28} />
-                    <span>{alt}</span>
-                </div>
-            ) : (
-                <Image
-                    src={screenshots[name]}
-                    alt={alt}
-                    sizes="(max-width: 850px) 100vw, 600px"
-                    onError={() => setMissing(true)}
-                />
-            )}
-        </div>
+        <figure className="story-screenshot">
+            <div className="story-screenshot-frame">
+                {missing ? (
+                    <div className="story-screenshot-placeholder" role="img" aria-label={alt}>
+                        <AppIcon name="view" size={28} /><span>{alt}</span>
+                    </div>
+                ) : (["Light", "Dark"] as const).map((theme) => {
+                    const desktop = screenshot[`desktop${theme}`];
+                    const mobile = screenshot[`mobile${theme}`];
+                    return (
+                        <picture key={theme} className={`story-screenshot-${theme.toLowerCase()}`}>
+                            <source media="(max-width: 600px)" srcSet={mobile.src} width={mobile.width} height={mobile.height} />
+                            <Image src={desktop.src} width={desktop.width} height={desktop.height} alt={alt} sizes={fullPage ? "(max-width: 1344px) calc(100vw - 64px), 1280px" : "(max-width: 1000px) calc(100vw - 48px), 680px"} onError={() => setMissing(true)} />
+                        </picture>
+                    );
+                })}
+            </div>
+            <figcaption>
+                <span>{caption}{fullPage && " · Example data"}</span>
+                {fullPage ? (["Light", "Dark"] as const).map(theme => (
+                    <a key={theme} className={`story-screenshot-${theme.toLowerCase()} story-preview-link`} href={screenshot[`desktop${theme}`].src} target="_blank" rel="noreferrer" aria-label={`View full-size ${caption.toLowerCase()} screenshot`}>View full size ↗</a>
+                )) : <span className="story-example-label">Example data</span>}
+            </figcaption>
+        </figure>
     );
 }

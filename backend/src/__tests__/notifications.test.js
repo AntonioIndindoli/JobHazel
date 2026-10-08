@@ -225,14 +225,14 @@ test("email escapes resource content, includes one-click controls and uses provi
   assert.ok(!payload.html.includes("<script>"));
   assert.match(payload.headers["List-Unsubscribe"], /^<https:\/\/api.example.com\/notifications\/unsubscribe\?token=/);
   assert.equal(payload.headers["List-Unsubscribe-Post"], "List-Unsubscribe=One-Click");
-  assert.equal(await sendNotificationEmail(payload, "stable-key", { config, fetchImpl: async (_url, options) => {
+  assert.equal(await sendNotificationEmail(payload, "stable-key", { config, acquire: async () => {}, block: async () => {}, fetchImpl: async (_url, options) => {
     assert.equal(options.headers["Idempotency-Key"], "stable-key");
     assert.deepEqual(JSON.parse(options.body), payload);
     return { ok: true, json: async () => ({ id: "provider-id" }) };
   } }), "provider-id");
   await assert.rejects(sendNotificationEmail(payload, "k", { config: {}, fetchImpl: () => assert.fail("must not call provider") }));
   for (const [status, permanent] of [[422, true], [429, false], [409, false], [500, false]]) {
-    await assert.rejects(sendNotificationEmail(payload, "k", { config, fetchImpl: async () => ({ ok: false, status }) }), { permanent });
+    await assert.rejects(sendNotificationEmail(payload, "k", { config, acquire: async () => {}, block: async () => {}, fetchImpl: async () => ({ ok: false, status }) }), { permanent });
   }
 });
 

@@ -116,10 +116,17 @@ test("resume upload, application attachment and download", async ({ page }) => {
     const application = page.getByRole("dialog", { name: "Add application" });
     await application.getByLabel("Job title", { exact: false }).fill("Resume Engineer");
     await application.getByLabel("Resume", { exact: false }).selectOption({ label: "Browser resume" });
+    const saveRequests: { url: string; body: Record<string, unknown> | null }[] = [];
+    page.on("request", request => {
+        if (["POST", "PUT"].includes(request.method()) && request.url().startsWith(`${api}/applications`)) saveRequests.push({ url: request.url(), body: request.postDataJSON() });
+    });
     await application.getByRole("button", { name: "Save application" }).click();
     await expect(application).not.toBeVisible();
     const saved = (await (await page.request.get(`${api}/applications`)).json()).applications[0];
     expect(saved.resumeVersion.name).toBe("Browser resume");
+    expect(saveRequests).toHaveLength(1);
+    expect(saveRequests[0].url).toBe(`${api}/applications`);
+    expect(saveRequests[0].body?.resumeVersionId).toBe(saved.resumeVersion.id);
     await page.getByText("Resume Engineer", { exact: true }).first().click();
     const download = page.waitForEvent("download");
     await page.getByRole("button", { name: "Download PDF", exact: true }).click();

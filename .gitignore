@@ -1,5 +1,6 @@
 .neon
 .env
 .env.local
+.env.capacity-test
 frontend/AGENTS.md
 frontend/CLAUDE.md

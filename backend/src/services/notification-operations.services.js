@@ -45,8 +45,10 @@ export async function cancelNotificationOperations(tx, userId, where = {}, { era
 }
 
 async function enrolled(prisma, userId, config) {
-  const users = await prisma.user.findMany({ where: { emailVerifiedAt: { not: null }, notificationPreference: { is: { emailEnabled: true } } }, orderBy: { id: "asc" }, take: config.NOTIFICATION_COHORT_LIMIT ?? 5, select: { id: true } });
-  return users.some((user) => user.id === userId);
+  const limit = config.NOTIFICATION_COHORT_LIMIT ?? 5;
+  if (limit === 0) return true;
+  const rank = await prisma.user.count({ where: { id: { lte: userId }, emailVerifiedAt: { not: null }, notificationPreference: { is: { emailEnabled: true } } } });
+  return rank <= limit;
 }
 
 // Serialized with preference edits and account deletion by the User lock.
@@ -153,7 +155,7 @@ async function replayProviderEvents(prisma, operation) {
   for (const event of events) await applyProviderOutcome(prisma, operation.id, event.type, event.eventAt);
 }
 
-export async function processOperation(id, { prisma, config = env, clock = () => new Date(), provider = notificationProvider({ config }) } = {}) {
+export async function processOperation(id, { prisma, config = env, clock = () => new Date(), provider = notificationProvider({ config, prisma }) } = {}) {
   const now = clock();
   const token = crypto.randomUUID();
   const claimed = await prisma.notificationOperation.updateMany({ where: { id, nextAttemptAt: { lte: now },
@@ -250,7 +252,7 @@ export async function processOperation(id, { prisma, config = env, clock = () =>
 export async function notificationStatus(prisma, userId, config = env) {
   const now = new Date();
   const [pending, unknown, failed, dirty] = await Promise.all([
-    prisma.notificationOperation.count({ where: { userId, status: { notIn: TERMINAL }, OR: [{ desired: false }, { providerId: null, nextAttemptAt: { lte: now } }] } }),
+    prisma.notificationOperation.count({ where: { userId, status: { notIn: TERMINAL }, OR: [{ desired: false }, { nextAttemptAt: { lte: now } }] } }),
     prisma.notificationOperation.count({ where: { userId, status: "UNKNOWN" } }),
     prisma.notificationOperation.count({ where: { userId, desired: true, status: "FAILED" } }),
     prisma.notificationSync.count({ where: { userId } }),
@@ -283,8 +285,7 @@ export async function drainOperations(prisma, { config = env, userId, deadline =
     const op = candidates[0]; seen.add(op.id); servedUsers.add(op.userId);
     const result = await processOperation(op.id, { prisma, config, clock, provider });
     counts[result] = (counts[result] ?? 0) + 1;
-    // Leave headroom for other account traffic. HTTP 429 persists Retry-After
-    // when concurrent request handlers consume the shared provider budget.
+    // Local pacing avoids unnecessary contention; the DB gate is authoritative.
     const interval = config.NOTIFICATION_PROVIDER_INTERVAL_MS ?? 200;
     if (Date.now() + interval < deadline) await new Promise((resolve) => setTimeout(resolve, interval));
   }
@@ -308,6 +309,24 @@ export async function flushUserNotifications(userId, { prisma, config = env, ...
 export async function runDailyNotifications({ prisma, config = env, clock = () => new Date(), provider } = {}) {
   prisma ??= await getPrismaAsync();
   requireNotificationConfiguration(config);
+  const token = crypto.randomUUID();
+  const now = clock();
+  await prisma.$executeRaw`INSERT INTO "NotificationWorkerState" ("id") VALUES ('reminders') ON CONFLICT ("id") DO NOTHING`;
+  const claim = await prisma.notificationWorkerState.updateMany({
+    where: { id: "reminders", OR: [{ leaseUntil: null }, { leaseUntil: { lte: now } }] },
+    data: { leaseToken: token, leaseUntil: new Date(+now + (config.NOTIFICATION_RUN_BUDGET_MS ?? 45000) + 20000), lastStartedAt: now },
+  });
+  if (!claim.count) return { busy: true, incomplete: false };
+  try {
+    const result = await runNotificationBatch({ prisma, config, clock, provider });
+    await prisma.notificationWorkerState.updateMany({ where: { id: "reminders", leaseToken: token }, data: { lastFinishedAt: clock() } });
+    return result;
+  } finally {
+    await prisma.notificationWorkerState.updateMany({ where: { id: "reminders", leaseToken: token }, data: { leaseToken: null, leaseUntil: null } });
+  }
+}
+
+async function runNotificationBatch({ prisma, config, clock, provider }) {
   const deadline = Date.now() + (config.NOTIFICATION_RUN_BUDGET_MS ?? 45000);
   const now = clock(); const slot = dailySlot(now);
   // Legacy attempted work is never silently reset into the new sender.
@@ -319,27 +338,40 @@ export async function runDailyNotifications({ prisma, config = env, clock = () =
   await prisma.notificationOperation.updateMany({ where: { desired: true, expiresAt: { lte: now } }, data: { desired: false, nextAttemptAt: now } });
   const counts = await drainOperations(prisma, { config, deadline: Math.min(deadline, Date.now() + 12000), clock, provider, allowCreate: false });
   const run = await prisma.notificationRun.upsert({ where: { id: slot.id }, create: { id: slot.id }, update: {} });
-  let discoveryComplete = !!run.completedAt;
-  if (newNotificationsEnabled(config) && !run.completedAt) {
-    const cohort = await prisma.user.findMany({ where: { emailVerifiedAt: { not: null }, notificationPreference: { is: { emailEnabled: true } } }, orderBy: { id: "asc" }, take: config.NOTIFICATION_COHORT_LIMIT ?? 5, select: { id: true } });
-    discoveryComplete = true;
-    for (const user of cohort.filter((u) => !run.cursor || u.id > run.cursor)) {
-      if (Date.now() + 5500 >= deadline) { discoveryComplete = false; break; }
-      await reconcileUser(prisma, user.id, { config, now: clock(), deadline });
-      await enqueueDigest(prisma, user.id, clock(), config);
-      await prisma.notificationRun.update({ where: { id: slot.id }, data: { cursor: user.id } });
+  let discoveryComplete = !newNotificationsEnabled(config) || !!(run.discoveryCompletedAt || run.completedAt);
+  if (newNotificationsEnabled(config) && !discoveryComplete) {
+    // Discover in pages, reserving time to deliver on every invocation. A cursor
+    // and per-day digest key allow many short invocations without duplicate mail.
+    const limit = config.NOTIFICATION_COHORT_LIMIT ?? 5;
+    let cursor = run.cursor;
+    let scanned = cursor && limit ? await prisma.user.count({ where: { id: { lte: cursor }, emailVerifiedAt: { not: null }, notificationPreference: { is: { emailEnabled: true } } } }) : 0;
+    while (Date.now() + 15000 < deadline) {
+      const take = limit ? Math.min(50, Math.max(0, limit - scanned)) : 50;
+      if (!take) { discoveryComplete = true; break; }
+      const page = await prisma.user.findMany({ where: { ...(cursor ? { id: { gt: cursor } } : {}), emailVerifiedAt: { not: null }, notificationPreference: { is: { emailEnabled: true } } }, orderBy: { id: "asc" }, take, select: { id: true } });
+      if (!page.length) { discoveryComplete = true; break; }
+      for (const user of page) {
+        if (Date.now() + 15000 >= deadline) break;
+        await reconcileUser(prisma, user.id, { config, now: clock(), deadline: deadline - 15000 });
+        await enqueueDigest(prisma, user.id, clock(), config);
+        cursor = user.id; scanned++;
+        await prisma.notificationRun.update({ where: { id: slot.id }, data: { cursor } });
+      }
+      if (cursor !== page.at(-1).id) break;
+      if (page.length < take || (limit && scanned >= limit)) { discoveryComplete = true; break; }
     }
+    if (discoveryComplete) await prisma.notificationRun.update({ where: { id: slot.id }, data: { discoveryCompletedAt: clock() } });
   }
   // Changes that failed their request-time attempt must be reconciled, even if
   // this daily slot's discovery has already completed.
   const dirty = await prisma.notificationSync.findMany({ orderBy: { updatedAt: "asc" }, take: 100 });
   for (const item of dirty) {
-    if (Date.now() + 5500 >= deadline) break;
-    await reconcileUser(prisma, item.userId, { config, now: clock(), deadline });
+    if (Date.now() + 15000 >= deadline) break;
+    await reconcileUser(prisma, item.userId, { config, now: clock(), deadline: deadline - 15000 });
   }
   const drained = await drainOperations(prisma, { config, deadline, clock, provider });
   for (const [key, value] of Object.entries(drained)) counts[key] = (counts[key] ?? 0) + value;
-  const backlog = await prisma.notificationOperation.count({ where: { status: { notIn: TERMINAL }, OR: [{ desired: false }, { providerId: null, nextAttemptAt: { lte: clock() } }] } });
+  const backlog = await prisma.notificationOperation.count({ where: { status: { notIn: TERMINAL }, OR: [{ desired: false }, { nextAttemptAt: { lte: clock() } }] } });
   const dirtyCount = await prisma.notificationSync.count();
   const unknown = await prisma.notificationOperation.count({ where: { status: "UNKNOWN" } });
   const failed = await prisma.notificationOperation.count({ where: { desired: true, status: "FAILED" } });
@@ -351,5 +383,6 @@ export async function runDailyNotifications({ prisma, config = env, clock = () =
   // anonymous tombstones and raw-free webhook receipts after 30 days.
   await prisma.notificationOperation.deleteMany({ where: { userId: null, status: { in: TERMINAL }, updatedAt: { lt: new Date(+now - 30 * DAY_MS) } } });
   await prisma.notificationProviderEvent.deleteMany({ where: { createdAt: { lt: new Date(+now - 30 * DAY_MS) } } });
-  return { ...counts, incomplete, backlog, dirty: dirtyCount, unknown, failed, excludedUsers: Math.max(0, eligibleUsers - (config.NOTIFICATION_COHORT_LIMIT ?? 5)), oldestPendingAgeSeconds: oldest ? Math.max(0, Math.floor((+clock() - +oldest.createdAt) / 1000)) : 0, runDate: slot.id, completedAt: incomplete ? null : clock() };
+  const limit = config.NOTIFICATION_COHORT_LIMIT ?? 5;
+  return { ...counts, incomplete, backlog, dirty: dirtyCount, unknown, failed, excludedUsers: limit ? Math.max(0, eligibleUsers - limit) : 0, oldestPendingAgeSeconds: oldest ? Math.max(0, Math.floor((+clock() - +oldest.createdAt) / 1000)) : 0, runDate: slot.id, completedAt: incomplete ? null : clock() };
 }

@@ -1,24 +1,85 @@
-# Landing page screenshots
+# Landing page product captures
 
-These PNGs show the actual product components with fictional sample data:
+The product story pairs an HTML posting-to-details illustration with
+focused excerpts from the current product components, the Geist variable
+font, and the stylesheet order in `app/globals.css`.
+All data is fictional. Captures demonstrate recorded product states, not
+conversion or performance claims.
 
-| Filename | Landing page section | Suggested content |
-| --- | --- | --- |
-| applications.png | Application tracking | Your application board/pipeline |
-| import.png | Job import | The import or review-import form |
-| analytics.png | Search insights | Analytics charts or source-quality insights |
-| interviews.png | Interview preparation and follow-ups | An interview detail view, ideally showing its notes and related context |
+The story example contains 72 submitted applications and one saved opportunity.
+Source comparisons show Indeed (8 responses / 30 submitted), LinkedIn (5 / 24),
+and Company Website (3 / 18). The product calculates these figures from the
+fictional applications and recorded status changes; they are not hardcoded
+into the table.
 
-The page imports these images, using their actual dimensions to reserve space while loading. Replace the images and refresh
-the local page. For the live website, deploy again after adding the files.
+| Story assets | Focus |
+| --- | --- |
+| import*.webp | Retained review-step captures; the current story uses `LandingImportDemo.tsx` |
+| applications.webp / applications-dark.webp | Application list alongside the selected role, resume, tasks, interviews, and notes |
+| interviews.webp / interviews-dark.webp | Interview list alongside the selected interview, meeting details, and notes |
+| analytics*.webp | Source names, response rates, and submitted-application denominators |
 
-Use clear PNGs, preferably at least 1600 pixels wide for landscape screenshots.
-Crop to the relevant app area and omit browser chrome. There is no required image
-height or aspect ratio: images scale to the available width without cropping or
-stretching. The same screenshot is used in both light and dark themes.
+Application and interview workspaces render at 1280 × 850 CSS pixels in both
+themes. Their mobile manifest entries reuse the desktop capture so both panes
+remain visible; a full-size link lets visitors inspect the original image.
+The other desktop captures render at 600 CSS pixels wide, with mobile variants
+at 360. Exports use twice that resolution. `story-screenshots.json` records the
+intrinsic dimensions and paths, so responsive pictures reserve the correct
+space and use the variant appropriate to the selected page theme.
 
-To refresh the captures, run `node scripts/capture-landing.cjs` from `frontend`
-with Playwright available locally or through `NODE_PATH`, and Microsoft Edge installed.
-The script renders existing React components and styles without accessing an account
-or API. The import image is cropped to the review form's primary details.
-No hero image is changed by these files.
+Application and interview captures render the intact `ApplicationsView` and
+`InterviewsView` with shipped styles and no capture-specific UI overrides. They
+include the collection tabs, search and sorting controls, list, and selected
+detail panel in one viewport. These captures show the collection workspace;
+the surrounding dashboard navigation is outside the capture.
+
+The analytics and retained import excerpts omit unrelated fields and
+controls and tighten spacing for the landing page. They use actual component
+markup and sample data. Visible HTML captions explain each image and label it
+“Example data.”
+
+`LandingImportDemo.tsx` shows a fictional posting excerpt and its automatically
+extracted role, company, location, salary, and description. Matching highlights
+and accent lines map each source value to the extracted list. The source and
+result share the same sample values, including the visible description excerpt.
+The figure uses a document-to-data diagram with no browser chrome, form fields,
+or button-shaped outcomes. It is labeled “Illustrated example,” stacks in narrow
+containers, and does not run an import or save an application.
+
+Regenerate the current story assets and their manifest from `frontend`:
+
+```powershell
+node scripts/capture-landing.cjs --story-only
+```
+
+Refresh the application or interview workspace captures independently:
+
+```powershell
+node scripts/capture-landing.cjs --story-only --story=applications
+node scripts/capture-landing.cjs --story-only --story=interviews
+```
+
+This runs offline and needs no account, backend, or local preview server.
+Playwright, Sharp, and Microsoft Edge must be available. Set
+`LANDING_BROWSER_CHANNEL` to another installed Chromium channel if needed.
+
+The hero uses `dashboard-preview-{960,1440}.{webp,avif}` and
+`dashboard-preview-mobile-{480,720}.{webp,avif}`. It comes from the live
+`/dashboard-preview` route so the chart can hydrate. To refresh both the story
+and hero, start a local preview, then run the full capture:
+
+```powershell
+node node_modules/next/dist/bin/next dev --webpack --hostname 127.0.0.1 --port 3200
+```
+
+In another terminal:
+
+```powershell
+$env:LANDING_BASE_URL = 'http://127.0.0.1:3200'
+node scripts/capture-landing.cjs
+```
+
+The hero remains 1440 × 778 on desktop and 720 × 1219 on mobile. If its mobile
+widgets change height, update the source dimensions and the mobile aspect
+ratio in `05-landing.css` to match. Legacy feature PNGs are retained; the story
+uses the new WebP variants. Refresh the landing page after capture.

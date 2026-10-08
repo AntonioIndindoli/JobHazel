@@ -458,7 +458,7 @@ function extractJsonScriptPayloads(html) {
     const attrs = parseTagAttributes(match[1]);
     const scriptType = String(attrs.type ?? "").toLowerCase();
     const scriptId = String(attrs.id ?? "").toLowerCase();
-    const body = decodeHtmlEntities(match[2]).trim();
+    const body = match[2].trim();
     if (!body || body.length > MAX_FETCH_BYTES) continue;
     if (scriptType === "application/ld+json") continue;
     const looksLikeJson =
@@ -469,7 +469,10 @@ function extractJsonScriptPayloads(html) {
     if (!looksLikeJson) continue;
 
     try {
-      payloads.push(JSON.parse(body));
+      let payload;
+      try { payload = JSON.parse(body); }
+      catch { payload = JSON.parse(decodeHtmlEntities(body)); }
+      payloads.push(payload);
     } catch {
       continue;
     }
@@ -480,7 +483,9 @@ function extractJsonScriptPayloads(html) {
 function getObjectValueByKeys(object, keys) {
   if (!object || typeof object !== "object") return null;
   for (const key of keys) {
-    if (Object.prototype.hasOwnProperty.call(object, key)) return object[key];
+    if (Object.prototype.hasOwnProperty.call(object, key) &&
+      object[key] !== null && object[key] !== undefined &&
+      !(typeof object[key] === "string" && !object[key].trim())) return object[key];
   }
   return null;
 }
@@ -614,11 +619,16 @@ function extractGenericJobPayload(html) {
 }
 
 function extractStructuredJobPayload(html) {
-  const scriptMatches = String(html ?? "").matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+  const scriptMatches = String(html ?? "").matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/gi);
   const graphNodes = [];
   for (const match of scriptMatches) {
+    if (String(parseTagAttributes(match[1]).type ?? "").trim().toLowerCase() !== "application/ld+json") continue;
     try {
-      graphNodes.push(...flattenJsonLd(JSON.parse(decodeHtmlEntities(match[1]).trim())));
+      // JSON strings may contain literal entity spellings; decode only as a fallback.
+      let payload;
+      try { payload = JSON.parse(match[2].trim()); }
+      catch { payload = JSON.parse(decodeHtmlEntities(match[2]).trim()); }
+      graphNodes.push(...flattenJsonLd(payload));
     } catch {
       continue;
     }
@@ -639,8 +649,33 @@ function extractStructuredJobPayload(html) {
 }
 
 export function extractJobPageDataFromHtml(html) {
-  const structured = extractStructuredJobPayload(html) ?? extractGenericJobPayload(html);
+  const jsonLd = extractStructuredJobPayload(html);
+  const application = extractGenericJobPayload(html);
   const metadata = extractHtmlMetadata(html);
+  const visibleText = stripHtmlToText(html);
+  const fallbackText = [metadata.description, visibleText].filter(Boolean).join("\n");
+  // Do not borrow fields from a different job embedded in a related-jobs widget.
+  const compatibleApplication = !jsonLd?.title || !application?.title ||
+    titleSlugFromValue(jsonLd.title) === titleSlugFromValue(application.title)
+    ? application : null;
+  const structuredTitle = cleanTitleCandidate(jsonLd?.title);
+  const title = (structuredTitle && !isRejectedTitle(structuredTitle) ? structuredTitle : null) ?? compatibleApplication?.title ??
+    extractTitle({ pageTitle: metadata.title, rawText: fallbackText });
+  const company = jsonLd?.company ?? compatibleApplication?.company ??
+    extractCompany({ pageTitle: metadata.title, rawText: fallbackText, parsedTitle: title });
+  const fallbackSalary = extractSalaryRange(fallbackText);
+  const fields = {
+    title,
+    company,
+    location: jsonLd?.location ?? compatibleApplication?.location ??
+      extractLocation(fallbackText, { parsedTitle: title, parsedCompany: company }),
+    employmentType: jsonLd?.employmentType ?? compatibleApplication?.employmentType ?? null,
+    salary: jsonLd?.salary ?? compatibleApplication?.salary ??
+      (fallbackSalary.min && fallbackSalary.max ? `Salary: USD ${fallbackSalary.min} - ${fallbackSalary.max}` : null),
+    description: normalizeOptional(jsonLd?.description) ?? compatibleApplication?.description ??
+      normalizeOptional(visibleText) ?? metadata.description,
+  };
+  const structured = jsonLd || application ? fields : null;
   const pageTitle = structured?.title ?? metadata.title;
   const rawTextParts = [
     structured?.title,
@@ -718,6 +753,7 @@ export async function fetchJobPageData(sourceUrl) {
     result.pageTitle = extracted.pageTitle;
     result.rawTextLength = extracted.rawText?.length ?? 0;
     result.rawText = extracted.rawText;
+    result.structured = extracted.structured;
     return result;
   } catch (error) {
     result.error = error.message;
@@ -1334,16 +1370,17 @@ export function parseJobDescription(input = {}) {
   const cleanedText = cleanJobText(rawText);
   const sourceInfo = detectJobSource({ sourceUrl, sourceDomain });
 
-  const parsedTitle = extractTitle({ pageTitle, rawText: cleanedText, sourceUrl: extractionUrl ?? sourceUrl });
-  const parsedCompany = extractCompany({
+  const structured = input.fetchResult?.success ? input.fetchResult.structured : null;
+  const parsedTitle = cleanTitleCandidate(structured?.title) ?? extractTitle({ pageTitle, rawText: cleanedText, sourceUrl: extractionUrl ?? sourceUrl });
+  const parsedCompany = normalizeOptional(structured?.company) ?? extractCompany({
     pageTitle,
     rawText: cleanedText,
     sourceUrl,
     source: sourceInfo.source,
     parsedTitle,
   });
-  const parsedLocation = extractLocation(cleanedText, { parsedTitle, parsedCompany, sourceUrl: extractionUrl ?? sourceUrl });
-  const salary = extractSalaryRange(cleanedText);
+  const parsedLocation = normalizeOptional(structured?.location) ?? extractLocation(cleanedText, { parsedTitle, parsedCompany, sourceUrl: extractionUrl ?? sourceUrl });
+  const salary = extractSalaryRange(structured?.salary ?? cleanedText);
 
   const parsed = {
     sourceUrl,
@@ -1384,7 +1421,7 @@ export function parseJobDescription(input = {}) {
 
 export async function parseJobDescriptionWithFetch(input = {}) {
   const sourceUrl = normalizeUrl(normalizeOptional(input.sourceUrl));
-  const fetchUrl = normalizeOptional(input.fetchUrl) ?? sourceUrl;
+  const fetchUrl = normalizeOptional(input.fetchUrl) ?? normalizeOptional(input.sourceUrl);
   const shouldFetch = Boolean(fetchUrl && !normalizeOptional(input.rawText));
   let fetchResult = {
     attempted: false,

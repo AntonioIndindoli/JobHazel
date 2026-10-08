@@ -152,6 +152,8 @@ export async function createApplication(userId, payload) {
   if (duplicates.length) return { duplicateCandidates: duplicates.map(withApplicationRelations) };
 
   return prisma.$transaction(async (tx) => {
+    await lockUserForResumeAssociation(tx, userId);
+    const nextResume = await validateResume(tx, userId, payload.resumeVersionId ?? null);
     const company = payload.companyName
       ? await tx.company.upsert({
           where: { userId_name: { userId, name: payload.companyName } },
@@ -173,6 +175,7 @@ export async function createApplication(userId, payload) {
         description: payload.description,
         notes: payload.notes,
         dateApplied: payload.dateApplied,
+        resumeVersionId: nextResume?.id ?? null,
       },
       include: APPLICATION_INCLUDE,
     });
@@ -181,6 +184,7 @@ export async function createApplication(userId, payload) {
       title: application.title,
       status: application.status,
     });
+    await logResumeChange(tx, userId, application.id, null, nextResume);
 
     const createdTasks = [];
     if (application.status === "APPLIED") {
@@ -194,13 +198,19 @@ export async function createApplication(userId, payload) {
 
 export async function updateApplication(userId, id, payload) {
   const prisma = await getPrismaAsync();
-  const existing = await prisma.application.findFirst({ where: { id, userId }, include: APPLICATION_INCLUDE });
-  if (!existing) return null;
+  const found = await prisma.application.findFirst({ where: { id, userId }, select: { id: true } });
+  if (!found) return null;
 
   const duplicates = await detectDuplicates(prisma, userId, payload, id);
   if (duplicates.length) return { duplicateCandidates: duplicates.map(withApplicationRelations) };
 
   const result = await prisma.$transaction(async (tx) => {
+    await lockUserForResumeAssociation(tx, userId);
+    if (typeof tx.$queryRaw === "function") await tx.$queryRaw`SELECT "id" FROM "Application" WHERE "id" = ${id} AND "userId" = ${userId} FOR UPDATE`;
+    const existing = await tx.application.findFirst({ where: { id, userId }, include: APPLICATION_INCLUDE });
+    if (!existing) return null;
+    const changeResume = Object.prototype.hasOwnProperty.call(payload, "resumeVersionId");
+    const nextResume = changeResume ? await validateResume(tx, userId, payload.resumeVersionId, existing.resumeVersionId) : existing.resumeVersion;
     const company = payload.companyName
       ? await tx.company.upsert({
           where: { userId_name: { userId, name: payload.companyName } },
@@ -222,6 +232,7 @@ export async function updateApplication(userId, id, payload) {
         description: payload.description,
         notes: payload.notes,
         dateApplied: payload.dateApplied ?? (payload.status === "APPLIED" && !existing.dateApplied ? new Date() : existing.dateApplied),
+        ...(changeResume ? { resumeVersionId: nextResume?.id ?? null } : {}),
       },
       include: APPLICATION_INCLUDE,
     });
@@ -230,6 +241,7 @@ export async function updateApplication(userId, id, payload) {
       previous: { title: existing.title, status: existing.status, companyName: existing.company?.name ?? null },
       next: { title: updated.title, status: updated.status, companyName: updated.company?.name ?? null },
     });
+    if (changeResume) await logResumeChange(tx, userId, id, existing.resumeVersion, nextResume);
 
     const createdTasks = [];
     if (existing.status !== updated.status) {
@@ -246,7 +258,7 @@ export async function updateApplication(userId, id, payload) {
     await markNotificationDirty(tx, userId);
     return { application: withApplicationRelations(updated), createdTasks };
   });
-  result.notification = await flushUserNotifications(userId, { prisma });
+  if (result) result.notification = await flushUserNotifications(userId, { prisma });
   return result;
 }
 
@@ -278,6 +290,61 @@ export async function transitionApplicationStatus(userId, id, status) {
   });
 }
 
+async function validateResume(tx, userId, resumeVersionId, currentResumeId = null) {
+  let nextResume = null;
+  if (resumeVersionId !== null) {
+    nextResume = await tx.resumeVersion.findFirst({
+      where: { id: resumeVersionId, userId },
+      select: APPLICATION_RESUME_SUMMARY_SELECT,
+    });
+    if (!nextResume) {
+      throw new ApplicationResumeApiError(
+        404,
+        APPLICATION_RESUME_ERROR_CODES.ACCESS_DENIED,
+        "Resume not found.",
+      );
+    }
+    if (nextResume.uploadStatus !== "READY") {
+      throw new ApplicationResumeApiError(
+        409,
+        APPLICATION_RESUME_ERROR_CODES.INVALID_STATE,
+        "Only completed resumes can be attached to applications.",
+      );
+    }
+    if (nextResume.archivedAt && currentResumeId !== nextResume.id) {
+      throw new ApplicationResumeApiError(
+        409,
+        APPLICATION_RESUME_ERROR_CODES.ARCHIVED,
+        "Archived resumes cannot be selected for a new application association.",
+      );
+    }
+  }
+
+  return nextResume;
+}
+
+async function logResumeChange(tx, userId, id, previousResume, nextResume) {
+  if ((previousResume?.id ?? null) === (nextResume?.id ?? null)) return;
+  const type = previousResume
+    ? nextResume?.id
+      ? "RESUME_CHANGED"
+      : "RESUME_REMOVED"
+    : "RESUME_ATTACHED";
+  const message =
+    type === "RESUME_ATTACHED"
+      ? `Resume attached: ${nextResume.name}`
+      : type === "RESUME_CHANGED"
+        ? `Resume changed from ${previousResume.name} to ${nextResume.name}`
+        : `Resume removed: ${previousResume.name}`;
+
+  await logActivity(tx, userId, id, type, message, {
+    previousResumeVersionId: previousResume?.id ?? null,
+    previousResumeName: previousResume?.name ?? null,
+    nextResumeVersionId: nextResume?.id ?? null,
+    nextResumeName: nextResume?.name ?? null,
+  });
+}
+
 export async function setApplicationResume(userId, id, resumeVersionId) {
   const prisma = await getPrismaAsync();
 
@@ -289,34 +356,7 @@ export async function setApplicationResume(userId, id, resumeVersionId) {
     });
     if (!existing) return null;
 
-    let nextResume = null;
-    if (resumeVersionId !== null) {
-      nextResume = await tx.resumeVersion.findFirst({
-        where: { id: resumeVersionId, userId },
-        select: APPLICATION_RESUME_SUMMARY_SELECT,
-      });
-      if (!nextResume) {
-        throw new ApplicationResumeApiError(
-          404,
-          APPLICATION_RESUME_ERROR_CODES.ACCESS_DENIED,
-          "Resume not found.",
-        );
-      }
-      if (nextResume.uploadStatus !== "READY") {
-        throw new ApplicationResumeApiError(
-          409,
-          APPLICATION_RESUME_ERROR_CODES.INVALID_STATE,
-          "Only completed resumes can be attached to applications.",
-        );
-      }
-      if (nextResume.archivedAt && existing.resumeVersionId !== nextResume.id) {
-        throw new ApplicationResumeApiError(
-          409,
-          APPLICATION_RESUME_ERROR_CODES.ARCHIVED,
-          "Archived resumes cannot be selected for a new application association.",
-        );
-      }
-    }
+    const nextResume = await validateResume(tx, userId, resumeVersionId, existing.resumeVersionId);
 
     if (existing.resumeVersionId === resumeVersionId) {
       return { application: withApplicationRelations(existing), changed: false };
@@ -328,25 +368,7 @@ export async function setApplicationResume(userId, id, resumeVersionId) {
       include: APPLICATION_INCLUDE,
     });
 
-    const previousResume = existing.resumeVersion;
-    const type = previousResume
-      ? resumeVersionId
-        ? "RESUME_CHANGED"
-        : "RESUME_REMOVED"
-      : "RESUME_ATTACHED";
-    const message =
-      type === "RESUME_ATTACHED"
-        ? `Resume attached: ${nextResume.name}`
-        : type === "RESUME_CHANGED"
-          ? `Resume changed from ${previousResume.name} to ${nextResume.name}`
-          : `Resume removed: ${previousResume.name}`;
-
-    await logActivity(tx, userId, id, type, message, {
-      previousResumeVersionId: previousResume?.id ?? null,
-      previousResumeName: previousResume?.name ?? null,
-      nextResumeVersionId: nextResume?.id ?? null,
-      nextResumeName: nextResume?.name ?? null,
-    });
+    await logResumeChange(tx, userId, id, existing.resumeVersion, nextResume);
 
     return { application: withApplicationRelations(updated), changed: true };
   });

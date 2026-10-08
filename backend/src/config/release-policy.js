@@ -29,6 +29,7 @@ export function productionConfigurationIssues(config, { requireScheduled = false
     if (!config.NOTIFICATION_UNSUBSCRIBE_SECRET || config.NOTIFICATION_UNSUBSCRIBE_SECRET.length < 32) issues.push("NOTIFICATION_UNSUBSCRIBE_SECRET must contain at least 32 characters.");
     if (!config.EMAIL_FROM || /@resend\.dev\b/i.test(config.EMAIL_FROM)) issues.push("EMAIL_FROM must use your verified sender domain.");
     if (config.NOTIFICATION_RUN_BUDGET_MS > 45000) issues.push("NOTIFICATION_RUN_BUDGET_MS must not exceed 45000 with the checked-in 60-second function limit.");
+    if ((config.NOTIFICATION_COHORT_LIMIT === 0 || config.NOTIFICATION_COHORT_LIMIT > 5) && (config.NOTIFICATION_WORKER_INTERVAL_SECONDS ?? 86400) > 300) issues.push("Expanded reminder enrollment requires NOTIFICATION_WORKER_INTERVAL_SECONDS<=300 and a matching recurring worker scheduler.");
   }
   if (config.NOTIFICATION_MODE === "drain" && !config.RESEND_API_KEY) issues.push("RESEND_API_KEY is required to drain scheduled reminders.");
   return issues;

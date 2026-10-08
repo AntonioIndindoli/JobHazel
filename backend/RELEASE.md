@@ -1,5 +1,13 @@
 # Release verification
 
+## Pending capacity/atomic-save release
+
+Local changes add `20261001000000_notification_capacity`, a shared Resend throttle, resumable worker batches, independent operator monitoring, and atomic application/resume saves. Apply the migration and deploy API/frontend together. Retain the existing five-user cohort until an actual five-minute scheduler, independent alert receiver and live delivery/cancellation acceptance checks are verified. Select `vercel.scaled.json` on a supported plan or use an external scheduler; set NOTIFICATION_WORKER_INTERVAL_SECONDS=300 before expanding enrollment. The default deployment config still runs daily.
+
+Tests were run on temporary branch `notification-capacity-20261001` (`br-rough-recipe-arnstkve`), which expires October 3, 2026 at 05:40 UTC. The new migration, real SQL atomic rollback/ownership/history checks, expanded reminder queue and shared throttle checks passed. Synthetic providers sent no real emails. These local changes have not been deployed to production.
+
+Validation: 172 backend tests, 78 frontend tests, 15 extension tests, frontend lint/build, extension typecheck, desktop/mobile resume-save browser workflows, isolated notification SQL checks (including overlapping worker exclusion), and isolated atomic-save SQL checks passed. The browser test asserts exactly one application save request carries the selected resume ID. CI now runs both isolated SQL regression scripts against its disposable PostgreSQL service.
+
 ## Release completed September 30, 2026 UTC
 
 - Production snapshot `snap-red-dew-ar7qstlh` was created before migration and expires October 7 at 12:00 UTC. Temporary validation branch `release-20260930-check` expires October 2 at 12:00 UTC.

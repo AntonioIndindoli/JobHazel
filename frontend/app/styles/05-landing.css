@@ -1351,7 +1351,7 @@ body.auth-modal-open {
 
     .landing-product {
         grid-template-columns: 72px 1fr;
-        aspect-ratio: 3 / 2;
+        aspect-ratio: 720 / 1219;
         transform: none;
     }
 

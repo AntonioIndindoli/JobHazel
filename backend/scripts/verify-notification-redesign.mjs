@@ -108,15 +108,19 @@ try {
   const scoped = {
     notificationDelivery: prisma.notificationDelivery, notificationOperation: prisma.notificationOperation,
     notificationSync: prisma.notificationSync, notificationRun: prisma.notificationRun, notificationProviderEvent: prisma.notificationProviderEvent,
+    notificationWorkerState: prisma.notificationWorkerState,
+    $executeRaw: (...args) => prisma.$executeRaw(...args),
     interview: prisma.interview, task: prisma.task, $transaction: (fn, options) => prisma.$transaction(fn, options),
     user: {
-    findMany: (args) => prisma.user.findMany({ ...args, where: { ...args.where, id: user.id } }),
+    findMany: (args) => prisma.user.findMany({ ...args, where: { AND: [args.where, { id: user.id }] } }),
     findUnique: (...args) => prisma.user.findUnique(...args),
-    count: (args) => prisma.user.count({ ...args, where: { ...args.where, id: user.id } }),
+    count: (args) => prisma.user.count({ ...args, where: { AND: [args.where, { id: user.id }] } }),
     },
   };
   // Daily maintenance does inspect global notification ledgers on this disposable branch.
-  const result = await runDailyNotifications({ ...options, prisma: scoped });
+  const overlapping = await Promise.all([runDailyNotifications({ ...options, prisma: scoped }), runDailyNotifications({ ...options, prisma: scoped })]);
+  assert.equal(overlapping.filter(r => r.busy).length, 1, "A concurrent worker does not discover or send");
+  const result = overlapping.find(r => !r.busy);
   assert.equal(result.unknown, 0);
   const countBefore = sends;
   await runDailyNotifications({ ...options, prisma: scoped });
@@ -132,15 +136,31 @@ try {
     await prisma.interview.createMany({ data: ids.map((userId) => ({ userId, applicationId: userId + "-app", type: "TECHNICAL", scheduledAt: new Date(+now + 3 * 86400000) })) });
     await prisma.task.createMany({ data: ids.map((userId) => ({ userId, title: "Benchmark task", dueDate: now })) });
     const benchPrisma = { ...scoped, user: { ...scoped.user,
-      findMany: (args) => prisma.user.findMany({ ...args, where: { ...args.where, id: { in: ids } } }),
-      count: (args) => prisma.user.count({ ...args, where: { ...args.where, id: { in: ids } } }),
+      findMany: (args) => prisma.user.findMany({ ...args, where: { AND: [args.where, { id: { in: ids } }] } }),
+      count: (args) => prisma.user.count({ ...args, where: { AND: [args.where, { id: { in: ids } }] } }),
     } };
     await prisma.notificationRun.deleteMany({ where: { id: result.runDate } });
     const started = Date.now();
-    const benchmark = await runDailyNotifications({ ...options, prisma: benchPrisma, config: { ...config, NOTIFICATION_COHORT_LIMIT: benchmarkUsers } });
-    console.log(JSON.stringify({ benchmarkUsers, elapsedMs: Date.now() - started, ...benchmark }));
-    assert.equal(benchmark.incomplete, false, "Rollout cohort must drain inside one invocation");
+    let benchmark;
+    let batches = 0;
+    do {
+      benchmark = await runDailyNotifications({ ...options, prisma: benchPrisma, config: { ...config, NOTIFICATION_COHORT_LIMIT: benchmarkUsers } });
+      batches++;
+    } while (benchmark.incomplete && batches < 20);
+    console.log(JSON.stringify({ benchmarkUsers, batches, elapsedMs: Date.now() - started, ...benchmark }));
+    assert.equal(benchmark.incomplete, false, "Resumable worker must drain the cohort");
+    assert.equal(await prisma.notificationOperation.count({ where: { userId: { in: ids }, kind: "TASK_DIGEST" } }), benchmarkUsers, "One digest per user across worker batches");
   }
+  // Real cross-connection SQL throttle checks, with no outbound provider call.
+  const { acquireProviderSlot, blockProvider } = await import("../src/services/provider-rate-limit.services.js");
+  const scope = `integration-${crypto.randomUUID()}`;
+  const rateConfig = { ...config, RESEND_RATE_LIMIT_SCOPE: scope, NOTIFICATION_PROVIDER_INTERVAL_MS: 5000 };
+  try {
+    const slots = await Promise.allSettled(Array.from({ length: 10 }, () => acquireProviderSlot({ prisma, config: rateConfig })));
+    assert.equal(slots.filter(s => s.status === "fulfilled").length, 1, "Exactly one concurrent SQL reservation");
+    await blockProvider(new Response("", { status: 429, headers: { "Retry-After": "90" } }), { prisma, config: rateConfig });
+    await assert.rejects(acquireProviderSlot({ prisma, config: rateConfig }), e => e.safeToRetry && e.retryAfterMs > 80000);
+  } finally { await prisma.providerRateLimit.deleteMany({ where: { scope } }); }
   console.log("PASS: SQL migration, concurrent revision discovery/claims, reschedule ordering, digest uniqueness/expiry, deletion during acceptance, 24h retry stop, repeated daily run.");
   console.log(JSON.stringify({ syntheticSends: sends, syntheticCancellations: cancels, dailyRun: result }));
 } finally {

@@ -17,6 +17,14 @@ const COMPLETE_R2_ENV = {
   R2_ENDPOINT: "https://example-account.r2.cloudflarestorage.com",
 };
 
+test("reminder rollout accepts unlimited enrollment and bounds worker/throttle settings", () => {
+  assert.equal(loadEnv({ ...BASE_ENV, NOTIFICATION_COHORT_LIMIT: "0" }).NOTIFICATION_COHORT_LIMIT, 0);
+  assert.equal(loadEnv({ ...BASE_ENV, NOTIFICATION_COHORT_LIMIT: "100000" }).NOTIFICATION_COHORT_LIMIT, 100000);
+  for (const change of [{ NOTIFICATION_COHORT_LIMIT: "-1" }, { NOTIFICATION_COHORT_LIMIT: "100001" }, { NOTIFICATION_WORKER_INTERVAL_SECONDS: "0" }, { NOTIFICATION_BACKLOG_ALERT_SECONDS: "0" }]) {
+    assert.throws(() => loadEnv({ ...BASE_ENV, ...change }));
+  }
+});
+
 test("production startup reports every missing R2 setting", () => {
   assert.throws(
     () => loadEnv({ ...BASE_ENV, NODE_ENV: "production" }),

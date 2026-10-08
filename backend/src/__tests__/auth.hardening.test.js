@@ -152,7 +152,7 @@ for (const operation of ["signup", "resend", "reset", "profile"]) {
 test("Resend HTTP and network failures propagate", async () => {
   const mail = { to: "test@example.com", subject: "Test", heading: "Test", copy: "Test", actionLabel: "Verify", actionUrl: "https://example.com" };
   for (const fetchImpl of [async () => ({ ok: false, status: 503, text: async () => "unavailable" }), async () => { throw new Error("network"); }]) {
-    await assert.rejects(sendAccountEmail(mail, { config: { RESEND_API_KEY: "test", EMAIL_FROM: "test@example.com" }, fetchImpl }));
+    await assert.rejects(sendAccountEmail(mail, { config: { RESEND_API_KEY: "test", EMAIL_FROM: "test@example.com" }, acquire: async () => {}, fetchImpl }), /unavailable|network/);
   }
 });
 

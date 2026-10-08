@@ -58,6 +58,14 @@ export function validateApplicationPayload(req, res, next) {
       dateApplied: parseDate(req.body.dateApplied, "dateApplied"),
     };
 
+    if (Object.prototype.hasOwnProperty.call(req.body, "resumeVersionId")) {
+      const value = req.body.resumeVersionId;
+      if (value !== null && (typeof value !== "string" || !value.trim())) {
+        return res.status(400).json({ message: "resumeVersionId must be a non-empty string or null." });
+      }
+      req.validatedApplication.resumeVersionId = value === null ? null : value.trim();
+    }
+
     return next();
   } catch (error) {
     return res.status(400).json({ message: error.message });
