@@ -14,7 +14,7 @@
     --landing-border: #dce8d9;
     --landing-border-strong: #a4c4aa;
     --landing-copy: #2f4234;
-    --landing-copy-background: #fbfdf98a;
+    --landing-copy-background: #fbfdf9de;
     --landing-muted: #5c7162;
     --landing-faint: #708574;
     --landing-button-ink: #ffffff;
@@ -40,7 +40,7 @@ html[data-theme="dark"] .landing-page {
     --landing-border: #2b493a;
     --landing-border-strong: #3d6b4e;
     --landing-copy: #b3c8b9;
-    --landing-copy-background: #fafafa00;
+    --landing-copy-background: #1a1919b6;
     --landing-muted: #8ea395;
     --landing-faint: #6f8677;
     --landing-button-ink: #06130b;
@@ -48,6 +48,12 @@ html[data-theme="dark"] .landing-page {
     --landing-danger-surface: #421d1c;
     --landing-glow-core: #17462a;
     --landing-glow-edge: #0d2c1a;
+}
+
+/* Natural tree: tapered SVG limbs reveal through animated centerline masks. */
+.hero-growth-natural {
+    --tree-wood-opacity: .4;
+    --tree-foliage-opacity: .5;
 }
 
 .landing-page button,
@@ -386,7 +392,7 @@ html[data-theme="dark"] .landing-page {
 .hero-growth-vines {
     stroke: #37864a;
     stroke-width: 3;
-    opacity: .1;
+    opacity: .2;
 }
 
 .hero-growth-trunk {
@@ -1472,13 +1478,6 @@ body.auth-modal-open {
         opacity: 1;
         transform: none;
     }
-}
-
-
-/* Natural tree: tapered SVG limbs reveal through animated centerline masks. */
-.hero-growth-natural {
-    --tree-wood-opacity: .12;
-    --tree-foliage-opacity: .12;
 }
 
 .hero-growth-natural .hero-growth-vines {

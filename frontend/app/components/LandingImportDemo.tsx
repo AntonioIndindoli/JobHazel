@@ -46,7 +46,6 @@ export function LandingImportDemo() {
                     </dl>
                 </section>
             </div>
-            <figcaption><span>Automatic extraction</span><span className="story-example-label">Illustrated example</span></figcaption>
         </figure>
     );
 }

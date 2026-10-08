@@ -766,7 +766,7 @@ html[data-theme="dark"] .story-import-demo [data-field="description"] {
 }
 
 .story-copyright {
-    width: 100%;
+    margin-left: auto;
     color: var(--landing-muted);
     font-size: 12px;
 }

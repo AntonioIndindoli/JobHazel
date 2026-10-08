@@ -54,7 +54,7 @@ export function LandingProductStory({ onGetStarted }: { onGetStarted: () => void
                     <article className="story-chapter story-organize story-workspace" id="pipeline" aria-labelledby="story-organize-title">
                         <div className="story-feature-copy" data-reveal>
                             <span className="story-eyebrow">Organize</span>
-                            <h3 id="story-organize-title">Pick up exactly where you left off.</h3>
+                            <h3 id="story-organize-title">Every application, organized.</h3>
                             <p id="resumes">Find the status, resume you sent, notes, and next task together in each application.</p>
                         </div>
                         <div className="story-visual" data-reveal>
@@ -77,7 +77,7 @@ export function LandingProductStory({ onGetStarted }: { onGetStarted: () => void
                         <div className="story-feature-copy" data-reveal>
                             <span className="story-eyebrow">Learn</span>
                             <h3 id="story-learn-title">See what gets a response.</h3>
-                            <p>Compare responses by job source or resume, with application counts alongside each rate.</p>
+                            <p>Compare application response rates by job source or resume.</p>
                         </div>
                         <div className="story-visual story-insights-visual" data-reveal>
                             <LandingScreenshot name="analytics" alt="Example comparison of 72 submitted applications: Indeed has eight responses from 30 submissions, LinkedIn five from 24, and company websites three from 18" caption="72 submitted applications" />
@@ -96,7 +96,6 @@ export function LandingProductStory({ onGetStarted }: { onGetStarted: () => void
 
             <footer className="story-footer story-container">
                 <a className="landing-brand" href="#top"><Image src="/JobHazelIcon.png" alt="" width={32} height={32} /><span>JobHazel</span></a>
-                <nav aria-label="Footer navigation"><a href="#job-import">Job import</a><a href="#resumes">Resumes</a><a href="#insights">Insights</a><a href="#top">Back to top ↑</a></nav>
                 <span className="story-copyright">© {new Date().getFullYear()} JobHazel</span>
             </footer>
         </div>

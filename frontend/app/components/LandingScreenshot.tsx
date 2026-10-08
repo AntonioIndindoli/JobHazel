@@ -34,12 +34,6 @@ export function LandingScreenshot({ name, alt, caption, fullPage = false }: Land
                     );
                 })}
             </div>
-            <figcaption>
-                <span>{caption}{fullPage && " · Example data"}</span>
-                {fullPage ? (["Light", "Dark"] as const).map(theme => (
-                    <a key={theme} className={`story-screenshot-${theme.toLowerCase()} story-preview-link`} href={screenshot[`desktop${theme}`].src} target="_blank" rel="noreferrer" aria-label={`View full-size ${caption.toLowerCase()} screenshot`}>View full size ↗</a>
-                )) : <span className="story-example-label">Example data</span>}
-            </figcaption>
         </figure>
     );
 }
