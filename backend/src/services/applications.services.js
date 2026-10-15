@@ -64,7 +64,7 @@ function publicResumeSummary(resume) {
   };
 }
 
-async function lockUserForResumeAssociation(prisma, userId) {
+export async function lockUserForResumeAssociation(prisma, userId) {
   if (typeof prisma.$queryRaw === "function") {
     await prisma.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
   }
@@ -290,7 +290,7 @@ export async function transitionApplicationStatus(userId, id, status) {
   });
 }
 
-async function validateResume(tx, userId, resumeVersionId, currentResumeId = null) {
+export async function validateResume(tx, userId, resumeVersionId, currentResumeId = null) {
   let nextResume = null;
   if (resumeVersionId !== null) {
     nextResume = await tx.resumeVersion.findFirst({
@@ -323,7 +323,7 @@ async function validateResume(tx, userId, resumeVersionId, currentResumeId = nul
   return nextResume;
 }
 
-async function logResumeChange(tx, userId, id, previousResume, nextResume) {
+export async function logResumeChange(tx, userId, id, previousResume, nextResume) {
   if ((previousResume?.id ?? null) === (nextResume?.id ?? null)) return;
   const type = previousResume
     ? nextResume?.id

@@ -19,6 +19,7 @@ process.env.DATABASE_URL = connectionString;
 process.env.NOTIFICATION_MODE = "legacy";
 const { setPrismaForTests } = await import("../src/db/prisma.js");
 const { createApplication, updateApplication } = await import("../src/services/applications.services.js");
+const { convertImportDraft } = await import("../src/services/imports.services.js");
 const pool = new Pool({ connectionString });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 setPrismaForTests(prisma);
@@ -53,7 +54,25 @@ try {
   await updateApplication(user.id, before.id, { ...payload, title: "Remove resume", resumeVersionId: null });
   assert.equal((await prisma.application.findUnique({ where: { id: before.id } })).resumeVersionId, null);
   assert.equal(await prisma.activityLog.count({ where: { applicationId: before.id, type: "RESUME_REMOVED" } }), 1);
-  console.log("PASS: real SQL atomic save, rollback after history failure, cross-user rejection, follow-up task creation, historical archived resume retention and removal.");
+  const draft = await prisma.importDraft.create({ data: { userId: user.id, parsedTitle: "Concurrent import role", parsedCompany: "Concurrent import company" } });
+  const converted = await Promise.all(Array.from({ length: 4 }, () => convertImportDraft(user.id, draft.id, { status: "SAVED", allowDuplicate: true })));
+  assert.equal(converted.filter(value => value.application).length, 1);
+  assert.equal(converted.filter(value => value.alreadyConverted).length, 3);
+  assert.equal(await prisma.application.count({ where: { userId: user.id, title: "Concurrent import role" } }), 1);
+  assert.equal(await prisma.activityLog.count({ where: { userId: user.id, type: "IMPORT_CONVERTED" } }), 1);
+  assert.equal(await convertImportDraft(other.id, draft.id, {}), null);
+  const rollbackDraft = await prisma.importDraft.create({ data: { userId: user.id, parsedTitle: "Import rollback role", parsedCompany: "Import rollback company" } });
+  setPrismaForTests({ importDraft: prisma.importDraft, application: prisma.application, $transaction: fn => prisma.$transaction(tx => fn(new Proxy(tx, { get(target, key) {
+    if (key === "activityLog") return { create: async () => { throw Error("injected import activity failure"); } };
+    return Reflect.get(target, key);
+  } }))) });
+  await assert.rejects(convertImportDraft(user.id, rollbackDraft.id, { status: "SAVED" }), /injected import activity failure/);
+  assert.equal((await prisma.importDraft.findUnique({ where: { id: rollbackDraft.id } })).convertedAt, null);
+  assert.equal(await prisma.application.count({ where: { userId: user.id, title: "Import rollback role" } }), 0);
+  assert.equal(await prisma.company.count({ where: { userId: user.id, name: "Import rollback company" } }), 0);
+  setPrismaForTests(prisma);
+  assert.ok((await convertImportDraft(user.id, rollbackDraft.id, { status: "SAVED" })).application);
+  console.log("PASS: real SQL atomic save/rollback, ownership, resume associations, concurrent import conversion and retry after rollback.");
 } finally {
   setPrismaForTests(null);
   await prisma.user.deleteMany({ where: { id: { in: users } } });

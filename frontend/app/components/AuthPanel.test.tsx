@@ -48,6 +48,6 @@ describe("AuthPanel", () => {
 
     it("styles successful password reset feedback as success", () => {
         renderAuthPanel("login", { message: "Password reset. You can now sign in.", messageTone: "success" });
-        expect(screen.getByRole("status").className).toContain("success");
+        expect(screen.getByText("Password reset. You can now sign in.").className).toContain("success");
     });
 });

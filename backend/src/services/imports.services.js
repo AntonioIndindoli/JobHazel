@@ -2,7 +2,7 @@ import { getPrismaAsync } from "../db/prisma.js";
 import { detectJobSource, parseJobDescriptionWithFetch } from "./parser.services.js";
 import { normalizeUrl } from "../utils/url.js";
 import { maybeCreateAppliedFollowUpTask } from "./tasks.services.js";
-import { APPLICATION_INCLUDE, withApplicationRelations } from "./applications.services.js";
+import { APPLICATION_INCLUDE, withApplicationRelations, lockUserForResumeAssociation, validateResume, logResumeChange } from "./applications.services.js";
 
 function decorateDraft(draft) {
   if (!draft) return null;
@@ -72,6 +72,7 @@ function buildConversionPayload(draft, overrides = {}) {
     description: pickOverride(overrides, "description", draft.parsedDescription),
     notes: pickOverride(overrides, "notes", null),
     dateApplied: pickOverride(overrides, "dateApplied", null),
+    resumeVersionId: pickOverride(overrides, "resumeVersionId", null),
   };
 }
 
@@ -162,6 +163,19 @@ export async function convertImportDraft(userId, id, overrides = {}) {
   if (duplicateCandidates.length && !overrides.allowDuplicate) return { duplicateCandidates };
 
   const result = await prisma.$transaction(async (tx) => {
+    await lockUserForResumeAssociation(tx, userId);
+    // Claim this draft in the same transaction as its application and activity.
+    // A concurrent conversion waits for this row, then sees convertedAt changed.
+    const convertedAt = new Date();
+    const claimed = await tx.importDraft.updateMany({
+      where: { id: draft.id, userId, convertedAt: null },
+      data: { convertedAt },
+    });
+    if (claimed.count !== 1) {
+      const current = await tx.importDraft.findFirst({ where: { id: draft.id, userId } });
+      return current ? { alreadyConverted: true, importDraft: decorateDraft(current) } : null;
+    }
+    const nextResume = await validateResume(tx, userId, payload.resumeVersionId ?? null);
     const company = await findOrCreateCompany(tx, userId, payload.companyName);
     const application = await tx.application.create({
       data: {
@@ -177,14 +191,12 @@ export async function convertImportDraft(userId, id, overrides = {}) {
         description: payload.description,
         notes: payload.notes,
         dateApplied: payload.dateApplied,
+        resumeVersionId: nextResume?.id ?? null,
       },
       include: APPLICATION_INCLUDE,
     });
 
-    const importDraft = await tx.importDraft.update({
-      where: { id: draft.id },
-      data: { convertedAt: new Date() },
-    });
+    const importDraft = { ...draft, convertedAt };
 
     await tx.activityLog.create({
       data: {
@@ -199,6 +211,8 @@ export async function convertImportDraft(userId, id, overrides = {}) {
         },
       },
     });
+
+    await logResumeChange(tx, userId, application.id, null, nextResume);
 
     const createdTasks = [];
     if (application.status === "APPLIED") {

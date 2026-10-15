@@ -9,6 +9,7 @@ import type {
     ImportDraft,
     ImportReviewValues,
     ParserDebug,
+    ResumeVersion,
 } from "../lib/types";
 import { AppIcon } from "./AppIcon";
 import { ApplicationStatusSelect } from "./ApplicationStatusSelect";
@@ -23,6 +24,10 @@ type ImportDrawerProps = {
     importStep: "capture" | "review";
     isImportSubmitting: boolean;
     parserDebug: ParserDebug | null;
+    resumes: ResumeVersion[];
+    isResumesLoading: boolean;
+    resumesError: string;
+    onResumesRetry: () => void;
     onCaptureChange: (importCapture: ImportCaptureValues) => void;
     onClose: () => void;
     onCreateDraft: (event: FormEvent) => void;
@@ -40,6 +45,10 @@ export function ImportDrawer({
     importStep,
     isImportSubmitting,
     parserDebug,
+    resumes,
+    isResumesLoading,
+    resumesError,
+    onResumesRetry,
     onCaptureChange,
     onClose,
     onCreateDraft,
@@ -47,6 +56,7 @@ export function ImportDrawer({
     onReviewSubmit,
     onStepChange,
 }: ImportDrawerProps) {
+    const selectableResumes = resumes.filter((resume) => resume.uploadStatus === "READY" && !resume.archivedAt);
     return (
         <DrawerBackdrop onClose={onClose}>
             <aside
@@ -256,6 +266,33 @@ export function ImportDrawer({
                                 <span className="field-error">
                                     {importErrors.dateApplied}
                                 </span>
+                            )}
+                        </section>
+                        <section className="form-section">
+                            <h3>Submitted resume</h3>
+                            <label>
+                                Resume version
+                                <select
+                                    value={importReview.resumeVersionId}
+                                    disabled={isResumesLoading || isImportSubmitting}
+                                    onChange={(event) => onReviewChange({ ...importReview, resumeVersionId: event.target.value })}
+                                >
+                                    <option value="">No resume</option>
+                                    {selectableResumes.map((resume) => (
+                                        <option key={resume.id} value={resume.id}>
+                                            {resume.name}{resume.targetRole ? ` — ${resume.targetRole}` : ""}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            {isResumesLoading && <p className="application-resume-form-hint">Loading resumes…</p>}
+                            {resumesError ? (
+                                <div role="alert">
+                                    <p className="field-error">{resumesError}</p>
+                                    <button type="button" className="secondary" disabled={isResumesLoading} onClick={onResumesRetry}>Retry loading resumes</button>
+                                </div>
+                            ) : !isResumesLoading && selectableResumes.length === 0 && (
+                                <p className="application-resume-form-hint">Upload a completed PDF in Resumes to attach it here.</p>
                             )}
                         </section>
                         <section className="form-section">

@@ -267,6 +267,7 @@ export type ImportCaptureValues = {
 };
 
 export type ImportReviewValues = {
+    resumeVersionId: string;
     title: string;
     companyName: string;
     status: string;

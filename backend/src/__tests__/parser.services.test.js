@@ -49,6 +49,47 @@ test("extractSalaryRange parses annual salary ranges and ignores hourly rates", 
   });
 });
 
+// Salary disclosures observed on the authenticated Amplitude LinkedIn posting.
+const regionalSalaryText = `
+Based on Colorado law, the following details are for individuals who will work for Amplitude in Colorado. Colorado range: $125,000 - $188,000 total target cash (inclusive of bonus or commission)
+Based on legislation in New York City, the following details are for individuals who will work for Amplitude in New York City. New York City salary range: $138,000 - $207,000 total target cash (inclusive of bonus or commission)
+Based on legislation in California, the following details are for individuals who will work for Amplitude in San Francisco Bay Area of California. Salary range: $138,000 - $207,000 total target cash (inclusive of bonus or commission)
+Based on legislation in California, the following details are for individuals who will work for Amplitude in California outside of the San Francisco Bay Area. California salary range: $125,000 - $188,000 total target cash (inclusive of bonus or commission)
+`;
+
+test("a captured San Francisco job uses its regional salary disclosure", () => {
+  const parsed = parseJobDescription({
+    sourceUrl: "https://www.linkedin.com/jobs/view/4476906462/",
+    pageTitle: "Software Engineer I",
+    rawText: `Job title: Software Engineer I\nCompany: Amplitude\nLocation: San Francisco, CA\n${regionalSalaryText}`,
+  });
+  assert.equal(parsed.parsedLocation, "San Francisco, CA");
+  assert.equal(parsed.parsedSalaryMin, 138000);
+  assert.equal(parsed.parsedSalaryMax, 207000);
+});
+
+test("regional salary selection excludes outside-city disclosures regardless of order", () => {
+  const outside = "California outside of the San Francisco Bay Area salary range: $125,000 - $188,000";
+  const applicable = "San Francisco Bay Area salary range: $138,000 - $207,000";
+  for (const lines of [[outside, applicable], [applicable, outside]]) {
+    assert.deepEqual(extractSalaryRange(lines.join("\n"), { location: "San Francisco, CA" }), { min: 138000, max: 207000 });
+  }
+  assert.deepEqual(extractSalaryRange(regionalSalaryText), { min: 125000, max: 188000 });
+  assert.deepEqual(extractSalaryRange("Salary: $150,000 - $190,000", { location: "San Francisco, CA" }), { min: 150000, max: 190000 });
+});
+
+test("HTML salary fallback uses the selected job's location and preserves structured salary precedence", () => {
+  for (const salary of [null, { "@type": "MonetaryAmount", currency: "USD", value: { minValue: 160000, maxValue: 210000, unitText: "YEAR" } }]) {
+    const extracted = extractJobPageDataFromHtml(`<html><body>
+      <script type="application/ld+json">${JSON.stringify({ "@type": "JobPosting", title: "Software Engineer I", jobLocation: "San Francisco, CA", baseSalary: salary })}</script>
+      <p>${regionalSalaryText.replace(/\n/g, "</p><p>")}</p>
+    </body></html>`);
+    const parsed = parseJobDescription({ ...extracted, fetchResult: { success: true, structured: extracted.structured } });
+    assert.equal(parsed.parsedSalaryMin, salary ? 160000 : 138000);
+    assert.equal(parsed.parsedSalaryMax, salary ? 210000 : 207000);
+  }
+});
+
 test("extractTitle handles page title patterns", () => {
   assert.equal(extractTitle({ pageTitle: "Senior Frontend Engineer - ExampleCo" }), "Senior Frontend Engineer");
   assert.equal(extractTitle({ pageTitle: "ExampleCo | Staff Software Engineer" }), "Staff Software Engineer");

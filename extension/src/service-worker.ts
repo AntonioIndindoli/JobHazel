@@ -4,20 +4,13 @@ import {
   buildJobCapture,
   captureStorageKey,
   selectCaptureKeysToRemove,
-  type CapturedPageContext,
   type StoredCapture,
 } from "./capture.js";
 import type { CaptureWarning } from "./protocol.js";
+import { readPageContext, type PageContextResult } from "./page-context.js";
+import { fillApplication, normalizeProfile } from "./autofill.js";
 
 const FEEDBACK_DURATION_MS = 8_000;
-
-function readPageContext(): CapturedPageContext {
-  return {
-    sourceUrl: window.location.href,
-    pageTitle: document.title ?? "",
-    rawText: window.getSelection()?.toString() ?? "",
-  };
-}
 
 async function pruneCaptureStorage(now = Date.now(), slotsToReserve = 0): Promise<void> {
   const allValues = await chrome.storage.session.get(null);
@@ -57,13 +50,23 @@ type CaptureResult = { ok: true } | { ok: false; message: string };
 
 async function captureTab(tab: chrome.tabs.Tab): Promise<CaptureResult> {
   try {
-    if (!tab.id) throw new CaptureError("UNSUPPORTED_PAGE", "Open a job posting and retry.");
-    const injection = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: readPageContext,
-    }).catch(() => null);
+    if (typeof tab.id !== "number") throw new CaptureError("UNSUPPORTED_PAGE", "Open a job posting and retry.");
+    if (tab.url && !/^https?:\/\//i.test(tab.url)) {
+      throw new CaptureError("UNSUPPORTED_PAGE", "JobHazel can capture only HTTP and HTTPS job postings. Open a posting and try again.");
+    }
+    let injection: chrome.scripting.InjectionResult<PageContextResult>[];
+    try {
+      injection = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: readPageContext });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (/Cannot access contents of url|Extension manifest must request permission|Missing host permission/i.test(message)) {
+        throw new CaptureError("CAPTURE_FAILED", "Chrome blocked page access. In JobHazel's extension settings, set Site access to On all sites, then capture the posting again.");
+      }
+      throw new CaptureError("CAPTURE_FAILED", "Chrome could not read this posting. Wait for the page to finish loading, then capture it again.");
+    }
     const context = injection?.[0]?.result;
-    if (!context) throw new CaptureError("CAPTURE_FAILED", "JobHazel could not read this page. Reload it and retry.");
+    if (!context) throw new CaptureError("CAPTURE_FAILED", "JobHazel could not read this posting. Wait for the page to finish loading, then capture it again.");
+    if ("error" in context) throw new CaptureError("CAPTURE_FAILED", context.error);
 
     const capture = buildJobCapture(context, crypto.randomUUID());
     const record: StoredCapture = { capture, expiresAt: capture.createdAt + CAPTURE_TTL_MS };
@@ -89,8 +92,34 @@ async function handleToolbarClick(tab: chrome.tabs.Tab): Promise<void> {
 chrome.action.onClicked.addListener((tab) => handleToolbarClick(tab));
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === "jobhazel.autofill.active") {
+    // Only our extension UI can request writes; never accept requests from page scripts.
+    if (_sender.id !== chrome.runtime.id || _sender.tab ||
+      _sender.url !== chrome.runtime.getURL("side-panel.html")) return false;
+    const query = typeof message.windowId === "number"
+      ? { active: true, windowId: message.windowId } : { active: true, lastFocusedWindow: true };
+    void (async () => {
+      const [tab] = await chrome.tabs.query(query);
+      if (typeof tab?.id !== "number" || (tab.url && !/^https?:\/\//i.test(tab.url))) {
+        return { ok: false, message: "Open a job application on an HTTP or HTTPS page and try again." };
+      }
+      const results = await chrome.scripting.executeScript({
+        target: { tabId: tab.id, allFrames: true }, func: fillApplication, args: [normalizeProfile(message.profile)],
+      });
+      if (!results.some((frame) => frame.result)) return { ok: false, message: "The page is still loading. Try autofill again." };
+      const result = results.reduce((total, frame) => ({
+        filled: total.filled + (frame.result?.filled ?? 0),
+        preserved: total.preserved + (frame.result?.preserved ?? 0),
+        missing: total.missing + (frame.result?.missing ?? 0),
+      }), { filled: 0, preserved: 0, missing: 0 });
+      return { ok: true, result };
+    })().then(sendResponse).catch(() => sendResponse({ ok: false, message: "Chrome could not fill this page. Check JobHazel’s Site access in extension settings, wait for the form to load, and retry." }));
+    return true;
+  }
   if (message?.type !== "jobhazel.capture.active") return false;
-  void chrome.tabs.query({ active: true, lastFocusedWindow: true })
+  const query = typeof message.windowId === "number"
+    ? { active: true, windowId: message.windowId } : { active: true, lastFocusedWindow: true };
+  void chrome.tabs.query(query)
     .then(([tab]) => tab
       ? captureTab(tab)
       : ({ ok: false, message: "Open a job posting and try again." } as CaptureResult))

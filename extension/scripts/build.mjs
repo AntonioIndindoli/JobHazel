@@ -16,15 +16,21 @@ const apiUrl = development ? "http://localhost:4000" : "https://api.jobhazel.com
 const manifest = JSON.parse(await readFile(path.join(root, "manifest.json"), "utf8"));
 const packageJson = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
 manifest.version = packageJson.version;
-manifest.key = (await readFile(path.join(root, "development-key.txt"), "utf8")).trim();
+// A store-issued public key can replace the stable unpacked key after upload.
+manifest.key = (!development && process.env.JOBHAZEL_EXTENSION_PUBLIC_KEY?.trim()) ||
+  (await readFile(path.join(root, "development-key.txt"), "utf8")).trim();
+// Keep persistent website access from the source manifest in both builds.
+// The API URL and connect-src policy still select the networking environment.
+manifest.content_security_policy = {
+  extension_pages: `script-src 'self'; object-src 'none'; connect-src ${apiUrl}; base-uri 'none'`,
+};
 if (development) {
   manifest.name = "JobHazel (Development)";
-  manifest.host_permissions.push("http://localhost:4000/*");
-  const id = createHash("sha256").update(Buffer.from(manifest.key, "base64"))
-    .digest("hex").slice(0, 32).replace(/[0-9a-f]/g, (digit) =>
-      String.fromCharCode(97 + Number.parseInt(digit, 16)));
-  console.log(`Development extension ID: ${id}`);
 }
+const id = createHash("sha256").update(Buffer.from(manifest.key, "base64"))
+  .digest("hex").slice(0, 32).replace(/[0-9a-f]/g, (digit) =>
+    String.fromCharCode(97 + Number.parseInt(digit, 16)));
+console.log(`${environment} extension ID: ${id}`);
 
 const configPath = ts.findConfigFile(root, ts.sys.fileExists, "tsconfig.json");
 const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
@@ -46,6 +52,7 @@ await copyFile(path.join(root, "assets", "icon.png"), path.join(output, "icons",
 await copyFile(path.join(root, "src", "side-panel.html"), path.join(output, "side-panel.html"));
 await copyFile(path.join(root, "src", "side-panel.css"), path.join(output, "side-panel.css"));
 await writeFile(path.join(output, "config.js"),
-  `export const APP_URL = ${JSON.stringify(appUrl)};\nexport const API_URL = ${JSON.stringify(apiUrl)};\n`);
+  `export const BUILD_ENV = ${JSON.stringify(environment)};\nexport const APP_URL = ${JSON.stringify(appUrl)};\nexport const API_URL = ${JSON.stringify(apiUrl)};\n`);
 await writeFile(path.join(output, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 console.log(`Built ${environment}: ${output}`);
+console.log(`Load this exact folder in Chrome. API: ${apiUrl}`);

@@ -12,6 +12,7 @@ import { ThemeToggle } from "./ThemeToggle";
 
 type LandingPageProps = {
     authStatus: AuthStatus;
+    isAuthSubmitting: boolean;
     email: string;
     isAuthOpen: boolean;
     message: string;
@@ -30,6 +31,7 @@ type LandingPageProps = {
 
 export function LandingPage({
     authStatus,
+    isAuthSubmitting,
     email,
     isAuthOpen,
     message,
@@ -193,6 +195,7 @@ export function LandingPage({
                     email={email}
                     password={password}
                     authStatus={authStatus}
+                    isSubmitting={isAuthSubmitting}
                     message={message}
                     messageTone={messageTone}
                     canResendVerification={canResendVerification}

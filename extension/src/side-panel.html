@@ -7,8 +7,32 @@
     <link rel="stylesheet" href="side-panel.css">
   </head>
   <body>
-    <header class="brand"><img src="icons/icon.png" alt=""><div><strong>JobHazel</strong><span>Save jobs without leaving the posting</span></div></header>
+    <header class="brand"><img src="icons/icon.png" alt=""><div><strong>JobHazel</strong><span>Save jobs and autofill applications</span><span id="environment-label"></span></div></header>
     <main>
+      <section id="autofill-card" class="card hidden" aria-labelledby="autofill-heading">
+        <p class="eyebrow">APPLY FASTER</p><h1 id="autofill-heading">Autofill application</h1>
+        <p class="muted">Fill blank contact fields on the current page. Review your answers before submitting.</p>
+        <form id="autofill-form">
+          <details open>
+            <summary>Your autofill details</summary>
+            <div class="autofill-fields">
+              <label>Full name<input id="autofill-fullName" autocomplete="name" maxlength="500"></label>
+              <div class="grid"><label>First name<input id="autofill-firstName" autocomplete="given-name" maxlength="500"></label><label>Last name<input id="autofill-lastName" autocomplete="family-name" maxlength="500"></label></div>
+              <label>Email<input id="autofill-email" type="email" autocomplete="email" maxlength="500"></label>
+              <label>Phone<input id="autofill-phone" type="tel" autocomplete="tel" maxlength="500"></label>
+              <label>Street address<input id="autofill-address" autocomplete="address-line1" maxlength="500"></label>
+              <div class="grid"><label>City<input id="autofill-city" autocomplete="address-level2" maxlength="500"></label><label>State / province<input id="autofill-state" autocomplete="address-level1" maxlength="500"></label></div>
+              <div class="grid"><label>Postal code<input id="autofill-postalCode" autocomplete="postal-code" maxlength="500"></label><label>Country<input id="autofill-country" autocomplete="country-name" maxlength="500"></label></div>
+              <label>LinkedIn URL<input id="autofill-linkedin" type="url" placeholder="https://www.linkedin.com/in/you" maxlength="500"></label>
+              <label>Website / portfolio URL<input id="autofill-website" type="url" placeholder="https://" maxlength="500"></label>
+              <p class="muted">Saved in this browser for your account when you autofill. Resume uploads, screening questions, and custom dropdowns need manual input.</p>
+              <button id="autofill-clear" class="text-button" type="button">Clear saved autofill details</button>
+            </div>
+          </details>
+          <button id="autofill-current" class="primary" type="submit" disabled>Save details &amp; autofill page</button>
+          <p id="autofill-status" role="status" aria-live="polite"></p>
+        </form>
+      </section>
       <section id="loading-view" class="card"><p>Loading JobHazel…</p></section>
       <section id="login-view" class="card hidden">
         <h1>Connect your account</h1>
@@ -23,7 +47,7 @@
       </section>
       <section id="ready-view" class="card hidden">
         <div class="account-row"><div><strong id="account-email"></strong></div><button id="sign-out" class="text-button" type="button">Sign out</button></div>
-        <div class="empty-state"><h1>Capture a job</h1><p>Optionally select the job description, then capture the active posting.</p><button id="capture-job" class="primary" type="button">Capture current job</button><p id="capture-error" class="error hidden" role="alert"></p></div>
+        <div class="empty-state"><h1>Capture a job</h1><p>On LinkedIn, select a job to open its details. On other sites, optionally select the description. Then capture the current posting.</p><button id="capture-job" class="primary" type="button">Capture current job</button><p id="capture-error" class="error hidden" role="alert"></p></div>
       </section>
       <section id="working-view" class="card hidden"><div class="spinner"></div><h1>Creating your draft</h1><p class="muted">JobHazel is reading the captured posting.</p></section>
       <section id="review-view" class="hidden">
@@ -37,6 +61,10 @@
           <label>Company<input id="companyName" maxlength="200"></label>
           <div class="grid"><label>Status<span class="status-select-field"><span id="status-dot" class="status-dot status-saved" aria-hidden="true"></span><select id="status"><option value="SAVED">Saved</option><option value="APPLIED">Applied</option><option value="INTERVIEWING">Interviewing</option><option value="OFFER">Offer</option><option value="REJECTED">Rejected</option><option value="WITHDRAWN">Withdrawn</option></select></span></label><label>Date applied<input id="dateApplied" type="date"></label></div>
           <label>Location<input id="location" maxlength="200"></label>
+          <label>Resume version<select id="resumeVersionId" aria-describedby="resume-hint"><option value="">No resume</option></select></label>
+          <p id="resume-hint" class="muted hidden"></p>
+          <p id="resume-error" class="error hidden" role="alert"></p>
+          <button id="retry-resumes" class="text-button hidden" type="button">Retry loading resumes</button>
           <label>Source<input id="source" maxlength="100"></label>
           <label>Job URL<input id="sourceUrl" type="url" maxlength="2000"></label>
           <div class="grid"><label>Salary min<input id="salaryMin" inputmode="numeric"></label><label>Salary max<input id="salaryMax" inputmode="numeric"></label></div>

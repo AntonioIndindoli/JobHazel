@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 
 const apiUrl = process.argv[2] ?? "http://localhost:4000";
+const target = new URL(apiUrl);
+assert.ok(target.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(target.hostname),
+  "This legacy disposable-account workflow supports local development only. Use verify:production for deployed probes.");
 const runId = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
 const email = `extension-verification-${runId}@example.com`;
 const password = `Verify-${crypto.randomBytes(12).toString("base64url")}!`;

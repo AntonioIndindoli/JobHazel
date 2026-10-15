@@ -18,6 +18,7 @@ import { AppIcon } from "./components/AppIcon";
 import { ApplicationsView } from "./components/ApplicationsView";
 import { ApplicationDrawer } from "./components/ApplicationDrawer";
 import { DashboardShell } from "./components/DashboardShell";
+import { WorkspaceLoadStatus } from "./components/WorkspaceLoadStatus";
 import { ContactsView } from "./components/ContactsView";
 import { ImportDrawer } from "./components/ImportDrawer";
 import { ExtensionCaptureNotice } from "./components/ExtensionCaptureNotice";
@@ -181,6 +182,8 @@ export default function MainPage() {
     const taskClock = useTaskClock(token);
     const { timeZone } = taskClock;
     const [authStatus, setAuthStatus] = useState<AuthStatus>("checking");
+    const [isAuthSubmitting, setIsAuthSubmitting] = useState(false);
+    const authRequestPending = useRef(false);
     const authRevision = useRef(0);
     const [message, setMessage] = useState("");
     const [messageTone, setMessageTone] = useState<"error" | "success" | "info">("error");
@@ -202,6 +205,9 @@ export default function MainPage() {
     const restoredDraftId = useRef<string | null>(null);
     const [isAuthOpen, setIsAuthOpen] = useState(false);
     const [applications, setApplications] = useState<Application[]>([]);
+    const [workspaceLoadStatus, setWorkspaceLoadStatus] =
+        useState<"loading" | "ready" | "error">("loading");
+    const [workspaceLoadRetry, setWorkspaceLoadRetry] = useState(0);
     const [interviews, setInterviews] = useState<Interview[]>([]);
     const [tasks, setTasks] = useState<Task[]>([]);
     const [contacts, setContacts] = useState<Contact[]>([]);
@@ -532,6 +538,7 @@ export default function MainPage() {
                 setUserEmail(data.user.email);
                 setUserName(data.user.name ?? "");
                 setMemberSince(data.user.createdAt ?? "");
+                setWorkspaceLoadStatus("loading");
                 setAuthStatus("signedIn");
             } catch {
                 if (ignore || revision !== authRevision.current) return;
@@ -543,16 +550,34 @@ export default function MainPage() {
         return () => { ignore = true; clearTimeout(retry); };
     }, []);
     useEffect(() => {
-        if (authStatus === "signedIn" && token) {
-            loadApplications(token);
-            loadInterviews(token);
-            loadTasks(token);
-            loadContacts(token);
-            loadTaskAutomationPreferences(token);
-            loadResumeLibrary(token);
-        }
+        if (authStatus !== "signedIn" || !token) return;
+        let ignore = false;
+        const revision = authRevision.current;
+
+        // Keep initial empty arrays out of the UI until every workspace request,
+        // including the history used by dashboard metrics, has completed.
+        void Promise.allSettled([
+            loadApplications(token),
+            loadInterviews(token),
+            loadTasks(token),
+            loadContacts(token),
+        ]).then((results) => {
+            if (ignore || revision !== authRevision.current) return;
+            setWorkspaceLoadStatus(
+                results.every((result) => result.status === "fulfilled" && result.value === true)
+                    ? "ready"
+                    : "error",
+            );
+        });
+        void loadTaskAutomationPreferences(token).catch(() => {
+            if (!ignore && revision === authRevision.current) {
+                setMessage("Failed loading task preferences");
+            }
+        });
+        void loadResumeLibrary(token);
+        return () => { ignore = true; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [authStatus, token]);
+    }, [authStatus, token, workspaceLoadRetry]);
 
     useEffect(() => {
         if (authStatus === "signedIn" && token && currentView === "analytics") {
@@ -564,6 +589,10 @@ export default function MainPage() {
 
     async function authSubmit(event: FormEvent) {
         event.preventDefault();
+        if (authRequestPending.current || authStatus === "checking") return;
+        authRequestPending.current = true;
+        setIsAuthSubmitting(true);
+        setMessage("");
         try {
         const endpoint = mode === "forgot" ? "forgot-password" : mode === "reset" ? "reset-password" : mode === "verify" ? "verify-email" : mode;
         const otp = String(new FormData(event.currentTarget as HTMLFormElement).get("otp") ?? "");
@@ -612,6 +641,7 @@ export default function MainPage() {
         setUserEmail(data.user.email);
         setUserName(data.user.name ?? "");
         setMemberSince(data.user.createdAt ?? "");
+        setWorkspaceLoadStatus("loading");
         setAuthStatus("signedIn");
         setIsAuthOpen(false);
         setMessage(`Welcome ${data.user.email}`);
@@ -619,6 +649,9 @@ export default function MainPage() {
         } catch {
             setMessageTone("error");
             setMessage("Could not connect. Please retry; your session has not been cleared.");
+        } finally {
+            authRequestPending.current = false;
+            setIsAuthSubmitting(false);
         }
     }
 
@@ -641,6 +674,7 @@ export default function MainPage() {
         setMemberSince("");
         setPassword("");
         setApplications([]);
+        setWorkspaceLoadStatus("loading");
         setInterviews([]);
         setTasks([]);
         setContacts([]);
@@ -796,44 +830,66 @@ export default function MainPage() {
 
     async function loadApplications(activeToken = token) {
         if (!activeToken) return;
+        const revision = authRevision.current;
         const res = await fetch(`${API_BASE_URL}/applications`, {
             headers: { Authorization: `Bearer ${activeToken}` },
         });
         const data = await res.json();
-        if (!res.ok)
-            return setMessage(data.message ?? "Failed loading applications");
+        if (revision !== authRevision.current) return false;
+        if (!res.ok) {
+            setMessage(data.message ?? "Failed loading applications");
+            return false;
+        }
         setApplications(data.applications);
-        loadApplicationHistories(activeToken);
+        return loadApplicationHistories(activeToken);
     }
 
     async function loadInterviews(activeToken = token) {
         if (!activeToken) return;
+        const revision = authRevision.current;
         const res = await fetch(`${API_BASE_URL}/interviews`, {
             headers: { Authorization: `Bearer ${activeToken}` },
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) return setMessage(data.message ?? "Failed loading interviews");
+        if (revision !== authRevision.current) return false;
+        if (!res.ok) {
+            setMessage(data.message ?? "Failed loading interviews");
+            return false;
+        }
         setInterviews(data.interviews ?? []);
+        return true;
     }
 
     async function loadTasks(activeToken = token) {
         if (!activeToken) return;
+        const revision = authRevision.current;
         const res = await fetch(`${API_BASE_URL}/tasks`, {
             headers: { Authorization: `Bearer ${activeToken}` },
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) return setMessage(data.message ?? "Failed loading tasks");
+        if (revision !== authRevision.current) return false;
+        if (!res.ok) {
+            setMessage(data.message ?? "Failed loading tasks");
+            return false;
+        }
         setTasks(data.tasks ?? []);
+        return true;
     }
 
     async function loadContacts(activeToken = token) {
         if (!activeToken) return;
+        const revision = authRevision.current;
         const res = await fetch(`${API_BASE_URL}/contacts`, {
             headers: { Authorization: `Bearer ${activeToken}` },
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) return setMessage(data.message ?? "Failed loading contacts");
+        if (revision !== authRevision.current) return false;
+        if (!res.ok) {
+            setMessage(data.message ?? "Failed loading contacts");
+            return false;
+        }
         setContacts(data.contacts ?? []);
+        return true;
     }
 
     async function resendVerificationEmail() {
@@ -1044,13 +1100,18 @@ export default function MainPage() {
 
     async function loadApplicationHistories(activeToken = token) {
         if (!activeToken) return;
+        const revision = authRevision.current;
         const res = await fetch(`${API_BASE_URL}/applications/history`, {
             headers: { Authorization: `Bearer ${activeToken}` },
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok)
-            return setMessage(data.message ?? "Failed loading application history");
+        if (revision !== authRevision.current) return false;
+        if (!res.ok) {
+            setMessage(data.message ?? "Failed loading application history");
+            return false;
+        }
         setHistoryByApp(data.historyByApp ?? {});
+        return true;
     }
 
     async function loadHistory(id: string) {
@@ -1230,6 +1291,7 @@ export default function MainPage() {
 
     function buildImportReview(draft: ImportDraft): ImportReviewValues {
         return {
+            resumeVersionId: "",
             title: draft.parsedTitle ?? "",
             companyName: draft.parsedCompany ?? "",
             status: "APPLIED",
@@ -1612,6 +1674,7 @@ export default function MainPage() {
         setImportErrors({});
         const payload = {
             ...importReview,
+            resumeVersionId: importReview.resumeVersionId || null,
             salaryMin: importReview.salaryMin.trim()
                 ? Number(importReview.salaryMin)
                 : null,
@@ -1648,6 +1711,7 @@ export default function MainPage() {
 
             closeImportDrawer();
             setMessage("Imported job saved.");
+            loadResumeLibrary();
             loadApplications();
             loadTasks();
         } catch {
@@ -2026,6 +2090,7 @@ export default function MainPage() {
                     email={email}
                     password={password}
                     authStatus={authStatus}
+                    isAuthSubmitting={isAuthSubmitting}
                     message={message}
                     messageTone={messageTone}
                     canResendVerification={canResendVerification}
@@ -2225,7 +2290,15 @@ export default function MainPage() {
                     }
                 />
             )}
-            {currentView === "account" ? (
+            {workspaceLoadStatus !== "ready" ? (
+                <WorkspaceLoadStatus
+                    status={workspaceLoadStatus}
+                    onRetry={() => {
+                        setWorkspaceLoadStatus("loading");
+                        setWorkspaceLoadRetry((retry) => retry + 1);
+                    }}
+                />
+            ) : currentView === "account" ? (
                 <AccountView
                     activePipeline={activePipeline}
                     applicationCount={applications.length}
@@ -2409,6 +2482,10 @@ export default function MainPage() {
                     importStep={importStep}
                     isImportSubmitting={isImportSubmitting}
                     parserDebug={parserDebug}
+                    resumes={resumes}
+                    isResumesLoading={isResumeLibraryLoading}
+                    resumesError={resumeLibraryError}
+                    onResumesRetry={() => void loadResumeLibrary()}
                     onCaptureChange={setImportCapture}
                     onClose={closeImportDrawer}
                     onCreateDraft={createImportDraft}

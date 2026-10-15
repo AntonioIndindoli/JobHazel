@@ -1099,6 +1099,33 @@ body.auth-modal-open {
     opacity: .7;
 }
 
+.auth-spinner {
+    width: 18px;
+    height: 18px;
+    flex: 0 0 18px;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: auth-spin .8s linear infinite;
+}
+
+.auth-progress {
+    margin: 12px 0 0;
+    color: var(--landing-muted);
+    font-size: 12px;
+    text-align: center;
+}
+
+.auth-progress:empty { margin: 0; }
+
+@keyframes auth-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .auth-spinner { animation: none; }
+}
+
 .auth-message {
     margin: -3px 0 0;
     padding: 10px 12px;

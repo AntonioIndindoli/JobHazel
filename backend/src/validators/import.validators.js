@@ -90,6 +90,11 @@ export function validateCreateDraftPayload(req, res, next) {
 
 export function validateConvertDraftPayload(req, res, next) {
   try {
+    if (req.body.resumeVersionId !== undefined && req.body.resumeVersionId !== null && typeof req.body.resumeVersionId !== "string") {
+      throw new Error("resumeVersionId must be a string or null.");
+    }
+    const resumeVersionId = normalizeOptional(req.body.resumeVersionId);
+    validateLength(resumeVersionId, 200, "resumeVersionId");
     const sourceUrl = normalizeOptional(req.body.sourceUrl);
     const validatedUrl = validateUrl(sourceUrl, "sourceUrl");
     const salaryMin = parseOptionalInt(req.body.salaryMin, "salaryMin");
@@ -117,6 +122,7 @@ export function validateConvertDraftPayload(req, res, next) {
       notes: normalizeOptional(req.body.notes),
       dateApplied: parseDate(req.body.dateApplied, "dateApplied"),
       allowDuplicate: req.body.allowDuplicate === true,
+      resumeVersionId,
     };
 
     return next();

@@ -259,6 +259,7 @@ export const EMPTY_IMPORT_CAPTURE: ImportCaptureValues = {
 };
 
 export const EMPTY_IMPORT_REVIEW: ImportReviewValues = {
+    resumeVersionId: "",
     title: "",
     companyName: "",
     status: "APPLIED",

@@ -1,18 +1,27 @@
 {
   "name": "jobhazel-extension",
-  "version": "0.1.0",
+  "version": "0.1.6",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "npm run typecheck && node scripts/build.mjs production",
     "build:dev": "npm run typecheck && node scripts/build.mjs development",
-    "test": "npm run build:dev && node --test tests/*.test.mjs",
+    "test": "npm run build:dev && npm run build && node --test tests/*.test.mjs",
+    "package": "npm run build && node scripts/package.mjs",
+    "verify:production": "node scripts/verify-production.mjs",
+    "verify:linkedin": "node scripts/verify-linkedin-parser.mjs",
+    "verify:careertakes": "node scripts/verify-careertakes-parser.mjs",
+    "verify:bytedance": "node scripts/verify-bytedance-parser.mjs",
     "verify:local": "node scripts/verify-local-workflow.mjs",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/chrome": "^0.1.0",
+    "fflate": "^0.8.3",
+    "jsdom": "^26.1.0",
     "typescript": "^5.9.3"
   }
 }

@@ -11,6 +11,7 @@ type AuthPanelProps = {
     email: string;
     password: string;
     authStatus: AuthStatus;
+    isSubmitting?: boolean;
     message: string;
     messageTone?: "error" | "success" | "info";
     canResendVerification?: boolean;
@@ -27,6 +28,7 @@ export function AuthPanel({
     email,
     password,
     authStatus,
+    isSubmitting = false,
     message,
     messageTone = "error",
     canResendVerification = false,
@@ -41,7 +43,7 @@ export function AuthPanel({
 
     useEffect(() => {
         function closeOnEscape(event: KeyboardEvent) {
-            if (event.key === "Escape") onClose();
+            if (event.key === "Escape" && !isSubmitting) onClose();
         }
 
         document.addEventListener("keydown", closeOnEscape);
@@ -50,17 +52,21 @@ export function AuthPanel({
             document.removeEventListener("keydown", closeOnEscape);
             document.body.classList.remove("auth-modal-open");
         };
-    }, [onClose]);
+    }, [onClose, isSubmitting]);
 
-    const isChecking = authStatus === "checking";
+    const isChecking = authStatus === "checking" || isSubmitting;
+    const pendingLabel = isSubmitting
+        ? { login: "Signing in…", signup: "Creating account…", forgot: "Sending reset code…", reset: "Resetting password…", verify: "Verifying…" }[mode]
+        : "Checking session…";
 
     function changeMode(nextMode: Mode) {
+        if (isChecking) return;
         setIsPasswordVisible(false);
         onModeChange(nextMode);
     }
 
     return (
-        <div className="auth-modal-backdrop" role="presentation" onMouseDown={onClose}>
+        <div className="auth-modal-backdrop" role="presentation" onMouseDown={() => { if (!isSubmitting) onClose(); }}>
             <section
                 className="auth-panel"
                 role="dialog"
@@ -68,7 +74,7 @@ export function AuthPanel({
                 aria-labelledby="auth-title"
                 onMouseDown={(event) => event.stopPropagation()}
             >
-                <button type="button" className="auth-close" aria-label="Close" onClick={onClose}>
+                <button type="button" className="auth-close" aria-label="Close" disabled={isSubmitting} onClick={onClose}>
                     <AppIcon name="x" size={20} />
                 </button>
                 <div className="auth-brand">
@@ -90,6 +96,7 @@ export function AuthPanel({
                         type="button"
                         className={mode === "signup" ? "active" : ""}
                         role="tab"
+                        disabled={isChecking}
                         aria-selected={mode === "signup"}
                         onClick={() => changeMode("signup")}
                     >
@@ -99,6 +106,7 @@ export function AuthPanel({
                         type="button"
                         className={mode === "login" ? "active" : ""}
                         role="tab"
+                        disabled={isChecking}
                         aria-selected={mode === "login"}
                         onClick={() => changeMode("login")}
                     >
@@ -116,7 +124,8 @@ export function AuthPanel({
                             <input className="auth-code-input" name="otp" type="text" inputMode="numeric" autoComplete="one-time-code" aria-describedby="auth-verification-help" placeholder="000000" pattern="[0-9]{6}" maxLength={6} autoFocus required />
                         </label>
                         <button type="submit" className="auth-submit" disabled={isChecking}>
-                            {isChecking ? "Verifying…" : "Verify email"}
+                            {isChecking && <span className="auth-spinner" aria-hidden="true" />}
+                            {isChecking ? pendingLabel : "Verify email"}
                             {!isChecking && <AppIcon name="arrow-right" size={18} />}
                         </button>
                         {message && <p className={`auth-message ${messageTone}`} role="status">{message}</p>}
@@ -124,7 +133,7 @@ export function AuthPanel({
                             <p>Didn’t get a code? Check your spam folder.</p>
                             <button type="button" className="auth-text-action" disabled={isChecking} onClick={onResendVerification}>Resend verification email</button>
                         </div>}
-                        <button type="button" className="auth-back" onClick={() => changeMode("login")}>Back to sign in</button>
+                        <button type="button" className="auth-back" disabled={isChecking} onClick={() => changeMode("login")}>Back to sign in</button>
                     </form>
                 ) : <form onSubmit={onSubmit} className="auth-form">
                     {<label>
@@ -164,15 +173,17 @@ export function AuthPanel({
                             </button>
                         </span>
                     </div>}
-                    {mode === "login" && <button type="button" className="auth-text-action" onClick={() => changeMode("forgot")}>Forgot password?</button>}
+                    {mode === "login" && <button type="button" className="auth-text-action" disabled={isChecking} onClick={() => changeMode("forgot")}>Forgot password?</button>}
                     <button className="auth-submit" disabled={isChecking}>
-                        {isChecking ? "Please wait…" : { signup: "Create my account", login: "Sign in", forgot: "Send reset code", reset: "Reset password" }[mode]}
+                        {isChecking && <span className="auth-spinner" aria-hidden="true" />}
+                        {isChecking ? pendingLabel : { signup: "Create my account", login: "Sign in", forgot: "Send reset code", reset: "Reset password" }[mode]}
                         {!isChecking && <AppIcon name="arrow-right" size={18} />}
                     </button>
                     {message && <p className={`auth-message ${messageTone}`} role="status">{message}</p>}
-                    {canResendVerification && onResendVerification && <button type="button" className="auth-text-action auth-resend" onClick={onResendVerification}>Resend verification email</button>}
+                    {canResendVerification && onResendVerification && <button type="button" className="auth-text-action auth-resend" disabled={isChecking} onClick={onResendVerification}>Resend verification email</button>}
                 </form>}
-                {(mode === "forgot" || mode === "reset") && <button type="button" className="auth-back" onClick={() => changeMode("login")}>Back to sign in</button>}
+                <p className="auth-progress" role="status" aria-live="polite">{isChecking ? `${pendingLabel} This may take a moment.` : ""}</p>
+                {(mode === "forgot" || mode === "reset") && <button type="button" className="auth-back" disabled={isChecking} onClick={() => changeMode("login")}>Back to sign in</button>}
                 <p className="auth-terms">By continuing, you agree to use JobHazel responsibly.</p>
             </section>
         </div>

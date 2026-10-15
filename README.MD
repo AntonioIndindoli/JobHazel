@@ -1,226 +1,128 @@
 # JobHazel
 
-JobHazel is a full-stack job application tracker for organizing applications, interviews, contacts, follow-up tasks, and the resume version used for each application.
+**A full-stack job application tracker with a companion Chrome extension.**
 
-**App:** [jobhazel.com](https://jobhazel.com/)
+JobHazel keeps applications, interviews, contacts, follow-ups, and resume versions in one workspace. Import a job posting, track it through the hiring process, and see which sources and resume versions lead to responses.
 
-This README describes the implementation in this repository as of **September 19, 2026**, including current workspace changes. It does not confirm that every change has been deployed or verified in production. External account integrations and Chrome Web Store distribution are not implemented.
+Built by **[Antonio Indindoli](https://github.com/AntonioIndindoli)** · **[Visit JobHazel](https://jobhazel.com/)**
 
-## Implemented features
+[Features](#features) · [Engineering](#engineering-highlights) · [Architecture](#architecture) · [Testing](#testing) · [Local setup](#local-development)
 
-| Area | Current behavior |
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="frontend/public/landing/dashboard-preview-dark-1440.webp">
+  <img src="frontend/public/landing/dashboard-preview-1440.webp" alt="JobHazel dashboard with an application pipeline, job-search statistics, and a Kanban board" width="1440">
+</picture>
+
+*Dashboard preview with fictional sample data.*
+
+## Features
+
+| Workflow | What you can do |
 | --- | --- |
-| Accounts | Email/password signup and verified-email login, verification-email resend, forgot-password recovery, session refresh, logout, profile editing, signed-in password changes, and account deletion. Signup is limited to 1,000 current accounts; deletion frees a slot. |
-| Applications | Create, edit, delete, search, and filter applications. Store company, role, source, URL, location, workplace/employment type, salary, priority, dates, description, and notes. |
-| Kanban | Drag applications between fixed stages and persist status changes. Application activity history records changes. |
-| Imports | Paste a URL or description, create a parsed draft, review/edit extracted fields, and convert the draft into an application. |
-| Chrome extension | Capture the active page URL, title, and optional selected text in a Manifest V3 side panel; sign in, review an idempotent parsed draft, handle duplicate warnings, and save the application without leaving the panel. |
-| Duplicate detection | Detect normalized URL matches or exact company/title matches, ignoring company/title case and surrounding whitespace. |
-| Interviews | Create, edit, and delete interviews linked to applications; record type, schedule, duration, location, meeting URL, interviewer, notes, and outcome. View upcoming interviews. |
-| Tasks | Create, edit, delete, complete, and reopen tasks. Support follow-ups, preparation, thank-you notes, reminders, due dates, and overdue/upcoming views. |
-| Task automation | Optional automatic follow-up and thank-you task creation, with separately configurable delays of 0–365 days and per-user preferences. |
-| Email reminders | Opt-in upcoming-task, overdue-task, and interview emails for verified addresses, with lead times, time zones, quiet hours, and unsubscribe controls. Supports a once-daily task digest plus provider-scheduled interview reminders behind a rollout setting; legacy delivery remains the default. See [notification operations](backend/NOTIFICATIONS.md). |
-| Contacts | Manage recruiters, referrals, hiring managers, employees, and other contacts, with company/application associations, email, LinkedIn URL, role, and notes. |
-| Resume library | Upload immutable PDF versions; list, rename, annotate, download, archive/unarchive, and permanently delete unreferenced resumes. |
-| Application resumes | Select one resume per application, change/remove it, download it from application details, and filter by resume or “No resume.” Association changes create history events. |
-| Dashboard and analytics | Application and conversion metrics, pipeline visualization, source comparisons, weekly application volume, a geographic application map, and backend-aggregated performance metrics by resume version. |
-| Data export | Download account data as JSON or application records as CSV. Resume exports include metadata, not file bytes or private storage credentials. |
-| Appearance | Dark mode, responsive layouts, and mobile navigation. |
+| Track applications | Organize roles in a searchable list or drag-and-drop Kanban board, with notes, salary details, and activity history. |
+| Import job postings | Paste a URL or description, review extracted fields, and save an application. The Chrome side panel also captures the selected LinkedIn job. |
+| Plan the next step | Manage interviews, recruiter contacts, and follow-up tasks, with optional task automation and email reminders. |
+| Keep resume history | Upload PDF versions, attach the version used for each application, and compare their recorded outcomes. |
+| Understand progress | Explore the application pipeline, response rates, source comparisons, weekly activity, and a geographic map. |
+| Manage your data | Export account data as JSON or applications as CSV. Use the responsive interface in light or dark mode. |
 
-### Application stages
+Applications move through six stages: **Saved, Applied, Interviewing, Offer, Rejected, and Withdrawn**.
 
-The six fixed application statuses are **Saved, Applied, Interviewing, Offer, Rejected, and Withdrawn**. Recruiter screen, technical, manager, panel, final, take-home, and other are interview types, not separate application stages. Custom stages are not supported.
+## Engineering highlights
 
-### Account verification and recovery
+- **Reusable React workspaces.** Shared search/filter controls and resizable detail panes keep application, interview, task, and contact screens consistent. Pane state persists between visits, with pointer and keyboard resizing. [Detail-pane hook](frontend/app/components/useCollectionDetailPane.ts).
+- **Application saves commit together.** The application, company, selected resume, activity history, and generated follow-up task share one database transaction. An invalid resume rejects the entire save. [Application service](backend/src/services/applications.services.js).
+- **Resume files have a defined lifecycle.** The API issues short-lived upload/download URLs, checks stored file size, content type, and PDF signature, and prevents deletion of resumes still linked to applications. [Resume service](backend/src/services/resumes.services.js).
+- **Import retries preserve work.** Capture IDs allow draft reuse; conversion claims a draft inside the same transaction that creates its application. Retrying a completed conversion returns its saved state. [Import service](backend/src/services/imports.services.js).
+- **Account access has explicit controls.** Neon Auth handles verification and recovery. Web credentials stay in HttpOnly cookies, mutations check request origins, and authentication rate limits persist in the database. [Session handling](backend/src/services/neon-auth.services.js) · [Origin checks](backend/src/middleware/session-origin.middleware.js).
+- **Reminder state survives failed requests.** Database records track scheduling, retries, cancellations, and uncertain provider responses. Shared provider throttling and health reporting support operation across API instances. [Notification design](backend/NOTIFICATIONS.md).
 
-New accounts verify their email through Neon Auth using six-digit codes. Neon manages password recovery, password hashes, sessions and revocation. Web credentials stay in an HttpOnly cookie, and transient failures preserve the session. The managed-auth migration and identity links were verified in production on September 29, 2026. See [release verification](backend/RELEASE.md) for observed production state and remaining delivery/storage checks, and [Neon Auth migration and production cutover](backend/NEON_AUTH_MIGRATION.md) for the migration procedure.
+## Architecture
 
-Requests to resend verification or recover a password return non-enumerating responses whether or not the email identifies an eligible account. Existing accounts created before the verification migration are marked verified by the migration. Both endpoints have persistent, per-endpoint rate limits of 20 requests per IP and 3 per normalized email in a 15-minute window. Limited requests return HTTP 429 with `AUTH_RATE_LIMITED` and `Retry-After`. Signed-in email-address changes are unavailable in the current managed-auth configuration.
+```mermaid
+flowchart LR
+    Web["Web app<br/>Next.js / React"] --> API["REST API<br/>Express"]
+    Extension["Chrome side panel<br/>Manifest V3"] --> API
+    API -->|Prisma| DB[("PostgreSQL")]
+    API --> Auth["Neon Auth<br/>Accounts and sessions"]
+    API -->|Signed URLs| R2["Cloudflare R2<br/>Resume PDFs"]
+    Web -.->|File transfers| R2
+    API --> Email["Resend<br/>Email reminders"]
+```
 
-### Job importing
+The web app and extension share the API and import workflow. The API stores application data in PostgreSQL and manages access to resume files; the browser transfers PDFs directly to and from R2. Authentication and reminder delivery use separate providers.
 
-The parser uses deterministic rules, a skills dictionary, HTML metadata, and structured job data where available. It attempts URL fetching when no description text is supplied, and extracts candidate title, company, location, salary, description, source, and skills for review.
+## Technology summary
 
-Fetching does not guarantee extraction from every job board. Access restrictions and dynamically rendered pages can require pasted or extension-captured selected text and manual corrections. Parsing is deterministic rather than AI-powered. Duplicate detection does not implement fuzzy role-name matching.
-
-### Chrome extension
-
-The `extension/` package implements a Chrome Manifest V3 side panel. It captures the active HTTP(S) page's URL and title plus optional selected text, stores bounded captures temporarily, and sends them through the same import-draft and conversion APIs used by the web interface. The panel has its own login, managed Neon Auth session, editable review form, duplicate override, and post-save link to JobHazel.
-
-Development builds use the checked-in extension key to keep a stable unpacked extension ID. Production release work remains: create the store ZIP and listing assets, verify current Chrome Web Store requirements, publish through the project owner's account, set the resulting production ID in the frontend/backend configuration, and smoke-test it against the deployed service.
-
-### Resume management
-
-The resume library and application association UI are implemented; they are no longer API-only plans.
-
-- PDF uploads only, with a default maximum of 5 MB and configurable active-resume quota (default: 10).
-- Files reside in private Cloudflare R2 storage; the application stores metadata and object keys.
-- Upload completion verifies stored content before exposing a resume as ready.
-- Upload/download links expire after five minutes by default.
-- A revised file creates a new version; changing its name or notes does not replace its contents.
-- Archived resumes already linked to applications remain available in historical associations.
-- Permanent deletion is blocked while an application references the resume.
-- Moving an application to Applied without a resume produces a non-blocking warning.
-- Backend lifecycle controls include endpoint rate limits, abandoned-upload cleanup, cleanup status reporting, and retryable storage cleanup during account deletion.
-
-Application create/update requests accept an optional resumeVersionId. The application, company, resume association, history and generated follow-up task commit in one transaction. Invalid, foreign, incomplete or newly selected archived resumes reject the entire save. Omitting the field preserves the association on update; null removes it. The separate association endpoint remains available for quick changes.
-
-A scheduled cleanup entry exists in `backend/vercel.json`. Actual bucket privacy, credentials, CORS, migrations, scheduler execution, and cleanup behavior still need verification in the deployed environment.
-
-The [resume feature document](RESUME-FEATURE.md) describes the broader phased scope. Storage, library UI, application associations, lifecycle hardening, and resume performance analytics are implemented. PDF text extraction, job matching, tailoring, and generalized application documents remain future work.
-
-## Implemented foundations with remaining limitations
-
-| Area | What is still missing or limited |
+| Area | Technologies |
 | --- | --- |
-| Task automation | Creates in-app tasks; optional email reminders are handled separately by the notification scheduler. Push notifications are not implemented. Thank-you tasks are created when an interview is added, with a due date based on its schedule; there is no background detection of interview completion. |
-| Analytics | Most dashboard metrics are calculated in the frontend from applications, interviews, and activity history. Resume-version performance is aggregated by `GET /resumes/analytics`; there is no general-purpose backend analytics API. |
-| Resume intelligence | The schema has an optional extracted-text field, but no PDF text-extraction pipeline, scoring, matching, or tailoring workflow. |
-| Account access | Email verification, verification resend, signed-in password changes, and forgot-password recovery are implemented. Persistent recovery/resend rate limits are also implemented. Changing an account email, social sign-in, and MFA are unavailable. |
-| Companies | Company records support applications and contacts, but there is no dedicated company-management screen/API. |
-| Mobile | Responsive web UI exists; installable PWA and offline support do not. |
-| Imports | URL/text review and Chrome-extension capture work, but CSV import is absent. |
-| Chrome extension | The side-panel workflow is implemented and tested locally, but Chrome Web Store packaging, listing, publication, production-ID rollout, and deployed smoke testing remain. |
+| Web interface | Next.js 16, React 19, TypeScript, custom components and CSS, Tailwind CSS tooling. |
+| Visualizations | D3 Sankey, Leaflet, and custom chart components. |
+| API and data | Express 5, JavaScript ES modules, PostgreSQL, Prisma 7. |
+| External services | Neon Auth, Cloudflare R2 through the AWS S3 SDK, Resend. |
+| Chrome extension | Manifest V3, TypeScript, service worker, side panel. |
+| Quality checks | Node test runner, Vitest, Testing Library, Playwright, GitHub Actions. |
 
-## Not implemented / future work
+The frontend builds as a static export; the backend includes a Vercel deployment configuration. Each of the three packages has its own dependencies.
 
-These are potential extensions, not available features or release commitments:
+## Testing
 
-- Gmail import and application-confirmation email detection.
-- Google Calendar sync and interview detection.
-- LinkedIn/Indeed application-history synchronization.
-- CSV import (CSV export already exists).
-- AI-powered job parsing and interview-preparation generation.
-- Resume text extraction, job matching, scoring, rewriting, and tailoring. Resume-version outcome comparisons are implemented.
-- Cover-letter, portfolio, writing-sample, and take-home document management; DOC/DOCX uploads.
-- Custom pipeline stages.
-- Push follow-up reminders (opt-in email reminders are implemented).
-- Public shareable job-search activity reports.
-- Installable/offline PWA support.
+Use **Node.js 22** (the version used in CI) and npm. Configure the [development environment files](docs/DEVELOPMENT.md#environment-files), then install dependencies and run the test suites from the repository root:
 
-JobHazel does not submit job applications on users' behalf.
+```sh
+npm --prefix backend ci
+npm --prefix frontend ci
+npm --prefix extension ci
 
-## Architecture and stack
+npm --prefix backend test
+npm --prefix frontend test
+npm --prefix extension test
+```
 
-| Layer | Implementation |
-| --- | --- |
-| Frontend | Next.js 16, React 19, TypeScript, custom components and CSS, Tailwind CSS tooling. |
-| Visualization | D3 Sankey, Leaflet, and custom chart components. The map uses external geocoding with a browser cache. |
-| Drag and drop | Native browser drag-and-drop handlers. |
-| Backend | Express 5 and JavaScript ES modules. |
-| Authentication | Neon managed Better Auth, HttpOnly web sessions, and managed extension sessions. |
-| Persistence | PostgreSQL with Prisma 7 and the PostgreSQL adapter; Neon connection tooling is included. |
-| Files | Cloudflare R2 through the AWS S3 SDK, using signed upload/download URLs. |
-| Tests | Node test runner for the backend; Vitest and Testing Library for the frontend. |
-| Deployment support | Static frontend export (`frontend/out`) and a Vercel Express entry point/configuration for the backend. |
-| Browser extension | Standalone TypeScript Manifest V3 package with a service worker, side panel, Chrome session/local storage, and production/development builds. |
+Frontend checks also include `npm --prefix frontend run lint` and `npm --prefix frontend run build`. Extension tests type-check and build both development and production variants.
 
-The frontend and extension call the Express API, which accesses PostgreSQL and issues signed R2 URLs. Frontend, backend, and extension dependencies are installed separately; there is no root application package.
+The [CI workflow](.github/workflows/ci.yml) adds SQL rollback/concurrency checks, LinkedIn capture-to-parser checks, production extension packaging, and desktop/mobile browser workflows against disposable PostgreSQL.
+
+For browser tests, configure a migrated, isolated database with `E2E_DATABASE_URL` and `E2E_DATABASE_HOST`, then run from `frontend/`:
+
+```sh
+npx playwright install chromium
+npm run test:e2e
+```
+
+The browser suite starts the real API and frontend, with simulated authentication and storage providers. See [browser test setup and coverage](frontend/e2e/README.md). Live provider and deployment checks are tracked in the [release notes](backend/RELEASE.md).
 
 ## Local development
 
-Use Node.js **20.9 or newer**, npm, and PostgreSQL. Docker is optional for the included local database.
+Follow the [local development guide](docs/DEVELOPMENT.md) to configure PostgreSQL, managed authentication, and optional storage/email services, then start the API and web app. The default addresses are [localhost:3000](http://localhost:3000) for the web app and [localhost:4000](http://localhost:4000/health/live) for the API.
 
-### 1. Configure environment files
+To view the sample dashboard without configuring services, run `npm --prefix frontend ci` and `npm --prefix frontend run dev`, then open [the dashboard preview](http://localhost:3000/dashboard-preview). It uses fictional data and requires no account.
 
-Copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env.local`. Do not overwrite existing local configuration.
+The [extension guide](extension/README.md) covers building and loading the Chrome side panel.
 
-- Set the backend NEON_AUTH_BASE_URL for its database branch and a stable AUTH_RATE_LIMIT_SECRET. Follow backend/NEON_AUTH_MIGRATION.md before cutting over existing accounts.
-- Set `APP_URL` to the frontend origin used in verification and password-reset links.
-- Set `RESEND_API_KEY` and a verified `EMAIL_FROM` sender to deliver account emails. Without an API key, development logs account-action links; production treats email delivery as unconfigured.
-- Set `DATABASE_URL`; use `DATABASE_URL_UNPOOLED` for a direct migration connection when using a pooled database service.
-- Local database defaults use port `55489` and database name `jobappledger`.
-- The API defaults to `http://localhost:4000`; the frontend defaults to `http://localhost:3000`.
-- Set frontend `NEXT_PUBLIC_API_BASE_URL` to the API URL and backend `CORS_ORIGIN` to the frontend origin.
+## Repository layout
 
-For resume storage, supply all five backend R2 settings: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, and `R2_ENDPOINT`. Apply appropriate bucket CORS settings; [an example is included](infra/cloudflare/r2-cors.json).
-
-To run development without resume storage, leave **all five R2 values empty**. The example contains bucket/endpoint placeholders, which must also be cleared. Partial configuration fails startup validation, and resume storage operations require a configured provider.
-
-### 2. Start a local database (optional)
-
-From the repository root; skip if using an existing database:
-
-```sh
-docker compose -f infra/docker-compose.yml up -d
+```text
+frontend/   Next.js web app, components, charts, and browser tests
+backend/    Express API, domain services, Prisma schema, and migrations
+extension/  Chrome side panel, page capture, and build/release tooling
+infra/      Local PostgreSQL and R2 CORS configuration
+docs/       Setup, implementation notes, and API reference
 ```
 
-### 3. Install and start the backend
+## Scope and next steps
 
-From `backend/`, after configuring `.env`:
+Imports use rules-based parsing and a review step; some job boards require pasted or selected text. The extension can be loaded unpacked, while Chrome Web Store publication and authenticated production acceptance checks remain open. See the [extension release checklist](extension/RELEASE.md).
 
-```sh
-npm install
-npm run prisma:generate
-npx prisma migrate deploy
-npm run dev
-```
+Potential next steps include CSV import, calendar/email integrations, and resume text analysis. These are future work. The [implementation notes](docs/IMPLEMENTATION.md) document current behavior and limits; the release notes distinguish repository changes from deployed and verified features.
 
-Optionally run `npm run db:seed` to create/update the development seed user using the `SEED_USER_*` environment settings. Do not seed a production database with development credentials.
+## Further reading
 
-### 4. Install and start the frontend
-
-In a second terminal, from `frontend/`:
-
-```sh
-npm install
-npm run dev
-```
-
-Open [localhost:3000](http://localhost:3000). The API exposes `/health/live` and `/health/ready` on port 4000.
-
-### 5. Build and load the Chrome extension
-
-From `extension/`, install dependencies and create the development build:
-
-```sh
-npm install
-npm run build:dev
-```
-
-In Chrome, open `chrome://extensions`, enable Developer mode, choose **Load unpacked**, and select `extension/dist/development`. The development build targets the local app/API configuration generated by the build script. See [the extension README](extension/README.md) for the complete workflow and production-build instructions.
-
-### Builds and deployment configuration
-
-Run `npm run build` from `frontend/` to generate the static site in `frontend/out`. Host that export with a static host; the current configuration is not a server-rendered Next.js deployment. Set `NEXT_PUBLIC_API_BASE_URL` when building.
-
-The backend can run with `npm start` or its included Vercel entry point. Apply migrations before relying on new schema-dependent features. Production configuration requires complete R2 settings and a maintenance secret, plus appropriate `CORS_ORIGIN` and secure cookie settings.
-
-For Vercel Cron, set `CRON_SECRET`. The backend falls back to it when `RESUME_CLEANUP_SECRET` is unset; if both are set, ensure the cron-supplied bearer token matches the effective cleanup secret. The included cron configuration requests cleanup daily at 04:17 UTC. Notification maintenance stays daily at 15:07 UTC (`7 15 * * *`). The new `daily-digest-scheduled-interviews` mode schedules interviews ahead of time through Resend and prepares daily task summaries. The default `legacy` mode can still miss short reminder windows; see [notification rollout and delivery limits](backend/NOTIFICATIONS.md). Other hosts need equivalent authenticated scheduled requests.
-
-## Implemented API routes
-
-Paths are relative to the backend origin, with **no `/api` prefix** in Express. User-data routes require authentication; resume maintenance uses a separate bearer secret.
-
-| Area | Routes |
+| Guide | Purpose |
 | --- | --- |
-| Health | `GET /health/live`, `GET /health/ready` |
-| Authentication | `POST /auth/signup`, `POST /auth/login`, `POST /auth/verify-email`, `POST /auth/resend-verification`, `POST /auth/forgot-password`, `POST /auth/reset-password`, `POST /auth/refresh`, `POST /auth/logout`, extension-specific `POST /auth/extension/login`, `/refresh`, and `/logout`, plus `GET /auth/me` |
-| Account | `PATCH /auth/profile`, `PATCH /auth/password`, `GET /auth/export` (JSON, or `?format=csv` for applications), `DELETE /auth/account` |
-| Applications | `GET /applications`, `POST /applications`, `GET /applications/:id`, `PUT /applications/:id`, `PATCH /applications/:id/status`, `DELETE /applications/:id` |
-| Application history | `GET /applications/history`, `GET /applications/:id/history`, `DELETE /applications/:id/history/:activityLogId` |
-| Application resume | `PUT /applications/:id/resume` (attach, replace, or remove) |
-| Interviews | `GET /interviews`, `POST /interviews`, `PATCH /interviews/:id`, `DELETE /interviews/:id` |
-| Tasks | `GET /tasks`, `POST /tasks`, `PATCH /tasks/:id`, `PATCH /tasks/:id/complete`, `DELETE /tasks/:id` |
-| Task preferences | `GET /tasks/preferences`, `PATCH /tasks/preferences` |
-| Contacts | `GET /contacts`, `POST /contacts`, `GET /contacts/:id`, `PATCH /contacts/:id`, `DELETE /contacts/:id` |
-| Imports | `POST /imports/create-draft`, `GET /imports/:id`, `POST /imports/:id/convert` |
-| Parser | `POST /parser/job-description` |
-| Resumes | `GET /resumes`, `GET /resumes/analytics`, `POST /resumes/uploads`, `POST /resumes/:id/complete`, `GET /resumes/:id/download-url`, `PATCH /resumes/:id`, `DELETE /resumes/:id` |
-| Notifications | `GET /notifications/preferences`, `PATCH /notifications/preferences`, `GET /notifications/unsubscribe`, `POST /notifications/unsubscribe` |
-| Notification maintenance | `GET /notifications/maintenance/deliver` (requires `CRON_SECRET` bearer authentication) |
-| Resume maintenance | `GET /resumes/maintenance/status`, `GET /resumes/maintenance/cleanup`, `POST /resumes/maintenance/cleanup` |
-
-Most analytics are computed in [the frontend analytics module](frontend/app/lib/application-analytics.ts). Resume performance is the exception and uses the authenticated `GET /resumes/analytics` aggregation endpoint.
-
-## Verification and test coverage
-
-Run `npm test` separately from `backend/`, `frontend/`, and `extension/`. The frontend also provides `npm run lint` and `npm run build`; the extension provides `npm run typecheck`, development/production builds, and `npm run verify:local` for its disposable-account integration workflow.
-
-On September 12, 2026, **84 backend tests, 37 frontend tests, and 14 extension tests passed** against the reviewed workspace. The frontend production build and extension TypeScript/development build also passed. Backend coverage includes authentication and recovery validation, parsing, signup limits, exports, task automation, resume storage/lifecycle and analytics, and application-resume associations. Frontend coverage focuses on authentication UI, resume workflows, API helpers, extension handoff behavior, and application-resume interactions. Extension coverage includes session refresh, capture validation and limits, storage pruning, side-panel behavior, draft creation, and application defaults.
-
-The GitHub Actions workflow runs backend tests, frontend lint/tests/build, extension tests/typecheck, and desktop/mobile Chromium workflows against PostgreSQL. Run `npm run test:e2e` from `frontend` with an explicitly configured isolated database; see [browser test setup](frontend/e2e/README.md). These tests exercise the real API/database with simulated auth and storage providers. Passing tests does not certify live Neon email, R2 permissions/CORS, Resend callbacks, or production browser behavior. Use `npm run verify:release` from `backend` and the [release checklist](backend/RELEASE.md) for those checks.
-
-## Author
-
-Built by Antonio Indindoli.
+| [Local development](docs/DEVELOPMENT.md) | Environment setup, package commands, builds, and deployment pointers. |
+| [Implementation notes](docs/IMPLEMENTATION.md) | Account behavior, imports, resume lifecycle, automation, and scope. |
+| [API reference](docs/API.md) | Route groups, authentication, and maintenance endpoints. |
+| [Browser tests](frontend/e2e/README.md) | Isolated database setup and end-to-end coverage. |
+| [Web/API release notes](backend/RELEASE.md) | Deployment evidence and remaining provider checks. |
+| [Chrome extension](extension/README.md) | Capture workflow, local installation, and packaging. |

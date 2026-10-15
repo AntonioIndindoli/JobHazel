@@ -31,6 +31,8 @@ export function createApp() {
     await handleNotificationWebhook(req.body.toString("utf8"), req.headers);
     res.status(200).json({ received: true });
   });
+  // Captures allow 100,000 characters; UTF-8 and JSON escaping can exceed 100 KB.
+  app.use("/imports", express.json({ limit: "1mb" }));
   app.use(express.json());
   app.use(protectSessionOrigin);
 

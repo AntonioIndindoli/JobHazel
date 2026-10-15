@@ -59,6 +59,12 @@ main {
     display: none !important;
 }
 
+#autofill-card { margin-bottom: 16px; }
+#autofill-card summary { cursor: pointer; font-weight: 700; }
+.autofill-fields { display: grid; gap: 12px; margin-top: 14px; }
+#autofill-status:empty { display: none; }
+#autofill-status { margin: 0; }
+
 h1 {
     margin: 4px 0 8px;
     font-size: 22px;

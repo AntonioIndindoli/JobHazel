@@ -12,7 +12,7 @@ globalThis.chrome = {
   },
 };
 
-const { createDraft, login, readSession, refresh, logout } = await import("../dist/development/api.js");
+const { createDraft, login, readSession, refresh, logout, storeSession, saveDraft, listResumes } = await import("../dist/development/api.js");
 
 test("extension login persists its own refreshable session", async () => {
   const session = {
@@ -23,6 +23,10 @@ test("extension login persists its own refreshable session", async () => {
   };
   globalThis.fetch = async (url, init) => {
     assert.match(url, /\/auth\/extension\/login$/);
+    assert.equal(url, "http://localhost:4000/auth/extension/login");
+    assert.equal(init.credentials, "omit");
+    assert.equal(init.redirect, "error");
+    assert.ok(init.signal instanceof AbortSignal);
     assert.deepEqual(JSON.parse(init.body), { email: "Taylor@Example.com", password: "password123" });
     return Response.json(session);
   };
@@ -73,4 +77,69 @@ test("network and provider failures preserve the saved managed session", async (
   globalThis.fetch = async () => Response.json({ message: "temporarily unavailable" }, { status: 503 });
   await assert.rejects(refresh(session));
   assert.deepEqual(await readSession(), session);
+});
+
+test("production never reads or transmits a development or unscoped session", async () => {
+  const developmentSession = await readSession();
+  localValues["jobhazel.extension-session.v1"] = developmentSession;
+  const production = await import("../dist/production/api.js");
+  assert.equal(await production.readSession(), null);
+  assert.equal(localValues["jobhazel.extension-session.v1"], undefined);
+  assert.deepEqual(await readSession(), developmentSession);
+  const productionSession = { ...developmentSession, accessToken: "production-access", refreshToken: "production-refresh" };
+  globalThis.fetch = async (url, init) => {
+    assert.equal(url, "https://api.jobhazel.com/auth/extension/login");
+    assert.equal(init.credentials, "omit");
+    return Response.json(productionSession);
+  };
+  await production.login("taylor@example.com", "password123");
+  assert.deepEqual(await production.readSession(), productionSession);
+  assert.deepEqual(await readSession(), developmentSession);
+  await storeSession(null);
+  assert.equal(await readSession(), null);
+  assert.deepEqual(await production.readSession(), productionSession);
+});
+
+test("invalid and non-JSON auth responses cannot overwrite a saved session", async () => {
+  const production = await import("../dist/production/api.js");
+  const session = await production.readSession();
+  for (const body of [null, {}, { accessToken: "access", refreshToken: "refresh", user: { email: "test@example.com" } }]) {
+    globalThis.fetch = async () => Response.json(body);
+    await assert.rejects(production.login("test@example.com", "password123"));
+    assert.deepEqual(await production.readSession(), session);
+  }
+  globalThis.fetch = async () => new Response("<html>upstream error</html>", { headers: { "Content-Type": "text/html" } });
+  await assert.rejects(production.refresh(session));
+  assert.deepEqual(await production.readSession(), session);
+});
+
+test("resume library uses authenticated requests and excludes archived or incomplete uploads", async () => {
+  const session = { accessToken: "resume-access" };
+  globalThis.fetch = async (url, init) => {
+    assert.equal(url, "http://localhost:4000/resumes");
+    assert.equal(init.headers.authorization, "Bearer resume-access");
+    return Response.json({ resumes: [
+      { id: "ready", name: "Engineering resume", uploadStatus: "READY", archivedAt: null },
+      { id: "pending", uploadStatus: "PENDING", archivedAt: null },
+      { id: "archived", uploadStatus: "READY", archivedAt: "2025-01-01" },
+    ] });
+  };
+  assert.deepEqual((await listResumes(session)).resumes.map((resume) => resume.id), ["ready"]);
+});
+
+test("saving an import sends the selected resume or an explicit no-resume value", async () => {
+  for (const selected of ["ready", ""]) {
+    globalThis.fetch = async (url, init) => {
+      assert.match(url, /\/imports\/draft-1\/convert$/);
+      assert.equal(init.headers.authorization, "Bearer resume-access");
+      const body = JSON.parse(init.body);
+      assert.equal(body.resumeVersionId, selected || null);
+      return Response.json({ application: { id: "app-1", title: "Engineer", resumeVersionId: body.resumeVersionId } });
+    };
+    await saveDraft({ accessToken: "resume-access" }, "draft-1", {
+      title: "Engineer", companyName: "Acme", status: "APPLIED", source: "", sourceUrl: "", location: "",
+      salaryMin: "", salaryMax: "", description: "", notes: "", dateApplied: "", allowDuplicate: false,
+      resumeVersionId: selected,
+    });
+  }
 });

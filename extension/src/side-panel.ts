@@ -1,13 +1,16 @@
-import { APP_URL } from "./config.js";
+import { APP_URL, API_URL, BUILD_ENV } from "./config.js";
+import { setupAutofillPanel } from "./autofill-panel.js";
 import { CAPTURE_STORAGE_PREFIX, isStoredCapture, type StoredCapture } from "./capture.js";
 import {
   ApiError,
   createDraft,
   login,
+  listResumes,
   logout,
   readSession,
   refresh,
   saveDraft,
+  storeSession,
   type Application,
   type DraftResult,
   type ExtensionSession,
@@ -20,6 +23,11 @@ let session: ExtensionSession | null = null;
 let draft: DraftResult | null = null;
 let activeCaptureKey: string | null = null;
 let processingCaptureId: string | null = null;
+let currentView: View = "loading";
+let captureInFlight = false;
+let saving = false;
+let queuedCaptureKey: string | null = null;
+let resumesLoading = false;
 
 function element<T extends HTMLElement>(id: string): T {
   const value = document.getElementById(id);
@@ -28,7 +36,9 @@ function element<T extends HTMLElement>(id: string): T {
 }
 
 function show(view: View): void {
+  currentView = view;
   for (const name of views) element(`${name}-view`).classList.toggle("hidden", name !== view);
+  updateAutofillUser(session?.user ?? null);
 }
 
 function setError(id: string, message = ""): void {
@@ -75,40 +85,53 @@ function latestCapture(values: Record<string, unknown>): { key: string; record: 
   return entry ? { key: entry[0], record: entry[1] } : null;
 }
 
+function processQueuedCapture(): void {
+  if (!queuedCaptureKey || !session || saving || captureInFlight) return;
+  if (currentView !== "ready" && currentView !== "saved") return;
+  show("ready");
+  setError("capture-error");
+  void processLatestCapture();
+}
+
 async function processLatestCapture(): Promise<void> {
-  if (!session) return;
-  const stored = await chrome.storage.session.get(null);
-  const pending = latestCapture(stored);
-  if (!pending || processingCaptureId === pending.record.capture.captureId) return;
-  processingCaptureId = pending.record.capture.captureId;
-  activeCaptureKey = pending.key;
-  show("working");
+  if (!session || captureInFlight || saving || currentView !== "ready") return;
+  captureInFlight = true;
   try {
+    const stored = await chrome.storage.session.get(null);
+    const pending = latestCapture(stored);
+    if (!pending || processingCaptureId === pending.record.capture.captureId) {
+      queuedCaptureKey = null;
+      return;
+    }
+    if (queuedCaptureKey === pending.key) queuedCaptureKey = null;
+    processingCaptureId = pending.record.capture.captureId;
+    activeCaptureKey = pending.key;
+    show("working");
     const response = await createDraft(session, pending.record.capture);
     session = response.session;
     draft = response.result;
     renderDraft(response.result);
     show("review");
+    await loadResumeOptions();
   } catch (error) {
     processingCaptureId = null;
     if (error instanceof ApiError && error.status === 401) {
-      await chrome.storage.local.remove("jobhazel.extension-session.v1");
+      await storeSession(null);
       session = null;
       show("login");
       setError("login-error", "Your session expired. Sign in to review this capture.");
       return;
     }
     show("ready");
-    setError("login-error", "");
-    element("ready-view").querySelector(".empty-state")!.innerHTML = `<h1>Draft creation failed</h1><p>${escapeHtml(error instanceof Error ? error.message : "Try clicking the toolbar icon again.")}</p>`;
-  }
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[char]!);
+    setError("capture-error", error instanceof Error ? error.message : "Draft creation failed. Capture the job again to retry.");
+  } finally { captureInFlight = false; processQueuedCapture(); }
 }
 
 function renderDraft(result: DraftResult): void {
+  const noResume = document.createElement("option");
+  noResume.value = ""; noResume.textContent = "No resume";
+  select("resumeVersionId").replaceChildren(noResume);
+  select("resumeVersionId").value = "";
   const value = result.importDraft;
   input("title").value = value.parsedTitle ?? "";
   input("companyName").value = value.parsedCompany ?? "";
@@ -137,6 +160,7 @@ function renderDraft(result: DraftResult): void {
 
 function reviewValues(): SaveValues {
   return {
+    resumeVersionId: select("resumeVersionId").value,
     title: input("title").value.trim(), companyName: input("companyName").value.trim(),
     status: select("status").value, source: input("source").value.trim(), sourceUrl: input("sourceUrl").value.trim(),
     location: input("location").value.trim(), salaryMin: input("salaryMin").value.trim(), salaryMax: input("salaryMax").value.trim(),
@@ -145,10 +169,54 @@ function reviewValues(): SaveValues {
   };
 }
 
+async function loadResumeOptions(): Promise<void> {
+  if (!session || resumesLoading || saving) return;
+  resumesLoading = true;
+  setBusy(element<HTMLFormElement>("review-form"), true, "Loading resumes…");
+  const picker = select("resumeVersionId");
+  picker.disabled = true;
+  element<HTMLButtonElement>("retry-resumes").disabled = true;
+  setError("resume-error");
+  element("retry-resumes").classList.add("hidden");
+  element("resume-hint").textContent = "Loading resumes…";
+  element("resume-hint").classList.remove("hidden");
+  try {
+    const result = await listResumes(session);
+    session = result.session;
+    const selected = picker.value;
+    const emptyOption = document.createElement("option");
+    emptyOption.value = ""; emptyOption.textContent = "No resume";
+    picker.replaceChildren(emptyOption, ...result.resumes.map((resume) => {
+      const option = document.createElement("option");
+      option.value = resume.id;
+      option.textContent = resume.name + (resume.targetRole ? ` — ${resume.targetRole}` : "");
+      return option;
+    }));
+    picker.value = result.resumes.some((resume) => resume.id === selected) ? selected : "";
+    element("resume-hint").textContent = result.resumes.length ? "" : "Upload a completed PDF in JobHazel’s Resumes to attach it here.";
+    element("resume-hint").classList.toggle("hidden", result.resumes.length > 0);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) throw error;
+    setError("resume-error", error instanceof Error ? error.message : "Could not load resumes. Please retry.");
+    element("resume-hint").classList.add("hidden");
+    element("retry-resumes").classList.remove("hidden");
+  } finally {
+    resumesLoading = false;
+    picker.disabled = false;
+    element<HTMLButtonElement>("retry-resumes").disabled = false;
+    setBusy(element<HTMLFormElement>("review-form"), false, "");
+  }
+}
+
 async function signOut(): Promise<void> {
-  if (session) await logout(session);
-  session = null; draft = null; processingCaptureId = null;
-  show("login");
+  if (saving || captureInFlight || resumesLoading) return;
+  try {
+    if (session) await logout(session);
+    session = null; draft = null; activeCaptureKey = null; processingCaptureId = null;
+    show("login");
+  } catch (error) {
+    setError(currentView === "review" ? "review-error" : "capture-error", error instanceof Error ? error.message : "Sign out failed. Please retry.");
+  }
 }
 
 async function captureActiveJob(button: HTMLButtonElement): Promise<void> {
@@ -157,12 +225,15 @@ async function captureActiveJob(button: HTMLButtonElement): Promise<void> {
   button.textContent = "Capturing…";
   setError("capture-error");
   try {
-    const result = await chrome.runtime.sendMessage({ type: "jobhazel.capture.active" }) as
+    const window = await chrome.windows.getCurrent();
+    const result = await chrome.runtime.sendMessage({ type: "jobhazel.capture.active", windowId: window.id }) as
       | { ok: true }
       | { ok: false; message: string };
     if (!result?.ok) {
       show("ready");
       setError("capture-error", result?.message ?? "JobHazel could not capture the active tab.");
+    } else {
+      await processLatestCapture();
     }
   } catch {
     show("ready");
@@ -174,12 +245,14 @@ async function captureActiveJob(button: HTMLButtonElement): Promise<void> {
 }
 
 async function initialize(): Promise<void> {
+  element("environment-label").textContent = BUILD_ENV === "development"
+    ? `Development · ${API_URL}` : "Connected to jobhazel.com";
   session = await readSession();
   if (session) {
     try { session = await refresh(session); }
     catch (error) {
       if (error instanceof ApiError && error.status === 401) {
-        await chrome.storage.local.remove("jobhazel.extension-session.v1"); session = null;
+        await storeSession(null); session = null;
       } else {
         renderAccount(); show("ready");
         setError("capture-error", "Could not check your session. Your sign-in is saved; try again when connected.");
@@ -204,20 +277,38 @@ const reviewForm = element<HTMLFormElement>("review-form");
 reviewForm.querySelector<HTMLButtonElement>('button[type="submit"]')!.dataset.label = "Save application";
 reviewForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  if (!session || !draft) return;
+  if (!session || !draft || saving || captureInFlight || resumesLoading) return;
+  saving = true;
+  const captureKey = activeCaptureKey;
   setError("review-error"); setBusy(reviewForm, true, "Saving…");
+  select("resumeVersionId").disabled = true;
   void saveDraft(session, draft.importDraft.id, reviewValues()).then(async (result) => {
     session = result.session;
-    if (activeCaptureKey) await chrome.storage.session.remove(activeCaptureKey);
+    // Once saved, a local cleanup failure must not invite a second save.
+    if (captureKey) await chrome.storage.session.remove(captureKey).catch(() => undefined);
     renderSaved(result.application); draft = null; activeCaptureKey = null; processingCaptureId = null; show("saved");
   }).catch((error) => {
+    if (error instanceof ApiError && error.status === 401) {
+      void storeSession(null); session = null; processingCaptureId = null;
+      show("login");
+      setError("login-error", "Your session expired. Sign in to review this capture.");
+      return;
+    }
+    if (error instanceof ApiError && error.status === 409 && error.body.importDraft) {
+      if (captureKey) void chrome.storage.session.remove(captureKey);
+      draft = null; activeCaptureKey = null; processingCaptureId = null;
+      element("saved-title").textContent = "Application already saved";
+      element("saved-company").textContent = "Open JobHazel to view it in your account.";
+      show("saved");
+      return;
+    }
     if (error instanceof ApiError && error.status === 409 && Array.isArray(error.body.duplicates)) {
       element("allow-duplicate-row").classList.remove("hidden");
       setError("review-error", "A possible duplicate was found. Check “Save this job anyway” to continue.");
       return;
     }
     setError("review-error", error instanceof Error ? error.message : "The application could not be saved.");
-  }).finally(() => setBusy(reviewForm, false, ""));
+  }).finally(() => { saving = false; select("resumeVersionId").disabled = false; setBusy(reviewForm, false, ""); processQueuedCapture(); });
 });
 
 select("status").addEventListener("change", (event) => {
@@ -230,6 +321,14 @@ function renderSaved(application: Application): void {
 }
 
 element("sign-out").addEventListener("click", () => void signOut());
+element("retry-resumes").addEventListener("click", () => {
+  void loadResumeOptions().catch((error) => {
+    if (error instanceof ApiError && error.status === 401) {
+      void storeSession(null); session = null; processingCaptureId = null;
+      show("login"); setError("login-error", "Your session expired. Sign in to review this capture.");
+    }
+  });
+});
 element("review-sign-out").addEventListener("click", () => void signOut());
 element("create-account").addEventListener("click", () => void chrome.tabs.create({ url: APP_URL }));
 element("open-jobhazel").addEventListener("click", () => void chrome.tabs.create({ url: APP_URL }));
@@ -239,12 +338,22 @@ element("capture-another").addEventListener("click", (event) => {
   void captureActiveJob(event.currentTarget as HTMLButtonElement);
 });
 element("cancel-review").addEventListener("click", () => {
+  if (saving || captureInFlight || resumesLoading) return;
   if (activeCaptureKey) void chrome.storage.session.remove(activeCaptureKey);
   draft = null; activeCaptureKey = null; processingCaptureId = null; show("ready");
+  processQueuedCapture();
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "session" && Object.keys(changes).some((key) => key.startsWith(CAPTURE_STORAGE_PREFIX))) void processLatestCapture();
+  if (area !== "session") return;
+  const addedCapture = Object.entries(changes).find(([key, change]) =>
+    key.startsWith(CAPTURE_STORAGE_PREFIX) && isStoredCapture(change.newValue));
+  if (!addedCapture) return;
+  queuedCaptureKey = addedCapture[0];
+  // A toolbar click can capture another posting while this panel stays open.
+  // Saving/removing a capture must not trigger this transition.
+  processQueuedCapture();
 });
 
+const updateAutofillUser = setupAutofillPanel();
 void initialize();

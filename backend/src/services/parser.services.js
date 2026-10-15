@@ -13,9 +13,12 @@ const JOB_SOURCES = [
   { name: "Ashby", patterns: ["ashbyhq.com"] },
   { name: "SmartRecruiters", patterns: ["smartrecruiters.com"] },
   { name: "Wellfound", patterns: ["wellfound.com"] },
+  { name: "CareerTakes", patterns: ["careertakes.ai"] },
+  { name: "ByteDance", patterns: ["joinbytedance.com"], employer: "ByteDance" },
 ];
 
-const SOURCE_NAMES = new Set(JOB_SOURCES.map((source) => source.name.toLowerCase()));
+// Employer-owned career sites can also be valid company names.
+const SOURCE_NAMES = new Set(JOB_SOURCES.filter((source) => !source.employer).map((source) => source.name.toLowerCase()));
 const COMPANY_SUFFIX_PATTERN = /\b(careers|jobs|hiring|inc\.?|llc|ltd\.?|corp\.?|corporation)\b/gi;
 const MAX_FETCH_BYTES = 1_000_000;
 const FETCH_TIMEOUT_MS = 10000;
@@ -30,6 +33,7 @@ const LINKEDIN_HIRING_TITLE_PATTERN = /^(.+?)\s+hiring\s+(.+?)(?:\s+in\s+(.+?))?
 const APPLICATION_TITLE_COMPANY_PATTERN = /^job application for\s+(.+?)\s+at\s+(.+?)$/i;
 const IGNORED_LINE_PATTERN = /^(?:>|all jobs|apply now|apply|save|share this job|sign in|cookie policy|privacy policy|modify cookie preferences|accept all cookies|google chrome|microsoft edge|apple safari|mozilla firefox|sign in to save|save job|easy apply|back to jobs|skip to main content|expand search|clear text|join now|people|learning|show|forgot password\?|email or phone|password|or|report this job|use ai to assess how you fit|tailor my resume|am i a good fit for this job\?|see who .* hired|posted\b.*|reposted\b.*|promoted\b.*|actively hiring|be among the first|new)$/i;
 const NON_COMPANY_LINE_PATTERN = /^(?:remote|hybrid|onsite|on-site|location\b.*|salary\b.*|compensation\b.*|pay range\b.*|base pay\b.*|department\b.*|team\b.*|employment type\b.*|full[- ]time|part[- ]time|contract|temporary|internship|mid[- ]senior|entry level|associate|director|executive|not applicable|posted\b.*|reposted\b.*|promoted\b.*|easy apply)$/i;
+const PAGE_CHROME_PATTERN = /^(?:(?:privacy policy|terms (?:of service|and conditions))(?:\s*\|.*)?|copyright\b.*|.*(?:©|&copy;)\s*\d{4}|sign up\b.*|log in|still hiring|find similar jobs\b.*)$/i;
 const GENERIC_TITLE_KEYS = ["jobTitle", "job_title", "title", "positionTitle", "position_title", "positionName", "position_name", "name", "roleName", "role_name", "postingTitle", "posting_title"];
 const GENERIC_COMPANY_KEYS = ["company", "companyName", "company_name", "organization", "organizationName", "organization_name", "employer", "employerName", "employer_name", "hiringOrganization", "hiring_organization"];
 const GENERIC_LOCATION_KEYS = ["location", "locations", "locationName", "location_name", "jobLocation", "job_location", "jobLocations", "job_locations", "office", "offices", "workplace"];
@@ -48,6 +52,7 @@ const IGNORED_URL_TITLE_SEGMENTS = new Set([
   "jobs",
   "posting",
   "recruiting",
+  "search",
   "view",
   "view-job",
   "viewjob",
@@ -134,6 +139,7 @@ function cleanTitleCandidate(value) {
 }
 
 function cleanCompanyName(value) {
+  if (PAGE_CHROME_PATTERN.test(cleanCandidate(value) ?? "") || IGNORED_LINE_PATTERN.test(cleanCandidate(value) ?? "")) return null;
   const cleaned = cleanCandidate(value)
     ?.replace(COMPANY_LABEL_PATTERN, "$1")
     .replace(/^(?:careers?|jobs)\s+at\s+/i, "")
@@ -154,6 +160,9 @@ function isRejectedTitle(value) {
   if (SECTION_HEADERS.has(candidate.toLowerCase())) return true;
   if (/^(?:careers?|jobs)(?:\s+at\b|\b)/i.test(candidate) && !hasRoleKeyword(candidate)) return true;
   if (isKnownSourceName(candidate)) return true;
+  if (PAGE_CHROME_PATTERN.test(candidate) || IGNORED_LINE_PATTERN.test(candidate)) return true;
+  const parts = candidate.split(TITLE_SEPARATOR_PATTERN);
+  if (parts.length > 1 && parts.every((part) => isKnownSourceName(part) || PAGE_CHROME_PATTERN.test(part) || IGNORED_LINE_PATTERN.test(part))) return true;
   if (IGNORED_TITLE_VALUES.has(candidate.toLowerCase())) return true;
   if (/^(company|organization|employer|department|team|location|salary|compensation)\s*[:\-]/i.test(candidate)) return true;
   if (/^(apply|save|sign in|log in|share|view job|job details)$/i.test(candidate)) return true;
@@ -169,6 +178,7 @@ function getMeaningfulLines(rawText, limit = 16) {
     .map(cleanCandidate)
     .filter(Boolean)
     .filter((line) => !IGNORED_LINE_PATTERN.test(line))
+    .filter((line) => !PAGE_CHROME_PATTERN.test(line))
     .slice(0, limit);
 }
 
@@ -648,7 +658,58 @@ function extractStructuredJobPayload(html) {
   };
 }
 
-export function extractJobPageDataFromHtml(html) {
+function byteDanceJobIdFromUrl(sourceUrl) {
+  try {
+    const url = new URL(sourceUrl);
+    if (!/^(?:www\.)?joinbytedance\.com$/i.test(url.hostname)) return null;
+    return url.pathname.match(/^\/search\/(\d+)\/?$/)?.[1] ?? null;
+  } catch { return null; }
+}
+
+function extractByteDanceJobPage(html, sourceUrl) {
+  const jobId = byteDanceJobIdFromUrl(sourceUrl);
+  if (!jobId) return null;
+  // Next streams the job after the footer in the initial HTTP response. Read
+  // actual HTML only, excluding serialized scripts and page chrome.
+  const content = String(html ?? "")
+    .replace(/<(script|style|menu|nav|footer)\b[^>]*>[\s\S]*?<\/\1>/gi, "");
+  const headings = [...content.matchAll(/<h[12]\b[^>]*>([\s\S]*?)<\/h[12]>/gi)];
+  const buttons = [...content.matchAll(/<button\b[^>]*>/gi)]
+    .filter((match) => {
+      const attrs = parseTagAttributes(match[0]);
+      return attrs["data-tracking"] === "job-apply-button" && attrs["tracking-value"] === jobId;
+    });
+  if (buttons.length < 2) return null;
+  const firstApply = buttons[0].index;
+  const lastApply = buttons.at(-1).index;
+  const heading = headings.filter((match) => match.index < firstApply).at(-1);
+  const title = cleanTitleCandidate(stripHtmlToText(heading?.[1]));
+  if (!heading || !title || isRejectedTitle(title)) return null;
+  const header = stripHtmlToText(content.slice(heading.index, firstApply));
+  const body = stripHtmlToText(content.slice(firstApply, lastApply));
+  const descriptionStart = body.search(/(?:^|\n)Responsibilities\s*\n/);
+  if (descriptionStart < 0) return null;
+  const description = body.slice(descriptionStart).trim();
+  if (description.length < 100 || !/(?:^|\n)Qualifications\s*\n/.test(description)) return null;
+  const field = (label) => cleanCandidate(header.match(new RegExp(`(?:^|\\n)${label}\\s*:\\s*([^\\n]+)`, "i"))?.[1]);
+  const location = field("Location");
+  const employmentType = field("Employment Type");
+  const salary = extractSalaryRange(description, { location });
+  const structured = {
+    title, company: "ByteDance", location, employmentType, description,
+    salary: salary.min && salary.max ? `Salary: USD ${salary.min} - ${salary.max}` : null,
+  };
+  return {
+    pageTitle: title, structured,
+    rawText: [`Job title: ${title}`, "Company: ByteDance", location && `Location: ${location}`,
+      employmentType && `Employment Type: ${employmentType}`, description].filter(Boolean).join("\n"),
+  };
+}
+
+export function extractJobPageDataFromHtml(html, sourceUrl) {
+  const byteDance = extractByteDanceJobPage(html, sourceUrl);
+  if (byteDance) return byteDance;
+  if (byteDanceJobIdFromUrl(sourceUrl)) return { pageTitle: null, rawText: "", structured: null };
   const jsonLd = extractStructuredJobPayload(html);
   const application = extractGenericJobPayload(html);
   const metadata = extractHtmlMetadata(html);
@@ -663,12 +724,13 @@ export function extractJobPageDataFromHtml(html) {
     extractTitle({ pageTitle: metadata.title, rawText: fallbackText });
   const company = jsonLd?.company ?? compatibleApplication?.company ??
     extractCompany({ pageTitle: metadata.title, rawText: fallbackText, parsedTitle: title });
-  const fallbackSalary = extractSalaryRange(fallbackText);
+  const location = jsonLd?.location ?? compatibleApplication?.location ??
+    extractLocation(fallbackText, { parsedTitle: title, parsedCompany: company });
+  const fallbackSalary = extractSalaryRange(fallbackText, { location });
   const fields = {
     title,
     company,
-    location: jsonLd?.location ?? compatibleApplication?.location ??
-      extractLocation(fallbackText, { parsedTitle: title, parsedCompany: company }),
+    location,
     employmentType: jsonLd?.employmentType ?? compatibleApplication?.employmentType ?? null,
     salary: jsonLd?.salary ?? compatibleApplication?.salary ??
       (fallbackSalary.min && fallbackSalary.max ? `Salary: USD ${fallbackSalary.min} - ${fallbackSalary.max}` : null),
@@ -745,7 +807,46 @@ export async function fetchJobPageData(sourceUrl) {
       throw new Error(`Unsupported content type: ${contentType}`);
     }
 
-    const extracted = extractJobPageDataFromHtml(body);
+    let extracted = extractJobPageDataFromHtml(body, normalizedUrl);
+    if (byteDanceJobIdFromUrl(normalizedUrl) && !extracted.structured) {
+      throw new Error("ByteDance job details are unavailable or do not match the requested posting.");
+    }
+    const pageUrl = new URL(normalizedUrl);
+    const careerTakesId = pageUrl.searchParams.get("id");
+    // The apply page is a client-rendered shell. This is the same public JSON
+    // resource its job-loading component requests; never derive a host from HTML.
+    if (/^(?:www\.)?careertakes\.ai$/i.test(pageUrl.hostname) &&
+      /^\/jobs\/apply\/?$/.test(pageUrl.pathname) && /^[a-zA-Z0-9_-]{1,128}$/.test(careerTakesId ?? "")) {
+      const dataUrl = `https://careertakes.ai/files/jobs/${careerTakesId}.json`;
+      await validateFetchUrl(dataUrl);
+      const jobResponse = await axios.get(dataUrl, {
+        timeout: FETCH_TIMEOUT_MS,
+        maxRedirects: 0,
+        maxContentLength: MAX_FETCH_BYTES,
+        responseType: "json",
+        headers: { accept: "application/json" },
+        validateStatus: (status) => status === 200,
+      });
+      const job = jobResponse.data;
+      if (!String(jobResponse.headers?.["content-type"] ?? "").toLowerCase().includes("application/json") ||
+        !job || typeof job !== "object" || Array.isArray(job) || (job.id && job.id !== careerTakesId)) {
+        throw new Error("CareerTakes returned invalid or mismatched job data.");
+      }
+      // Read the selected root object, excluding unrelated SEO/widget payloads.
+      const structured = extractGenericJobPayloadFromJson({
+        title: job.title, company: job.company,
+        location: genericStringValue(job.location?.text) ?? job.location,
+        description: job.description, salary: job.salary, jobType: job.job_type,
+      });
+      if (!structured?.title || !structured.description) throw new Error("CareerTakes job details are unavailable.");
+      extracted = {
+        pageTitle: structured.title,
+        rawText: [structured.title, structured.company, structured.location, structured.employmentType,
+          structured.salary, structured.description].filter(Boolean).join("\n"),
+        structured,
+      };
+      result.jobDataUrl = dataUrl;
+    }
     result.success = true;
     result.status = response.status;
     result.contentType = contentType || null;
@@ -786,6 +887,9 @@ export function cleanJobText(rawText) {
     .split("\n")
     .map((line) => line.trim())
     .filter((line) => !IGNORED_LINE_PATTERN.test(line))
+    .filter((line) => !PAGE_CHROME_PATTERN.test(line))
+    .filter((line) => !(line.split(TITLE_SEPARATOR_PATTERN).length > 1 && isRejectedTitle(line) &&
+      line.split(TITLE_SEPARATOR_PATTERN).every((part) => isKnownSourceName(part) || IGNORED_LINE_PATTERN.test(part))))
     .join("\n")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
@@ -932,6 +1036,7 @@ function companyFromUrl(sourceUrl, source) {
     const parts = parsed.pathname.split("/").filter(Boolean).map((part) => decodeURIComponent(part));
     const domain = parsed.hostname.replace(/^www\./i, "").toLowerCase();
 
+    if (domain === "joinbytedance.com") return "ByteDance";
     if (source === "Greenhouse" && parts[0]) return cleanCompanyName(titleCaseSlug(parts[0]));
     if (source === "Lever" && parts[0]) return cleanCompanyName(titleCaseSlug(parts[0]));
     if (source === "Ashby" && parts[0]) return cleanCompanyName(titleCaseSlug(parts[0]));
@@ -1221,7 +1326,7 @@ function collectSalaryAmountsFromLine(line) {
   return amounts;
 }
 
-export function extractSalaryRange(rawText) {
+export function extractSalaryRange(rawText, { location } = {}) {
   const text = normalizeOptional(rawText);
   if (!text) return { min: null, max: null };
 
@@ -1231,13 +1336,32 @@ export function extractSalaryRange(rawText) {
     .filter((line) => /(\$|usd|cad|salary|compensation|pay range|base pay|annual base|on-target earnings|ote)/i.test(line))
     .filter((line) => !isHourlyContext(line));
 
+  // A posting can list a separate range for each city. Prefer the selected
+  // job's city, rather than the first disclosure (often a different state).
+  // "California outside of the San Francisco Bay Area" does not apply to SF.
+  const city = cleanCandidate(location)?.split(",")[0]?.replace(/^(?:remote|hybrid|on[- ]site)\s*[-:]\s*/i, "");
+  const cityPattern = city && !/^(?:remote|hybrid|on[- ]site|united states|usa|us|canada)$/i.test(city)
+    ? new RegExp(`\\b${escapeRegExp(city)}\\b`, "i") : null;
+  const excludedCityPattern = cityPattern
+    ? new RegExp(`\\b(?:outside(?:\\s+of)?|excluding|except(?:\\s+for)?)\\s+(?:the\\s+)?${escapeRegExp(city)}\\b`, "i") : null;
+  const cityLines = cityPattern ? salaryLines.filter((line) =>
+    cityPattern.test(line) && !excludedCityPattern.test(line) && collectSalaryAmountsFromLine(line).length > 0,
+  ) : [];
+
   const amounts = [];
-  for (const line of salaryLines) {
+  const matchingSalaryLines = cityLines.length ? cityLines : salaryLines;
+  for (const line of matchingSalaryLines) {
     amounts.push(...collectSalaryAmountsFromLine(line));
     if (amounts.length >= 2) break;
   }
 
   const unique = [...new Set(amounts)];
+  // Preserve explicit equal bounds (a fixed annual salary), while repeated
+  // mentions of a single estimate still yield only one amount.
+  if (unique.length === 1 && matchingSalaryLines.some((line) => {
+    const values = collectSalaryAmountsFromLine(line);
+    return values.length === 2 && values[0] === unique[0] && values[0] === values[1] && /\d\s*(?:-|–|—|to)\s*(?:USD\s*)?\$?\d/i.test(line);
+  })) return { min: unique[0], max: unique[0] };
   if (unique.length >= 2) {
     const [min, max] = unique.slice(0, 2).sort((a, b) => a - b);
     return { min, max };
@@ -1380,7 +1504,7 @@ export function parseJobDescription(input = {}) {
     parsedTitle,
   });
   const parsedLocation = normalizeOptional(structured?.location) ?? extractLocation(cleanedText, { parsedTitle, parsedCompany, sourceUrl: extractionUrl ?? sourceUrl });
-  const salary = extractSalaryRange(structured?.salary ?? cleanedText);
+  const salary = extractSalaryRange(structured?.salary ?? cleanedText, { location: parsedLocation });
 
   const parsed = {
     sourceUrl,
