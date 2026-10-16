@@ -121,10 +121,10 @@ export function LandingPage({
                 <GrowingBranches />
                 <div className="landing-hero-copy landing-hero-entrance">
                     <h1>
-                        Less tracking. More <span>growing.</span>
+                        All-in-one tool for application autofill and tracking.
                     </h1>
                     <p>
-                        Keep your applications, resumes, interviews, and follow-ups organized in one place.
+                        Easily import jobs, autofill application forms, and track every application in one place.
                     </p>
                     <div className="landing-hero-actions">
                         <button type="button" className="landing-button" onClick={() => onAuthOpen("signup")}>
